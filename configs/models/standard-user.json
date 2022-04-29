@@ -1,0 +1,95 @@
+{
+  "$id": "https://github.com/instill-ai/mgmt-backend/blob/main/configs/models/standard-user.yaml",
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "title": "User",
+  "description": "The standard user data structure",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["login", "usage_data_collection", "newsletter_subscription"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Resource identifier",
+      "description": "The resource identifier",
+      "readOnly": true,
+      "order": 0
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "ID",
+      "description": "The unique ID",
+      "readOnly": true,
+      "order": 1
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "title": "Your email",
+      "description": "Fill your email address",
+      "order": 2
+    },
+    "login": {
+      "type": "string",
+      "title": "Username",
+      "description": "Pick a username that is unique",
+      "pattern": "^([a-z0-9]+[-]{1})*[a-z0-9]{1,39}$",
+      "minLength": 1,
+      "maxLength": 39,
+      "order": 3
+    },
+    "company_name": {
+      "type": "string",
+      "title": "Your company",
+      "description": "Fill the name of your company",
+      "order": 4
+    },
+    "role": {
+      "type": "string",
+      "title": "Your role",
+      "description": "Pick a role closest to your job in your company",
+      "enum": [
+        "manager",
+        "ai-researcher",
+        "ai-engineer",
+        "data-engineer",
+        "data-scientist",
+        "analytics-engineer",
+        "hobbyist"
+      ],
+      "order": 5
+    },
+    "usage_data_collection": {
+      "type": "boolean",
+      "title": "Anonymize usage data collection",
+      "description": "We collect data only for product improvements",
+      "default": false,
+      "order": 6
+    },
+    "newsletter_subscription": {
+      "type": "boolean",
+      "title": "Newsletter subscription",
+      "description": "Receive the latest news from Instill AI including open source updates, community highlights, blog posts, useful tutorials and more! You can unsubscribe any time.",
+      "default": false,
+      "order": 7
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created at",
+      "description": "The date when the user is created in the format YYYY-MM-DDTHH:MM::SS",
+      "examples": ["2022-04-29T00:20:06.703547Z"],
+      "readOnly": true,
+      "order": 8
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Updated at",
+      "description": "The date when the pipeline is updated in the format YYYY-MM-DDTHH:MM::SS",
+      "examples": ["2022-04-29T01:33:34.910865Z"],
+      "readOnly": true,
+      "order": 9
+    }
+  }
+}
