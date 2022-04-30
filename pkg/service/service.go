@@ -4,10 +4,11 @@ import (
 	"strings"
 
 	"github.com/gofrs/uuid"
-	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
-	"github.com/instill-ai/mgmt-backend/pkg/repository"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
+	"github.com/instill-ai/mgmt-backend/pkg/repository"
 )
 
 // Service interface

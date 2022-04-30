@@ -4,11 +4,12 @@ import (
 	"database/sql"
 
 	"github.com/gofrs/uuid"
-	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
-	"github.com/instill-ai/mgmt-backend/pkg/repository"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gorm.io/gorm"
+
+	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
+	"github.com/instill-ai/mgmt-backend/pkg/repository"
 )
 
 // DefaultUserId is the UUID of the default user

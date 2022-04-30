@@ -10,13 +10,7 @@ import (
 	"strings"
 	"syscall"
 
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/instill-ai/mgmt-backend/configs"
-	"github.com/instill-ai/mgmt-backend/internal/logger"
-	"github.com/instill-ai/mgmt-backend/pkg/handler"
-	"github.com/instill-ai/mgmt-backend/pkg/repository"
-	"github.com/instill-ai/mgmt-backend/pkg/service"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
@@ -24,8 +18,15 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/encoding/protojson"
 
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+
+	"github.com/instill-ai/mgmt-backend/configs"
+	"github.com/instill-ai/mgmt-backend/internal/logger"
+	"github.com/instill-ai/mgmt-backend/pkg/handler"
+	"github.com/instill-ai/mgmt-backend/pkg/repository"
+	"github.com/instill-ai/mgmt-backend/pkg/service"
 
 	database "github.com/instill-ai/mgmt-backend/internal/db"
 	mgmtPB "github.com/instill-ai/protogen-go/mgmt/v1alpha"

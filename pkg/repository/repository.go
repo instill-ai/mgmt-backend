@@ -4,11 +4,12 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
-	"github.com/instill-ai/mgmt-backend/internal/paginate"
-	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gorm.io/gorm"
+
+	"github.com/instill-ai/mgmt-backend/internal/paginate"
+	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 )
 
 type Repository interface {

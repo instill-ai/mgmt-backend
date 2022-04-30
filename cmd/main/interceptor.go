@@ -1,9 +1,10 @@
 package main
 
 import (
-	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 )
 
 // RecoveryInterceptor - panic handler

@@ -5,9 +5,11 @@ import (
 	"fmt"
 
 	"github.com/gofrs/uuid"
-	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
-	mgmtPB "github.com/instill-ai/protogen-go/mgmt/v1alpha"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
+
+	mgmtPB "github.com/instill-ai/protogen-go/mgmt/v1alpha"
 )
 
 //

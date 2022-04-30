@@ -6,11 +6,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/instill-ai/mgmt-backend/internal/logger"
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
+
+	"github.com/instill-ai/mgmt-backend/internal/logger"
 )
 
 // Config - Global variable to export
