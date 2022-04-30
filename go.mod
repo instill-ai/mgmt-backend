@@ -2,15 +2,13 @@ module github.com/instill-ai/mgmt-backend
 
 go 1.17
 
-replace github.com/instill-ai/protogen-go => /Users/xiaofeidu/Workspace/instill-ai-repos/mgmt-backend/protogen-go/go/instill
-
 require (
 	github.com/gofrs/uuid v4.2.0+incompatible
 	github.com/golang-migrate/migrate/v4 v4.15.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.10.0
 	github.com/iancoleman/strcase v0.2.0
-	github.com/instill-ai/protogen-go v0.0.0-00010101000000-000000000000
+	github.com/instill-ai/protogen-go v0.1.5-alpha.0.20220429223818-4c859e4ba4e2
 	github.com/knadh/koanf v1.4.1
 	github.com/mennanov/fieldmask-utils v0.5.0
 	go.uber.org/zap v1.21.0
