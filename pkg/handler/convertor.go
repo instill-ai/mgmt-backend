@@ -2,6 +2,7 @@ package handler
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/gofrs/uuid"
@@ -12,8 +13,11 @@ import (
 	mgmtPB "github.com/instill-ai/protogen-go/mgmt/v1alpha"
 )
 
-//
-func DBUser2PBUser(dbUser *datamodel.User) *mgmtPB.User {
+// DBUser2PBUser converts a database user instance to proto user
+func DBUser2PBUser(dbUser *datamodel.User) (*mgmtPB.User, error) {
+	if dbUser == nil {
+		return nil, errors.New("can't convert a nil user")
+	}
 
 	login := dbUser.Login
 
@@ -29,11 +33,15 @@ func DBUser2PBUser(dbUser *datamodel.User) *mgmtPB.User {
 		Type:                   mgmtPB.OwnerType_OWNER_TYPE_USER,
 		CreateTime:             timestamppb.New(dbUser.Base.CreateTime),
 		UpdateTime:             timestamppb.New(dbUser.Base.UpdateTime),
-	}
+	}, nil
 }
 
-//
+// PBUser2DBUser converts a proto user instance to database user
 func PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.User, error) {
+	if pbUser == nil {
+		return nil, errors.New("can't convert a nil user")
+	}
+
 	id, err := uuid.FromString(pbUser.Id)
 	if err != nil {
 		return nil, err

@@ -12,6 +12,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 )
 
+// Repository interface
 type Repository interface {
 	ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int, error)
 	CreateUser(user *datamodel.User) error

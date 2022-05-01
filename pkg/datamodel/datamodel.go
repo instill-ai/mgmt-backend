@@ -16,6 +16,7 @@ type Base struct {
 	DeleteTime gorm.DeletedAt `sql:"index"`
 }
 
+// User defines a user instance in the database
 type User struct {
 	Base
 	Email                  sql.NullString

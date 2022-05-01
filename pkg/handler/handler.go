@@ -61,7 +61,11 @@ func (h *handler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*m
 
 	pbUsers := []*mgmtPB.User{}
 	for _, dbUser := range dbUsers {
-		pbUsers = append(pbUsers, DBUser2PBUser(&dbUser))
+		pbUser, err := DBUser2PBUser(&dbUser)
+		if err != nil {
+			return &mgmtPB.ListUserResponse{}, err
+		}
+		pbUsers = append(pbUsers, pbUser)
 	}
 
 	resp := mgmtPB.ListUserResponse{
@@ -86,7 +90,10 @@ func (h *handler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (*mgm
 	if err != nil {
 		return &mgmtPB.GetUserResponse{}, err
 	}
-	pbUser := DBUser2PBUser(dbUser)
+	pbUser, err := DBUser2PBUser(dbUser)
+	if err != nil {
+		return &mgmtPB.GetUserResponse{}, err
+	}
 
 	resp := mgmtPB.GetUserResponse{
 		User: pbUser,
@@ -156,7 +163,10 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 		return &mgmtPB.UpdateUserResponse{}, err
 	}
 
-	pbUserUpdated := DBUser2PBUser(dbUserUpdated)
+	pbUserUpdated, err := DBUser2PBUser(dbUserUpdated)
+	if err != nil {
+		return &mgmtPB.UpdateUserResponse{}, err
+	}
 	resp := mgmtPB.UpdateUserResponse{
 		User: pbUserUpdated,
 	}
