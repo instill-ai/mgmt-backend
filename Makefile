@@ -1,6 +1,6 @@
 .DEFAULT_GOAL:=help
 
-DEVELOP_SERVICES := mgmt_backend mgmt_backend_migrate
+DEVELOP_SERVICES := mgmt_backend mgmt_backend_migrate mgmt_backend_init
 3RD_PARTY_SERVICES := pg_sql
 
 #============================================================================
