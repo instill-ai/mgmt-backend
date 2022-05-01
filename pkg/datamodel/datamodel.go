@@ -9,10 +9,10 @@ import (
 
 // Base contains common columns for all tables
 type Base struct {
-	Id        uuid.UUID `gorm:"type:uuid;primary_key;"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt *time.Time `sql:"index"`
+	ID         uuid.UUID `gorm:"type:uuid;primary_key;"`
+	CreateTime time.Time
+	UpdateTime time.Time
+	DeleteTime *time.Time `sql:"index"`
 }
 
 type User struct {

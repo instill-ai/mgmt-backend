@@ -89,7 +89,7 @@
     "create_time": {
       "type": "string",
       "format": "date-time",
-      "title": "Created at",
+      "title": "Create time",
       "description": "The date when the user is created in the format YYYY-MM-DDTHH:MM::SS",
       "examples": ["2022-04-29T00:20:06.703547Z"],
       "readOnly": true,
@@ -98,7 +98,7 @@
     "update_time": {
       "type": "string",
       "format": "date-time",
-      "title": "Updated at",
+      "title": "Update time",
       "description": "The date when the pipeline is updated in the format YYYY-MM-DDTHH:MM::SS",
       "examples": ["2022-04-29T01:33:34.910865Z"],
       "readOnly": true,

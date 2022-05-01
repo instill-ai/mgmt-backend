@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// DecodeToken decodes the token string into created_at time and UUID
+// DecodeToken decodes the token string into `create_time` time and UUID
 func DecodeToken(encodedToken string) (time.Time, string, error) {
 	byt, err := base64.StdEncoding.DecodeString(encodedToken)
 	if err != nil {
@@ -21,16 +21,16 @@ func DecodeToken(encodedToken string) (time.Time, string, error) {
 		return time.Time{}, "", err
 	}
 
-	createdAt, err := time.Parse(time.RFC3339Nano, arrStr[0])
+	createTime, err := time.Parse(time.RFC3339Nano, arrStr[0])
 	if err != nil {
 		return time.Time{}, "", err
 	}
 	uuid := arrStr[1]
 
-	return createdAt, uuid, nil
+	return createTime, uuid, nil
 }
 
-// EncodeToken encodes created_at time and UUID into a single string
+// EncodeToken encodes `create_time`` time and UUID into a single string
 func EncodeToken(t time.Time, uuid string) string {
 	key := fmt.Sprintf("%s,%s", t.Format(time.RFC3339Nano), uuid)
 	return base64.StdEncoding.EncodeToString([]byte(key))

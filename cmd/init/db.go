@@ -13,11 +13,11 @@ import (
 )
 
 // DefaultUserId is the UUID of the default user
-const DefaultUserId string = "2a06c2f7-8da9-4046-91ea-240f88a5d729"
+const DefaultUserID string = "2a06c2f7-8da9-4046-91ea-240f88a5d729"
 
 // CreateDefaultUser creates a default user in the database
 func createDefaultUser(db *gorm.DB) error {
-	defaultId, err := uuid.FromString(DefaultUserId)
+	defaultID, err := uuid.FromString(DefaultUserID)
 	if err != nil {
 		return err
 	}
@@ -25,7 +25,7 @@ func createDefaultUser(db *gorm.DB) error {
 	r := repository.NewRepository(db)
 
 	defaultUser := datamodel.User{
-		Base:                   datamodel.Base{Id: defaultId},
+		Base:                   datamodel.Base{ID: defaultID},
 		Email:                  sql.NullString{String: "hello@instill.tech", Valid: true},
 		Login:                  "instill",
 		CompanyName:            sql.NullString{String: "Instill AI", Valid: true},
@@ -34,7 +34,7 @@ func createDefaultUser(db *gorm.DB) error {
 		NewsletterSubscription: false,
 	}
 
-	_, err = r.GetUser(defaultUser.Base.Id)
+	_, err = r.GetUser(defaultUser.Base.ID)
 	// Already exist
 	if err == nil {
 		return nil

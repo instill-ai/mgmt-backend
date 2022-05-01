@@ -40,22 +40,22 @@ func (r *repository) ListUser(pageSize int, pageToken string) ([]datamodel.User,
 		return nil, "", int(totalSize), status.Errorf(codes.Internal, "Error %v", result.Error)
 	}
 
-	queryBuilder := r.db.Model(&datamodel.User{}).Order("created_at DESC, id DESC")
+	queryBuilder := r.db.Model(&datamodel.User{}).Order("create_time DESC, id DESC")
 
 	if pageSize > 0 {
 		queryBuilder = queryBuilder.Limit(pageSize)
 	}
 
 	if pageToken != "" {
-		createdAt, id, err := paginate.DecodeToken(pageToken)
+		createTime, id, err := paginate.DecodeToken(pageToken)
 		if err != nil {
 			return nil, "", int(totalSize), status.Errorf(codes.InvalidArgument, "Invalid page token: %s", err.Error())
 		}
-		queryBuilder = queryBuilder.Where("(created_at,id) < (?::timestamp, ?)", createdAt, id)
+		queryBuilder = queryBuilder.Where("(create_time,id) < (?::timestamp, ?)", createTime, id)
 	}
 
 	var users []datamodel.User
-	var createdAt time.Time
+	var createTime time.Time
 
 	rows, err := queryBuilder.Rows()
 	if err != nil {
@@ -67,12 +67,12 @@ func (r *repository) ListUser(pageSize int, pageToken string) ([]datamodel.User,
 		if err = r.db.ScanRows(rows, &item); err != nil {
 			return nil, "", int(totalSize), status.Errorf(codes.Internal, "Error %v", err.Error())
 		}
-		createdAt = item.CreatedAt
+		createTime = item.CreateTime
 		users = append(users, item)
 	}
 
 	if len(users) > 0 {
-		nextPageToken := paginate.EncodeToken(createdAt, (users)[len(users)-1].Id.String())
+		nextPageToken := paginate.EncodeToken(createTime, (users)[len(users)-1].ID.String())
 		return users, nextPageToken, int(totalSize), nil
 	}
 

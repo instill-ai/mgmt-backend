@@ -19,7 +19,7 @@ func DBUser2PBUser(dbUser *datamodel.User) *mgmtPB.User {
 
 	return &mgmtPB.User{
 		Name:                   fmt.Sprintf("users/%s", login),
-		Id:                     dbUser.Id.String(),
+		Id:                     dbUser.ID.String(),
 		Email:                  &dbUser.Email.String,
 		Login:                  login,
 		CompanyName:            &dbUser.CompanyName.String,
@@ -27,8 +27,8 @@ func DBUser2PBUser(dbUser *datamodel.User) *mgmtPB.User {
 		UsageDataCollection:    dbUser.UsageDataCollection,
 		NewsletterSubscription: dbUser.NewsletterSubscription,
 		Type:                   mgmtPB.OwnerType_OWNER_TYPE_USER,
-		CreateTime:             timestamppb.New(dbUser.Base.CreatedAt),
-		UpdateTime:             timestamppb.New(dbUser.Base.UpdatedAt),
+		CreateTime:             timestamppb.New(dbUser.Base.CreateTime),
+		UpdateTime:             timestamppb.New(dbUser.Base.UpdateTime),
 	}
 }
 
@@ -44,9 +44,9 @@ func PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.User, error) {
 
 	return &datamodel.User{
 		Base: datamodel.Base{
-			Id:        id,
-			CreatedAt: pbUser.GetCreateTime().AsTime(),
-			UpdatedAt: pbUser.GetUpdateTime().AsTime(),
+			ID:         id,
+			CreateTime: pbUser.GetCreateTime().AsTime(),
+			UpdateTime: pbUser.GetUpdateTime().AsTime(),
 		},
 		Email: sql.NullString{
 			String: email,
