@@ -16,6 +16,10 @@ import (
 	mgmtPB "github.com/instill-ai/protogen-go/mgmt/v1alpha"
 )
 
+// TODO: Validate mask based on the field behavior.
+// Currently, the OUTPUT_ONLY fields are hard-coded.
+var outputOnlyFields = []string{"Name", "Id", "Type", "CreateTime", "UpdateTime"}
+
 type handler struct {
 	mgmtPB.UnimplementedUserServiceServer
 	service service.Service
@@ -104,10 +108,6 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 	if err != nil {
 		return &mgmtPB.UpdateUserResponse{}, err
 	}
-
-	// TODO: Validate mask based on the field behavior.
-	// Currently, the OUTPUT_ONLY fields are hard-coded.
-	outputOnlyFields := []string{"Name", "Id", "Type", "CreateTime", "UpdateTime"}
 
 	for _, field := range outputOnlyFields {
 		_, ok := mask.Filter(field)
