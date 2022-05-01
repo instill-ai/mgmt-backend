@@ -46,9 +46,11 @@ func (h *handler) Readiness(ctx context.Context, in *mgmtPB.ReadinessRequest) (*
 	}, nil
 }
 
+// ListUser lists all users
 func (h *handler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*mgmtPB.ListUserResponse, error) {
 
-	dbUsers, nextPageCursor, err := h.service.ListUser(int(req.GetPageSize()), req.GetPageCursor())
+	dbUsers, nextPageToken, totalSize, err := h.service.ListUser(int(req.GetPageSize()), req.GetPageToken())
+
 	if err != nil {
 		return &mgmtPB.ListUserResponse{}, err
 	}
@@ -59,10 +61,17 @@ func (h *handler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*m
 	}
 
 	resp := mgmtPB.ListUserResponse{
-		Users:          pbUsers,
-		NextPageCursor: nextPageCursor,
+		Users:         pbUsers,
+		NextPageToken: nextPageToken,
+		TotalSize:     int32(totalSize),
 	}
 	return &resp, nil
+}
+
+// CreateUser creates a user. This endpoint is not supported.
+func (h *handler) CreateUser(ctx context.Context, req *mgmtPB.CreateUserRequest) (*mgmtPB.CreateUserResponse, error) {
+
+	return &mgmtPB.CreateUserResponse{User: &mgmtPB.User{}}, status.Error(codes.Unimplemented, "This endpoint is not supported")
 }
 
 // GetUser gets a user
@@ -84,11 +93,11 @@ func (h *handler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (*mgm
 // UpdateUser updates an existing user
 func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest) (*mgmtPB.UpdateUserResponse, error) {
 	reqUser := req.GetUser()
-	reqFieldMask := req.GetFieldMask()
+	reqFieldMask := req.GetUpdateMask()
 
 	// Validate the field mask
 	if !reqFieldMask.IsValid(reqUser) {
-		return &mgmtPB.UpdateUserResponse{}, status.Error(codes.FailedPrecondition, "The `field_mask` is invalid")
+		return &mgmtPB.UpdateUserResponse{}, status.Error(codes.FailedPrecondition, "The `update_mask` is invalid")
 	}
 
 	mask, err := fieldmask_utils.MaskFromProtoFieldMask(reqFieldMask, strcase.ToCamel)
@@ -98,7 +107,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 
 	// TODO: Validate mask based on the field behavior.
 	// Currently, the OUTPUT_ONLY fields are hard-coded.
-	outputOnlyFields := []string{"Name", "Id", "CreatedAt", "UpdatedAt"}
+	outputOnlyFields := []string{"Name", "Id", "Type", "CreateTime", "UpdateTime"}
 
 	for _, field := range outputOnlyFields {
 		_, ok := mask.Filter(field)
@@ -152,4 +161,9 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 		User: pbUserUpdated,
 	}
 	return &resp, nil
+}
+
+// DeleteUser deletes a user. This endpoint is not supported.
+func (h *handler) DeleteUser(ctx context.Context, req *mgmtPB.DeleteUserRequest) (*mgmtPB.DeleteUserResponse, error) {
+	return &mgmtPB.DeleteUserResponse{}, status.Error(codes.Unimplemented, "This endpoint is not supported")
 }

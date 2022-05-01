@@ -26,8 +26,9 @@ func DBUser2PBUser(dbUser *datamodel.User) *mgmtPB.User {
 		Role:                   &dbUser.Role.String,
 		UsageDataCollection:    dbUser.UsageDataCollection,
 		NewsletterSubscription: dbUser.NewsletterSubscription,
-		CreatedAt:              timestamppb.New(dbUser.Base.CreatedAt),
-		UpdatedAt:              timestamppb.New(dbUser.Base.UpdatedAt),
+		Type:                   mgmtPB.OwnerType_OWNER_TYPE_USER,
+		CreateTime:             timestamppb.New(dbUser.Base.CreatedAt),
+		UpdateTime:             timestamppb.New(dbUser.Base.UpdatedAt),
 	}
 }
 
@@ -44,8 +45,8 @@ func PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.User, error) {
 	return &datamodel.User{
 		Base: datamodel.Base{
 			Id:        id,
-			CreatedAt: pbUser.GetCreatedAt().AsTime(),
-			UpdatedAt: pbUser.GetUpdatedAt().AsTime(),
+			CreatedAt: pbUser.GetCreateTime().AsTime(),
+			UpdatedAt: pbUser.GetUpdateTime().AsTime(),
 		},
 		Email: sql.NullString{
 			String: email,

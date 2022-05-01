@@ -14,11 +14,13 @@ import (
 // Service interface
 type Service interface {
 	ListRole() []string
-	ListUser(pageSize int, pageCursor string) ([]datamodel.User, string, error)
+	ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int, error)
 	CreateUser(user *datamodel.User) (*datamodel.User, error)
 	GetUser(id uuid.UUID) (*datamodel.User, error)
 	GetUserByLogin(login string) (*datamodel.User, error)
 	UpdateUser(id uuid.UUID, user *datamodel.User) (*datamodel.User, error)
+	DeleteUser(id uuid.UUID) error
+	DeleteUserByLogin(login string) error
 }
 
 type service struct {
@@ -38,8 +40,8 @@ func (s *service) ListRole() []string {
 }
 
 // ListUser lists all users
-func (s *service) ListUser(pageSize int, pageCursor string) ([]datamodel.User, string, error) {
-	return s.repository.ListUser(pageSize, pageCursor)
+func (s *service) ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int, error) {
+	return s.repository.ListUser(pageSize, pageToken)
 }
 
 // CreateUser creates an user instance
@@ -60,6 +62,7 @@ func (s *service) CreateUser(user *datamodel.User) (*datamodel.User, error) {
 	return s.repository.GetUserByLogin(user.Login)
 }
 
+// GetUserByLogin gets a user by login
 func (s *service) GetUserByLogin(login string) (*datamodel.User, error) {
 	// Validation: Required field
 	if login == "" {
@@ -69,6 +72,7 @@ func (s *service) GetUserByLogin(login string) (*datamodel.User, error) {
 	return s.repository.GetUserByLogin(login)
 }
 
+// GetUser gets a user by uuid ID
 func (s *service) GetUser(id uuid.UUID) (*datamodel.User, error) {
 	// Validation: Required field
 	if id.IsNil() {
@@ -77,6 +81,7 @@ func (s *service) GetUser(id uuid.UUID) (*datamodel.User, error) {
 	return s.repository.GetUser(id)
 }
 
+// UpdateUser updates a user by uuid ID
 func (s *service) UpdateUser(id uuid.UUID, user *datamodel.User) (*datamodel.User, error) {
 	// Validation: Required field
 	if id.IsNil() {
@@ -102,5 +107,23 @@ func (s *service) UpdateUser(id uuid.UUID, user *datamodel.User) (*datamodel.Use
 
 	// Get the updated user
 	return s.repository.GetUser(id)
+}
 
+// DeleteUser deletes a user by uuid ID
+func (s *service) DeleteUser(id uuid.UUID) error {
+	// Validation: Required field
+	if id.IsNil() {
+		return status.Error(codes.FailedPrecondition, "The required field `id` is not specified")
+	}
+	return s.repository.DeleteUser(id)
+}
+
+// DeleteUserByLogin deletes a user by login
+func (s *service) DeleteUserByLogin(login string) error {
+	// Validation: Required field
+	if login == "" {
+		return status.Error(codes.FailedPrecondition, "The required field `login` is not specified")
+	}
+
+	return s.repository.DeleteUserByLogin(login)
 }
