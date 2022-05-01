@@ -12,7 +12,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 )
 
-// DefaultUserId is the UUID of the default user
+// DefaultUserId is the UUID id of the default user
 const DefaultUserID string = "2a06c2f7-8da9-4046-91ea-240f88a5d729"
 
 // CreateDefaultUser creates a default user in the database

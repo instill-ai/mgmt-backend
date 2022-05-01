@@ -5,14 +5,15 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
+	"gorm.io/gorm"
 )
 
 // Base contains common columns for all tables
 type Base struct {
-	ID         uuid.UUID `gorm:"type:uuid;primary_key;"`
-	CreateTime time.Time
-	UpdateTime time.Time
-	DeleteTime *time.Time `sql:"index"`
+	ID         uuid.UUID      `gorm:"type:uuid;primary_key;<-:create"` // allow read and create
+	CreateTime time.Time      `gorm:"autoCreateTime:nano"`
+	UpdateTime time.Time      `gorm:"autoUpdateTime:nano"`
+	DeleteTime gorm.DeletedAt `sql:"index"`
 }
 
 type User struct {
