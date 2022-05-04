@@ -19,13 +19,13 @@ func DBUser2PBUser(dbUser *datamodel.User) (*mgmtPB.User, error) {
 		return nil, errors.New("can't convert a nil user")
 	}
 
-	login := dbUser.Login
+	id := dbUser.ID
 
 	return &mgmtPB.User{
-		Name:                   fmt.Sprintf("users/%s", login),
-		Id:                     dbUser.ID.String(),
+		Name:                   fmt.Sprintf("users/%s", id),
+		Uid:                    dbUser.Base.UID.String(),
 		Email:                  &dbUser.Email.String,
-		Login:                  login,
+		Id:                     id,
 		CompanyName:            &dbUser.CompanyName.String,
 		Role:                   &dbUser.Role.String,
 		UsageDataCollection:    dbUser.UsageDataCollection,
@@ -42,7 +42,7 @@ func PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.User, error) {
 		return nil, errors.New("can't convert a nil user")
 	}
 
-	id, err := uuid.FromString(pbUser.Id)
+	uid, err := uuid.FromString(pbUser.Uid)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.User, error) {
 
 	return &datamodel.User{
 		Base: datamodel.Base{
-			ID:         id,
+			UID:        uid,
 			CreateTime: pbUser.GetCreateTime().AsTime(),
 			UpdateTime: pbUser.GetUpdateTime().AsTime(),
 		},
@@ -60,7 +60,7 @@ func PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.User, error) {
 			String: email,
 			Valid:  len(email) > 0,
 		},
-		Login: pbUser.GetLogin(),
+		ID: pbUser.GetId(),
 		CompanyName: sql.NullString{
 			String: companyName,
 			Valid:  len(companyName) > 0,

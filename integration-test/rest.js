@@ -24,7 +24,9 @@ export default function (data) {
   // Health check
   group("Management API: Health check", () => {
     check(http.request("GET", `${constant.mgmtHost}/health/mgmt`), {
-      "GET /health/mgmt response status is 200": (r) => r.status === 200,
+      [`GET /${constant.mgmtVersion}/health/mgmt response status is 200`]: (
+        r
+      ) => r.status === 200,
     });
   });
 

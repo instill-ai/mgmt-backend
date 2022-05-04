@@ -16,11 +16,11 @@ import (
 type Repository interface {
 	ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int, error)
 	CreateUser(user *datamodel.User) error
-	GetUser(id uuid.UUID) (*datamodel.User, error)
-	GetUserByLogin(login string) (*datamodel.User, error)
-	UpdateUser(id uuid.UUID, user *datamodel.User) error
-	DeleteUser(id uuid.UUID) error
-	DeleteUserByLogin(login string) error
+	GetUser(uid uuid.UUID) (*datamodel.User, error)
+	GetUserByID(id string) (*datamodel.User, error)
+	UpdateUser(uid uuid.UUID, user *datamodel.User) error
+	DeleteUser(uid uuid.UUID) error
+	DeleteUserByID(id string) error
 }
 
 type repository struct {
@@ -73,11 +73,16 @@ func (r *repository) ListUser(pageSize int, pageToken string) ([]datamodel.User,
 	}
 
 	if len(users) > 0 {
-		nextPageToken := paginate.EncodeToken(createTime, (users)[len(users)-1].ID.String())
+		// Last page
+		if (len(users) < pageSize) || (len(users) == pageSize && len(users) == int(totalSize)) {
+			return users, "", int(totalSize), nil
+		}
+		// Not last page
+		nextPageToken := paginate.EncodeToken(createTime, (users)[len(users)-1].UID.String())
 		return users, nextPageToken, int(totalSize), nil
 	}
 
-	return nil, "", int(totalSize), nil
+	return users, "", int(totalSize), nil
 }
 
 // CreateUser creates a new user
@@ -88,36 +93,36 @@ func (r *repository) CreateUser(user *datamodel.User) error {
 	return nil
 }
 
-// GetUser gets a user by uuid Id
-func (r *repository) GetUser(id uuid.UUID) (*datamodel.User, error) {
+// GetUser gets a user by uuid
+func (r *repository) GetUser(uid uuid.UUID) (*datamodel.User, error) {
 	var user datamodel.User
-	if result := r.db.First(&user, "id = ?", id.String()); result.Error != nil {
+	if result := r.db.First(&user, "uid = ?", uid.String()); result.Error != nil {
 
 		return nil, status.Error(codes.NotFound, "The user is not found")
 	}
 	return &user, nil
 }
 
-// GetUserByLogin gets a user by login
-func (r *repository) GetUserByLogin(login string) (*datamodel.User, error) {
+// GetUserByID gets a user by ID
+func (r *repository) GetUserByID(id string) (*datamodel.User, error) {
 	var user datamodel.User
-	if result := r.db.Model(&datamodel.User{}).Where("login = ?", login).First(&user); result.Error != nil {
-		return nil, status.Errorf(codes.NotFound, "The user with login `%s` specified is not found", login)
+	if result := r.db.Model(&datamodel.User{}).Where("id = ?", id).First(&user); result.Error != nil {
+		return nil, status.Errorf(codes.NotFound, "The user with id `%s` specified is not found", id)
 	}
 	return &user, nil
 }
 
-// UpdateUser updates a user by uuid Id
-func (r *repository) UpdateUser(id uuid.UUID, user *datamodel.User) error {
-	if result := r.db.Select("*").Omit("Id").Model(&datamodel.User{}).Where("id = ?", id.String()).Updates(user); result.Error != nil {
+// UpdateUser updates a user by uuid
+func (r *repository) UpdateUser(uid uuid.UUID, user *datamodel.User) error {
+	if result := r.db.Select("*").Omit("UID").Model(&datamodel.User{}).Where("uid = ?", uid.String()).Updates(user); result.Error != nil {
 		return status.Errorf(codes.Internal, "Error %v", result.Error)
 	}
 	return nil
 }
 
-// DeleteUser deletes a user by uuid Id
-func (r *repository) DeleteUser(id uuid.UUID) error {
-	result := r.db.Model(&datamodel.User{}).Where("id = ?", id.String()).Delete(&datamodel.User{})
+// DeleteUser deletes a user by uuid
+func (r *repository) DeleteUser(uid uuid.UUID) error {
+	result := r.db.Model(&datamodel.User{}).Where("uid = ?", uid.String()).Delete(&datamodel.User{})
 
 	if result.Error != nil {
 		return status.Errorf(codes.Internal, "Error %v", result.Error)
@@ -130,16 +135,16 @@ func (r *repository) DeleteUser(id uuid.UUID) error {
 	return nil
 }
 
-// DeleteUserByLogin deletes a user by login
-func (r *repository) DeleteUserByLogin(login string) error {
-	result := r.db.Model(&datamodel.User{}).Where("login = ?", login).Delete(&datamodel.User{})
+// DeleteUserByID deletes a user by ID
+func (r *repository) DeleteUserByID(id string) error {
+	result := r.db.Model(&datamodel.User{}).Where("id = ?", id).Delete(&datamodel.User{})
 
 	if result.Error != nil {
 		return status.Errorf(codes.Internal, "Error %v", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
-		return status.Errorf(codes.NotFound, "The user with login `%s` specified is not found", login)
+		return status.Errorf(codes.NotFound, "The user with id `%s` specified is not found", id)
 	}
 
 	return nil

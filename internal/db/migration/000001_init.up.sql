@@ -1,9 +1,9 @@
 BEGIN;
 -- user
 CREATE TABLE IF NOT EXISTS public.user(
-  id UUID NOT NULL,
+  uid UUID NOT NULL,
+  id VARCHAR(255) UNIQUE NOT NULL,
   email VARCHAR(255),
-  login VARCHAR(255) UNIQUE NOT NULL,
   company_name VARCHAR(255),
   role VARCHAR(255),
   usage_data_collection BOOL NOT NULL DEFAULT FALSE,
@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS public.user(
   create_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   update_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   delete_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT user_pkey PRIMARY KEY (id)
+  CONSTRAINT user_pkey PRIMARY KEY (uid)
 );
-CREATE INDEX user_id_create_time_pagination ON public.user (id, create_time);
+CREATE INDEX user_id_create_time_pagination ON public.user (uid, create_time);
 COMMIT;

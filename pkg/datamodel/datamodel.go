@@ -10,7 +10,7 @@ import (
 
 // Base contains common columns for all tables
 type Base struct {
-	ID         uuid.UUID      `gorm:"type:uuid;primary_key;<-:create"` // allow read and create
+	UID        uuid.UUID      `gorm:"type:uuid;primary_key;<-:create"` // allow read and create
 	CreateTime time.Time      `gorm:"autoCreateTime:nano"`
 	UpdateTime time.Time      `gorm:"autoUpdateTime:nano"`
 	DeleteTime gorm.DeletedAt `sql:"index"`
@@ -19,8 +19,8 @@ type Base struct {
 // User defines a user instance in the database
 type User struct {
 	Base
+	ID                     string `gorm:"unique;not null;"`
 	Email                  sql.NullString
-	Login                  string `gorm:"unique;not null;"`
 	CompanyName            sql.NullString
 	Role                   sql.NullString
 	UsageDataCollection    bool `gorm:"default:false"`

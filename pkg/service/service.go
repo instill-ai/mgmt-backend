@@ -16,11 +16,11 @@ type Service interface {
 	ListRole() []string
 	ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int, error)
 	CreateUser(user *datamodel.User) (*datamodel.User, error)
-	GetUser(id uuid.UUID) (*datamodel.User, error)
-	GetUserByLogin(login string) (*datamodel.User, error)
-	UpdateUser(id uuid.UUID, user *datamodel.User) (*datamodel.User, error)
-	DeleteUser(id uuid.UUID) error
-	DeleteUserByLogin(login string) error
+	GetUser(uid uuid.UUID) (*datamodel.User, error)
+	GetUserByID(id string) (*datamodel.User, error)
+	UpdateUser(uid uuid.UUID, user *datamodel.User) (*datamodel.User, error)
+	DeleteUser(uid uuid.UUID) error
+	DeleteUserByID(id string) error
 }
 
 type service struct {
@@ -51,7 +51,7 @@ func (s *service) CreateUser(user *datamodel.User) (*datamodel.User, error) {
 	//Validation: role field
 	if user.Role.Valid {
 		if r := Role(user.Role.String); !ValidateRole(r) {
-			return nil, status.Errorf(codes.FailedPrecondition, "The field `role` %s in the body is not valid. Please choose from: [ %v ]", r.GetName(), strings.Join(s.ListRole(), ", "))
+			return nil, status.Errorf(codes.InvalidArgument, "The field `role` %s in the body is not valid. Please choose from: [ %v ]", r.GetName(), strings.Join(s.ListRole(), ", "))
 		}
 	}
 
@@ -59,71 +59,66 @@ func (s *service) CreateUser(user *datamodel.User) (*datamodel.User, error) {
 		return nil, err
 	}
 
-	return s.repository.GetUserByLogin(user.Login)
+	return s.repository.GetUserByID(user.ID)
 }
 
-// GetUserByLogin gets a user by login
-func (s *service) GetUserByLogin(login string) (*datamodel.User, error) {
+// GetUserByID gets a user by ID
+func (s *service) GetUserByID(id string) (*datamodel.User, error) {
 	// Validation: Required field
-	if login == "" {
-		return nil, status.Error(codes.FailedPrecondition, "The required field `login` is not specified")
+	if id == "" {
+		return nil, status.Error(codes.InvalidArgument, "The required field `id` is not specified")
 	}
 
-	return s.repository.GetUserByLogin(login)
+	return s.repository.GetUserByID(id)
 }
 
-// GetUser gets a user by uuid ID
-func (s *service) GetUser(id uuid.UUID) (*datamodel.User, error) {
+// GetUser gets a user by uuid
+func (s *service) GetUser(uid uuid.UUID) (*datamodel.User, error) {
 	// Validation: Required field
-	if id.IsNil() {
-		return nil, status.Error(codes.FailedPrecondition, "The required field `id` is not specified")
+	if uid.IsNil() {
+		return nil, status.Error(codes.InvalidArgument, "The required field `uid` is not specified")
 	}
-	return s.repository.GetUser(id)
+	return s.repository.GetUser(uid)
 }
 
-// UpdateUser updates a user by uuid ID
-func (s *service) UpdateUser(id uuid.UUID, user *datamodel.User) (*datamodel.User, error) {
+// UpdateUser updates a user by uuid
+func (s *service) UpdateUser(uid uuid.UUID, user *datamodel.User) (*datamodel.User, error) {
 	// Validation: Required field
-	if id.IsNil() {
-		return nil, status.Error(codes.FailedPrecondition, "The required field `id` is not specified")
+	if uid.IsNil() {
+		return nil, status.Error(codes.InvalidArgument, "The required field `uid` is not specified")
 	}
 
 	//Validation: role field
 	if user.Role.Valid {
 		if r := Role(user.Role.String); !ValidateRole(r) {
-			return nil, status.Errorf(codes.FailedPrecondition, "The field `role` %s in the body is not valid. Please choose from: [ %v ]", r.GetName(), strings.Join(s.ListRole(), ", "))
+			return nil, status.Errorf(codes.InvalidArgument, "The field `role` %s in the body is not valid. Please choose from: [ %v ]", r.GetName(), strings.Join(s.ListRole(), ", "))
 		}
 	}
 
-	// // Get the user
-	// if _, err := s.repository.GetUser(id); err != nil {
-	// return nil, err
-	// }
-
 	// Update the user
-	if err := s.repository.UpdateUser(id, user); err != nil {
+	if err := s.repository.UpdateUser(uid, user); err != nil {
 		return nil, err
 	}
 
 	// Get the updated user
-	return s.repository.GetUser(id)
+	return s.repository.GetUser(uid)
 }
 
-// DeleteUser deletes a user by uuid ID
-func (s *service) DeleteUser(id uuid.UUID) error {
+// DeleteUser deletes a user by uuid
+func (s *service) DeleteUser(uid uuid.UUID) error {
 	// Validation: Required field
-	if id.IsNil() {
-		return status.Error(codes.FailedPrecondition, "The required field `id` is not specified")
+	if uid.IsNil() {
+		return status.Error(codes.InvalidArgument, "The required field `uid` is not specified")
 	}
-	return s.repository.DeleteUser(id)
+	return s.repository.DeleteUser(uid)
 }
 
-// DeleteUserByLogin deletes a user by login
-func (s *service) DeleteUserByLogin(login string) error {
+// DeleteUserByID deletes a user by ID
+func (s *service) DeleteUserByID(id string) error {
 	// Validation: Required field
-	if login == "" {
-		return status.Error(codes.FailedPrecondition, "The required field `login` is not specified")
+	if id == "" {
+		return status.Error(codes.InvalidArgument, "The required field `id` is not specified")
 	}
 
-	return s.repository.DeleteUserByLogin(login)
+	return s.repository.DeleteUserByID(id)
 }

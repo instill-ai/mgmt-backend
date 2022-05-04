@@ -18,7 +18,10 @@ import (
 
 // TODO: Validate mask based on the field behavior.
 // Currently, the OUTPUT_ONLY fields are hard-coded.
-var outputOnlyFields = []string{"Name", "Id", "Type", "CreateTime", "UpdateTime"}
+var outputOnlyFields = []string{"Name", "Uid", "Type", "CreateTime", "UpdateTime"}
+
+const defaultPageSize = int32(10)
+const maxPageSize = int32(100)
 
 type handler struct {
 	mgmtPB.UnimplementedUserServiceServer
@@ -53,7 +56,14 @@ func (h *handler) Readiness(ctx context.Context, in *mgmtPB.ReadinessRequest) (*
 // ListUser lists all users
 func (h *handler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*mgmtPB.ListUserResponse, error) {
 
-	dbUsers, nextPageToken, totalSize, err := h.service.ListUser(int(req.GetPageSize()), req.GetPageToken())
+	pageSize := req.GetPageSize()
+	if pageSize == 0 {
+		pageSize = defaultPageSize
+	} else if pageSize > maxPageSize {
+		pageSize = maxPageSize
+	}
+
+	dbUsers, nextPageToken, totalSize, err := h.service.ListUser(int(pageSize), req.GetPageToken())
 
 	if err != nil {
 		return &mgmtPB.ListUserResponse{}, err
@@ -78,15 +88,17 @@ func (h *handler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*m
 
 // CreateUser creates a user. This endpoint is not supported.
 func (h *handler) CreateUser(ctx context.Context, req *mgmtPB.CreateUserRequest) (*mgmtPB.CreateUserResponse, error) {
-
-	return &mgmtPB.CreateUserResponse{User: &mgmtPB.User{}}, status.Error(codes.Unimplemented, "This endpoint is not supported")
+	// TODO: validate the user id conforms to RFC-1034, which restricts to letters, numbers,
+	// and hyphen, with the first character a letter, the last a letter or a
+	// number, and a 63 character maximum.
+	return &mgmtPB.CreateUserResponse{User: &mgmtPB.User{}}, status.Error(codes.Unimplemented, "this endpoint is not supported")
 }
 
 // GetUser gets a user
 func (h *handler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (*mgmtPB.GetUserResponse, error) {
-	login := strings.TrimPrefix(req.GetName(), "users/")
+	id := strings.TrimPrefix(req.GetName(), "users/")
 
-	dbUser, err := h.service.GetUserByLogin(login)
+	dbUser, err := h.service.GetUserByID(id)
 	if err != nil {
 		return &mgmtPB.GetUserResponse{}, err
 	}
@@ -108,7 +120,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 
 	// Validate the field mask
 	if !reqFieldMask.IsValid(reqUser) {
-		return &mgmtPB.UpdateUserResponse{}, status.Error(codes.FailedPrecondition, "The `update_mask` is invalid")
+		return &mgmtPB.UpdateUserResponse{}, status.Error(codes.InvalidArgument, "the `update_mask` is invalid")
 	}
 
 	mask, err := fieldmask_utils.MaskFromProtoFieldMask(reqFieldMask, strcase.ToCamel)
@@ -116,6 +128,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 		return &mgmtPB.UpdateUserResponse{}, err
 	}
 
+	// Remove OUTPUT_ONLY fields from the update mask
 	for _, field := range outputOnlyFields {
 		_, ok := mask.Filter(field)
 		if ok {
@@ -142,9 +155,18 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 		return &mgmtPB.UpdateUserResponse{}, err
 	}
 	pbUserToUpd := GResp.GetUser()
-	id, err := uuid.FromString(pbUserToUpd.GetId())
+	uid, err := uuid.FromString(pbUserToUpd.GetUid())
 	if err != nil {
 		return &mgmtPB.UpdateUserResponse{}, err
+	}
+
+	// Handle IMMUTABLE fields from the update mask:
+	// TODO: we hard coded the IMMUTABLE field "Id" here
+	_, ok := mask.Filter("Id")
+	if ok {
+		if reqUser.GetId() != pbUserToUpd.GetId() {
+			return &mgmtPB.UpdateUserResponse{}, status.Error(codes.InvalidArgument, "`id` is not allowed to be updated")
+		}
 	}
 
 	// Only the fields mentioned in the field mask will be copied to `pbUserToUpd`, other fields are left intact
@@ -158,7 +180,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 		return &mgmtPB.UpdateUserResponse{}, err
 	}
 
-	dbUserUpdated, err := h.service.UpdateUser(id, dbUserToUpd)
+	dbUserUpdated, err := h.service.UpdateUser(uid, dbUserToUpd)
 	if err != nil {
 		return &mgmtPB.UpdateUserResponse{}, err
 	}
@@ -175,5 +197,5 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 
 // DeleteUser deletes a user. This endpoint is not supported.
 func (h *handler) DeleteUser(ctx context.Context, req *mgmtPB.DeleteUserRequest) (*mgmtPB.DeleteUserResponse, error) {
-	return &mgmtPB.DeleteUserResponse{}, status.Error(codes.Unimplemented, "This endpoint is not supported")
+	return &mgmtPB.DeleteUserResponse{}, status.Error(codes.Unimplemented, "this endpoint is not supported")
 }

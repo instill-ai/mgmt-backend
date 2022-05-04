@@ -5,44 +5,45 @@
   "description": "The standard user data structure",
   "type": "object",
   "additionalProperties": false,
-  "required": ["login", "usage_data_collection", "newsletter_subscription"],
+  "required": ["id", "usage_data_collection", "newsletter_subscription"],
   "properties": {
     "name": {
       "type": "string",
-      "title": "Resource identifier",
-      "description": "The resource identifier",
+      "title": "Resource name",
+      "description": "The resource name",
       "readOnly": true,
-      "order": 0
+      "instill_order": 0
     },
-    "id": {
+    "uid": {
       "type": "string",
       "format": "uuid",
-      "title": "ID",
-      "description": "The unique ID",
+      "title": "UUID",
+      "description": "The unique UUID",
       "readOnly": true,
-      "order": 1
+      "instill_order": 1
     },
     "email": {
       "type": "string",
       "format": "email",
       "title": "Your email",
       "description": "Fill your email address",
-      "order": 2
+      "instill_order": 2
     },
-    "login": {
+    "id": {
       "type": "string",
       "title": "Username",
       "description": "Pick a username that is unique",
       "pattern": "^([a-z0-9]+[-]{1})*[a-z0-9]{1,39}$",
       "minLength": 1,
       "maxLength": 39,
-      "order": 3
+      "readOnly": true,
+      "instill_order": 3
     },
     "company_name": {
       "type": "string",
       "title": "Your company",
       "description": "Fill the name of your company",
-      "order": 4
+      "instill_order": 4
     },
     "role": {
       "type": "string",
@@ -57,21 +58,21 @@
         "analytics-engineer",
         "hobbyist"
       ],
-      "order": 5
+      "instill_order": 5
     },
     "usage_data_collection": {
       "type": "boolean",
       "title": "Anonymize usage data collection",
       "description": "We collect data only for product improvements",
       "default": false,
-      "order": 6
+      "instill_order": 6
     },
     "newsletter_subscription": {
       "type": "boolean",
       "title": "Newsletter subscription",
       "description": "Receive the latest news from Instill AI including open source updates, community highlights, blog posts, useful tutorials and more! You can unsubscribe any time.",
       "default": false,
-      "order": 7
+      "instill_order": 7
     },
     "type": {
       "type": "string",
@@ -84,7 +85,7 @@
       ],
       "default": "OWNER_TYPE_USER",
       "readOnly": true,
-      "order": 8
+      "instill_order": 8
     },
     "create_time": {
       "type": "string",
@@ -93,7 +94,7 @@
       "description": "The date when the user is created in the format YYYY-MM-DDTHH:MM::SS",
       "examples": ["2022-04-29T00:20:06.703547Z"],
       "readOnly": true,
-      "order": 9
+      "instill_order": 9
     },
     "update_time": {
       "type": "string",
@@ -102,7 +103,7 @@
       "description": "The date when the pipeline is updated in the format YYYY-MM-DDTHH:MM::SS",
       "examples": ["2022-04-29T01:33:34.910865Z"],
       "readOnly": true,
-      "order": 10
+      "instill_order": 10
     }
   }
 }
