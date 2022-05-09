@@ -41,7 +41,7 @@ func createDefaultUser(db *gorm.DB) error {
 	}
 
 	if s, ok := status.FromError(err); !ok || s.Code() != codes.NotFound {
-		return status.Errorf(codes.Internal, "Error %v", err)
+		return status.Errorf(codes.Internal, "error %v", err)
 	}
 
 	// Create the default user

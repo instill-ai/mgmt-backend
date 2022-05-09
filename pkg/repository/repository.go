@@ -38,7 +38,7 @@ func NewRepository(db *gorm.DB) Repository {
 func (r *repository) ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int, error) {
 	totalSize := int64(0)
 	if result := r.db.Model(&datamodel.User{}).Count(&totalSize); result.Error != nil {
-		return nil, "", int(totalSize), status.Errorf(codes.Internal, "Error %v", result.Error)
+		return nil, "", int(totalSize), status.Errorf(codes.Internal, "error %v", result.Error)
 	}
 
 	queryBuilder := r.db.Model(&datamodel.User{}).Order("create_time DESC, id DESC")
@@ -66,7 +66,7 @@ func (r *repository) ListUser(pageSize int, pageToken string) ([]datamodel.User,
 	for rows.Next() {
 		var item datamodel.User
 		if err = r.db.ScanRows(rows, &item); err != nil {
-			return nil, "", int(totalSize), status.Errorf(codes.Internal, "Error %v", err.Error())
+			return nil, "", int(totalSize), status.Errorf(codes.Internal, "error %v", err.Error())
 		}
 		createTime = item.CreateTime
 		users = append(users, item)
@@ -88,7 +88,7 @@ func (r *repository) ListUser(pageSize int, pageToken string) ([]datamodel.User,
 // CreateUser creates a new user
 func (r *repository) CreateUser(user *datamodel.User) error {
 	if result := r.db.Model(&datamodel.User{}).Create(user); result.Error != nil {
-		return status.Errorf(codes.Internal, "Error %v", result.Error)
+		return status.Errorf(codes.Internal, "error %v", result.Error)
 	}
 	return nil
 }
@@ -98,7 +98,7 @@ func (r *repository) GetUser(uid uuid.UUID) (*datamodel.User, error) {
 	var user datamodel.User
 	if result := r.db.First(&user, "uid = ?", uid.String()); result.Error != nil {
 
-		return nil, status.Error(codes.NotFound, "The user is not found")
+		return nil, status.Error(codes.NotFound, "the user is not found")
 	}
 	return &user, nil
 }
@@ -107,7 +107,7 @@ func (r *repository) GetUser(uid uuid.UUID) (*datamodel.User, error) {
 func (r *repository) GetUserByID(id string) (*datamodel.User, error) {
 	var user datamodel.User
 	if result := r.db.Model(&datamodel.User{}).Where("id = ?", id).First(&user); result.Error != nil {
-		return nil, status.Errorf(codes.NotFound, "The user with id `%s` specified is not found", id)
+		return nil, status.Error(codes.NotFound, "the user is not found")
 	}
 	return &user, nil
 }
@@ -115,7 +115,7 @@ func (r *repository) GetUserByID(id string) (*datamodel.User, error) {
 // UpdateUser updates a user by uuid
 func (r *repository) UpdateUser(uid uuid.UUID, user *datamodel.User) error {
 	if result := r.db.Select("*").Omit("UID").Model(&datamodel.User{}).Where("uid = ?", uid.String()).Updates(user); result.Error != nil {
-		return status.Errorf(codes.Internal, "Error %v", result.Error)
+		return status.Errorf(codes.Internal, "error %v", result.Error)
 	}
 	return nil
 }
@@ -125,11 +125,11 @@ func (r *repository) DeleteUser(uid uuid.UUID) error {
 	result := r.db.Model(&datamodel.User{}).Where("uid = ?", uid.String()).Delete(&datamodel.User{})
 
 	if result.Error != nil {
-		return status.Errorf(codes.Internal, "Error %v", result.Error)
+		return status.Errorf(codes.Internal, "error %v", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
-		return status.Error(codes.NotFound, "The user is not found")
+		return status.Error(codes.NotFound, "the user is not found")
 	}
 
 	return nil
@@ -140,11 +140,11 @@ func (r *repository) DeleteUserByID(id string) error {
 	result := r.db.Model(&datamodel.User{}).Where("id = ?", id).Delete(&datamodel.User{})
 
 	if result.Error != nil {
-		return status.Errorf(codes.Internal, "Error %v", result.Error)
+		return status.Errorf(codes.Internal, "error %v", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
-		return status.Errorf(codes.NotFound, "The user with id `%s` specified is not found", id)
+		return status.Error(codes.NotFound, "the user is not found")
 	}
 
 	return nil

@@ -51,7 +51,7 @@ func (s *service) CreateUser(user *datamodel.User) (*datamodel.User, error) {
 	//Validation: role field
 	if user.Role.Valid {
 		if r := Role(user.Role.String); !ValidateRole(r) {
-			return nil, status.Errorf(codes.InvalidArgument, "The field `role` %s in the body is not valid. Please choose from: [ %v ]", r.GetName(), strings.Join(s.ListRole(), ", "))
+			return nil, status.Errorf(codes.InvalidArgument, "`role` %s in the body is not valid. Please choose from: [ %v ]", r.GetName(), strings.Join(s.ListRole(), ", "))
 		}
 	}
 
@@ -66,7 +66,7 @@ func (s *service) CreateUser(user *datamodel.User) (*datamodel.User, error) {
 func (s *service) GetUserByID(id string) (*datamodel.User, error) {
 	// Validation: Required field
 	if id == "" {
-		return nil, status.Error(codes.InvalidArgument, "The required field `id` is not specified")
+		return nil, status.Error(codes.InvalidArgument, "the required field `id` is not specified")
 	}
 
 	return s.repository.GetUserByID(id)
@@ -76,7 +76,7 @@ func (s *service) GetUserByID(id string) (*datamodel.User, error) {
 func (s *service) GetUser(uid uuid.UUID) (*datamodel.User, error) {
 	// Validation: Required field
 	if uid.IsNil() {
-		return nil, status.Error(codes.InvalidArgument, "The required field `uid` is not specified")
+		return nil, status.Error(codes.InvalidArgument, "the required field `uid` is not specified")
 	}
 	return s.repository.GetUser(uid)
 }
@@ -85,13 +85,13 @@ func (s *service) GetUser(uid uuid.UUID) (*datamodel.User, error) {
 func (s *service) UpdateUser(uid uuid.UUID, user *datamodel.User) (*datamodel.User, error) {
 	// Validation: Required field
 	if uid.IsNil() {
-		return nil, status.Error(codes.InvalidArgument, "The required field `uid` is not specified")
+		return nil, status.Error(codes.InvalidArgument, "the required field `uid` is not specified")
 	}
 
 	//Validation: role field
 	if user.Role.Valid {
 		if r := Role(user.Role.String); !ValidateRole(r) {
-			return nil, status.Errorf(codes.InvalidArgument, "The field `role` %s in the body is not valid. Please choose from: [ %v ]", r.GetName(), strings.Join(s.ListRole(), ", "))
+			return nil, status.Errorf(codes.InvalidArgument, "`role` %s in the body is not valid. Please choose from: [ %v ]", r.GetName(), strings.Join(s.ListRole(), ", "))
 		}
 	}
 
@@ -108,7 +108,7 @@ func (s *service) UpdateUser(uid uuid.UUID, user *datamodel.User) (*datamodel.Us
 func (s *service) DeleteUser(uid uuid.UUID) error {
 	// Validation: Required field
 	if uid.IsNil() {
-		return status.Error(codes.InvalidArgument, "The required field `uid` is not specified")
+		return status.Error(codes.InvalidArgument, "the required field `uid` is not specified")
 	}
 	return s.repository.DeleteUser(uid)
 }
@@ -117,7 +117,7 @@ func (s *service) DeleteUser(uid uuid.UUID) error {
 func (s *service) DeleteUserByID(id string) error {
 	// Validation: Required field
 	if id == "" {
-		return status.Error(codes.InvalidArgument, "The required field `id` is not specified")
+		return status.Error(codes.InvalidArgument, "the required field `id` is not specified")
 	}
 
 	return s.repository.DeleteUserByID(id)
