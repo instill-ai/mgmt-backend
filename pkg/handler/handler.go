@@ -91,6 +91,12 @@ func (h *handler) CreateUser(ctx context.Context, req *mgmtPB.CreateUserRequest)
 	// TODO: validate the user id conforms to RFC-1034, which restricts to letters, numbers,
 	// and hyphen, with the first character a letter, the last a letter or a
 	// number, and a 63 character maximum.
+
+	// Validation: `id` can't be UUID
+	if uid := uuid.FromStringOrNil(req.GetUser().GetId()); !uid.IsNil() {
+		return &mgmtPB.CreateUserResponse{}, status.Error(codes.InvalidArgument, "`id` is invalid, can't use UUID")
+	}
+
 	return &mgmtPB.CreateUserResponse{User: &mgmtPB.User{}}, status.Error(codes.Unimplemented, "this endpoint is not supported")
 }
 
