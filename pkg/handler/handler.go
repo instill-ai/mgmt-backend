@@ -120,7 +120,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 
 	// Validate the field mask
 	if !reqFieldMask.IsValid(reqUser) {
-		return &mgmtPB.UpdateUserResponse{}, status.Error(codes.InvalidArgument, "the `update_mask` is invalid")
+		return &mgmtPB.UpdateUserResponse{}, status.Error(codes.InvalidArgument, "`update_mask` is invalid")
 	}
 
 	mask, err := fieldmask_utils.MaskFromProtoFieldMask(reqFieldMask, strcase.ToCamel)
@@ -136,26 +136,23 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 		}
 	}
 
-	if mask.IsEmpty() {
-		// return the un-changed user `pbUserToUpd`
-		GResp, err := h.GetUser(ctx, &mgmtPB.GetUserRequest{Name: reqUser.GetName()})
-		if err != nil {
-			return &mgmtPB.UpdateUserResponse{}, err
-		}
-
-		resp := mgmtPB.UpdateUserResponse{
-			User: GResp.GetUser(),
-		}
-		return &resp, nil
-	}
-
-	// the current user `pbUserToUpd`: a struct to copy to
+	// Get current user
 	GResp, err := h.GetUser(ctx, &mgmtPB.GetUserRequest{Name: reqUser.GetName()})
 	if err != nil {
 		return &mgmtPB.UpdateUserResponse{}, err
 	}
-	pbUserToUpd := GResp.GetUser()
-	uid, err := uuid.FromString(pbUserToUpd.GetUid())
+	pbUserToUpdate := GResp.GetUser()
+
+	if mask.IsEmpty() {
+		// return the un-changed user `pbUserToUpdate`
+		resp := mgmtPB.UpdateUserResponse{
+			User: pbUserToUpdate,
+		}
+		return &resp, nil
+	}
+
+	// the current user `pbUserToUpdate`: a struct to copy to
+	uid, err := uuid.FromString(pbUserToUpdate.GetUid())
 	if err != nil {
 		return &mgmtPB.UpdateUserResponse{}, err
 	}
@@ -164,18 +161,18 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 	// TODO: we hard coded the IMMUTABLE field "Id" here
 	_, ok := mask.Filter("Id")
 	if ok {
-		if reqUser.GetId() != pbUserToUpd.GetId() {
+		if reqUser.GetId() != pbUserToUpdate.GetId() {
 			return &mgmtPB.UpdateUserResponse{}, status.Error(codes.InvalidArgument, "`id` is not allowed to be updated")
 		}
 	}
 
-	// Only the fields mentioned in the field mask will be copied to `pbUserToUpd`, other fields are left intact
-	err = fieldmask_utils.StructToStruct(mask, reqUser, pbUserToUpd)
+	// Only the fields mentioned in the field mask will be copied to `pbUserToUpdate`, other fields are left intact
+	err = fieldmask_utils.StructToStruct(mask, reqUser, pbUserToUpdate)
 	if err != nil {
 		return &mgmtPB.UpdateUserResponse{}, err
 	}
 
-	dbUserToUpd, err := PBUser2DBUser(pbUserToUpd)
+	dbUserToUpd, err := PBUser2DBUser(pbUserToUpdate)
 	if err != nil {
 		return &mgmtPB.UpdateUserResponse{}, err
 	}
