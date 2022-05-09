@@ -11,6 +11,7 @@ import (
 
 	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 
+	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 
 	mgmtPB "github.com/instill-ai/protogen-go/mgmt/v1alpha"
@@ -102,12 +103,20 @@ func (h *handler) CreateUser(ctx context.Context, req *mgmtPB.CreateUserRequest)
 
 // GetUser gets a user
 func (h *handler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (*mgmtPB.GetUserResponse, error) {
-	id := strings.TrimPrefix(req.GetName(), "users/")
+	sub := strings.TrimPrefix(req.GetName(), "users/")
 
-	dbUser, err := h.service.GetUserByID(id)
+	// Validation: whether the request queries user by `id` or `uid`
+	var dbUser *datamodel.User
+	var err error
+	if uid := uuid.FromStringOrNil(sub); uid.IsNil() {
+		dbUser, err = h.service.GetUserByID(sub) // `id`
+	} else {
+		dbUser, err = h.service.GetUser(uid) // `uid`
+	}
 	if err != nil {
 		return &mgmtPB.GetUserResponse{}, err
 	}
+
 	pbUser, err := DBUser2PBUser(dbUser)
 	if err != nil {
 		return &mgmtPB.GetUserResponse{}, err
