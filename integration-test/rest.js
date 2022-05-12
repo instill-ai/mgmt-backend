@@ -34,6 +34,7 @@ export default function (data) {
   user.CheckList();
   user.CheckCreate();
   user.CheckGet();
+  user.CheckLookUp();
   user.CheckUpdate();
   user.CheckDelete();
 }

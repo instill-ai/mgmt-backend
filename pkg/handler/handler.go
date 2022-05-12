@@ -11,7 +11,8 @@ import (
 
 	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 
-	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
+	checkfield "github.com/instill-ai/x/checkfield"
+
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 
 	mgmtPB "github.com/instill-ai/protogen-go/mgmt/v1alpha"
@@ -19,10 +20,11 @@ import (
 
 // TODO: Validate mask based on the field behavior.
 // Currently, the OUTPUT_ONLY fields are hard-coded.
-var outputOnlyFields = []string{"Name", "Uid", "Type", "CreateTime", "UpdateTime"}
+var outputOnlyFields = []string{"name", "uid", "type", "create_time", "update_time"}
+var immutableFields = []string{"id"}
 
-const defaultPageSize = int32(10)
-const maxPageSize = int32(100)
+const defaultPageSize = int64(10)
+const maxPageSize = int64(100)
 
 type handler struct {
 	mgmtPB.UnimplementedUserServiceServer
@@ -82,37 +84,30 @@ func (h *handler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*m
 	resp := mgmtPB.ListUserResponse{
 		Users:         pbUsers,
 		NextPageToken: nextPageToken,
-		TotalSize:     int32(totalSize),
+		TotalSize:     int64(totalSize),
 	}
 	return &resp, nil
 }
 
 // CreateUser creates a user. This endpoint is not supported.
 func (h *handler) CreateUser(ctx context.Context, req *mgmtPB.CreateUserRequest) (*mgmtPB.CreateUserResponse, error) {
-	// TODO: validate the user id conforms to RFC-1034, which restricts to letters, numbers,
+	// Validate the user id conforms to RFC-1034, which restricts to letters, numbers,
 	// and hyphen, with the first character a letter, the last a letter or a
 	// number, and a 63 character maximum.
-
-	// Validation: `id` can't be UUID
-	if uid := uuid.FromStringOrNil(req.GetUser().GetId()); !uid.IsNil() {
-		return &mgmtPB.CreateUserResponse{}, status.Error(codes.InvalidArgument, "`id` is invalid, can't use UUID")
+	id := req.GetUser().GetId()
+	err := checkfield.CheckResourceID(id)
+	if err != nil {
+		return &mgmtPB.CreateUserResponse{}, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	return &mgmtPB.CreateUserResponse{User: &mgmtPB.User{}}, status.Error(codes.Unimplemented, "this endpoint is not supported")
+	return &mgmtPB.CreateUserResponse{}, status.Error(codes.Unimplemented, "this endpoint is not supported")
 }
 
 // GetUser gets a user
 func (h *handler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (*mgmtPB.GetUserResponse, error) {
-	sub := strings.TrimPrefix(req.GetName(), "users/")
+	id := strings.TrimPrefix(req.GetName(), "users/")
 
-	// Validation: whether the request queries user by `id` or `uid`
-	var dbUser *datamodel.User
-	var err error
-	if uid := uuid.FromStringOrNil(sub); uid.IsNil() {
-		dbUser, err = h.service.GetUserByID(sub) // `id`
-	} else {
-		dbUser, err = h.service.GetUser(uid) // `uid`
-	}
+	dbUser, err := h.service.GetUserByID(id)
 	if err != nil {
 		return &mgmtPB.GetUserResponse{}, err
 	}
@@ -128,27 +123,47 @@ func (h *handler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (*mgm
 	return &resp, nil
 }
 
+// LookUpUser gets a user by permalink
+func (h *handler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserRequest) (*mgmtPB.LookUpUserResponse, error) {
+	uidStr := strings.TrimPrefix(req.GetPermalink(), "users/")
+	// Validation: `uid` in request is valid
+	uid, err := uuid.FromString(uidStr)
+	if err != nil {
+		return &mgmtPB.LookUpUserResponse{}, status.Error(codes.InvalidArgument, "permalink is invalid")
+	}
+
+	dbUser, err := h.service.GetUser(uid)
+	if err != nil {
+		return &mgmtPB.LookUpUserResponse{}, err
+	}
+
+	pbUser, err := DBUser2PBUser(dbUser)
+	if err != nil {
+		return &mgmtPB.LookUpUserResponse{}, err
+	}
+	resp := mgmtPB.LookUpUserResponse{
+		User: pbUser,
+	}
+	return &resp, nil
+}
+
 // UpdateUser updates an existing user
 func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest) (*mgmtPB.UpdateUserResponse, error) {
 	reqUser := req.GetUser()
-	reqFieldMask := req.GetUpdateMask()
 
 	// Validate the field mask
-	if !reqFieldMask.IsValid(reqUser) {
+	if !req.GetUpdateMask().IsValid(reqUser) {
 		return &mgmtPB.UpdateUserResponse{}, status.Error(codes.InvalidArgument, "`update_mask` is invalid")
+	}
+
+	reqFieldMask, err := checkfield.CheckOutputOnlyFieldsUpdate(req.GetUpdateMask(), outputOnlyFields)
+	if err != nil {
+		return &mgmtPB.UpdateUserResponse{}, err
 	}
 
 	mask, err := fieldmask_utils.MaskFromProtoFieldMask(reqFieldMask, strcase.ToCamel)
 	if err != nil {
 		return &mgmtPB.UpdateUserResponse{}, err
-	}
-
-	// Remove OUTPUT_ONLY fields from the update mask
-	for _, field := range outputOnlyFields {
-		_, ok := mask.Filter(field)
-		if ok {
-			delete(mask, field)
-		}
 	}
 
 	// Get current user
@@ -172,14 +187,20 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 		return &mgmtPB.UpdateUserResponse{}, err
 	}
 
-	// Handle IMMUTABLE fields from the update mask:
-	// TODO: we hard coded the IMMUTABLE field "Id" here
-	_, ok := mask.Filter("Id")
-	if ok {
-		if reqUser.GetId() != pbUserToUpdate.GetId() {
-			return &mgmtPB.UpdateUserResponse{}, status.Error(codes.InvalidArgument, "`id` is not allowed to be updated")
-		}
+	// Handle immutable fields from the update mask
+	err = checkfield.CheckImmutableFieldsUpdate(reqUser, pbUserToUpdate, immutableFields)
+	if err != nil {
+		return &mgmtPB.UpdateUserResponse{}, status.Error(codes.InvalidArgument, err.Error())
 	}
+
+	// // Handle IMMUTABLE fields from the update mask:
+	// // TODO: we hard coded the IMMUTABLE field "Id" here
+	// _, ok := mask.Filter("Id")
+	// if ok {
+	// 	if reqUser.GetId() != pbUserToUpdate.GetId() {
+	// 		return &mgmtPB.UpdateUserResponse{}, status.Error(codes.InvalidArgument, "`id` is not allowed to be updated")
+	// 	}
+	// }
 
 	// Only the fields mentioned in the field mask will be copied to `pbUserToUpdate`, other fields are left intact
 	err = fieldmask_utils.StructToStruct(mask, reqUser, pbUserToUpdate)
