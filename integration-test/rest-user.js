@@ -100,38 +100,46 @@ export function CheckGet() {
 }
 
 export function CheckLookUp() {
+  // Get the uid of the default user
+  var res = http.request(
+    "GET",
+    `${constant.mgmtHost}/users/${constant.defaultUser.id}`
+  );
+  defaultUid = res.json().user.uid;
+
   group(`Management API: Look up default user by permalink`, () => {
     check(
-      http.request(
-        "GET",
-        `${constant.mgmtHost}/users/${constant.defaultUser.uid}:lookUp`
-      ),
+      http.request("GET", `${constant.mgmtHost}/users/${defaultUid}:lookUp`),
       {
-        [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.uid} response status 200`]:
+        [`GET /${constant.mgmtVersion}/users/${defaultUid} response status 200`]:
           (r) => r.status === 200,
-        [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.uid} response name`]:
-          (r) => r.json().user.name !== undefined,
-        [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.uid} response uid is UUID`]:
+        [`GET /${constant.mgmtVersion}/users/${defaultUid} response name`]: (
+          r
+        ) => r.json().user.name !== undefined,
+        [`GET /${constant.mgmtVersion}/users/${defaultUid} response uid is UUID`]:
           (r) => helper.isUUID(r.json().user.uid),
-        [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.uid} response id`]:
-          (r) => r.json().user.id !== undefined,
-        [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.uid} response email`]:
-          (r) => r.json().user.email !== undefined,
-        [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.uid} response id`]:
-          (r) => r.json().user.id === constant.defaultUser.id,
-        [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.uid} response company_name`]:
+        [`GET /${constant.mgmtVersion}/users/${defaultUid} response id`]: (r) =>
+          r.json().user.id !== undefined,
+        [`GET /${constant.mgmtVersion}/users/${defaultUid} response email`]: (
+          r
+        ) => r.json().user.email !== undefined,
+        [`GET /${constant.mgmtVersion}/users/${defaultUid} response id`]: (r) =>
+          r.json().user.id === constant.defaultUser.id,
+        [`GET /${constant.mgmtVersion}/users/${defaultUid} response company_name`]:
           (r) => r.json().user.company_name !== undefined,
-        [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.uid} response role`]:
-          (r) => r.json().user.role !== undefined,
-        [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.uid} response usage_data_collection`]:
+        [`GET /${constant.mgmtVersion}/users/${defaultUid} response role`]: (
+          r
+        ) => r.json().user.role !== undefined,
+        [`GET /${constant.mgmtVersion}/users/${defaultUid} response usage_data_collection`]:
           (r) => r.json().user.usage_data_collection !== undefined,
-        [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.uid} response newsletter_subscription`]:
+        [`GET /${constant.mgmtVersion}/users/${defaultUid} response newsletter_subscription`]:
           (r) => r.json().user.newsletter_subscription !== undefined,
-        [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.uid} response type`]:
-          (r) => r.json().user.type === "OWNER_TYPE_USER",
-        [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.uid} response create_time`]:
+        [`GET /${constant.mgmtVersion}/users/${defaultUid} response type`]: (
+          r
+        ) => r.json().user.type === "OWNER_TYPE_USER",
+        [`GET /${constant.mgmtVersion}/users/${defaultUid} response create_time`]:
           (r) => r.json().user.create_time !== undefined,
-        [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.uid} response update_time`]:
+        [`GET /${constant.mgmtVersion}/users/${defaultUid} response update_time`]:
           (r) => r.json().user.update_time !== undefined,
       }
     );
