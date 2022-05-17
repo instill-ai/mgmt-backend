@@ -156,7 +156,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 		return &mgmtPB.UpdateUserResponse{}, status.Error(codes.InvalidArgument, "`update_mask` is invalid")
 	}
 
-	reqFieldMask, err := checkfield.CheckOutputOnlyFieldsUpdate(req.GetUpdateMask(), outputOnlyFields)
+	reqFieldMask, err := checkfield.CheckUpdateOutputOnlyFields(req.GetUpdateMask(), outputOnlyFields)
 	if err != nil {
 		return &mgmtPB.UpdateUserResponse{}, err
 	}
@@ -188,7 +188,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 	}
 
 	// Handle immutable fields from the update mask
-	err = checkfield.CheckImmutableFieldsUpdate(reqUser, pbUserToUpdate, immutableFields)
+	err = checkfield.CheckUpdateImmutableFields(reqUser, pbUserToUpdate, immutableFields)
 	if err != nil {
 		return &mgmtPB.UpdateUserResponse{}, status.Error(codes.InvalidArgument, err.Error())
 	}

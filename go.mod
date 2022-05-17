@@ -8,8 +8,8 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.10.0
 	github.com/iancoleman/strcase v0.2.0
-	github.com/instill-ai/protogen-go v0.1.5-alpha.0.20220509135836-cf927b8d2d64
-	github.com/instill-ai/x v0.1.0-alpha.0.20220511011451-83b1d7b1bffd
+	github.com/instill-ai/protogen-go v0.1.5-alpha.0.20220517005010-6963c56ac4fc
+	github.com/instill-ai/x v0.1.0-alpha.0.20220516185949-c80ecc26af91
 	github.com/knadh/koanf v1.4.1
 	github.com/mennanov/fieldmask-utils v0.5.0
 	go.uber.org/zap v1.21.0
@@ -22,9 +22,6 @@ require (
 
 require (
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
-	github.com/gogo/googleapis v1.4.1 // indirect
-	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/gogo/status v1.1.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
