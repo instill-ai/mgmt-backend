@@ -12,12 +12,11 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 )
 
-// DefaultUserUID is the UUIDv4 id of the default user
-const DefaultUserUID string = "2a06c2f7-8da9-4046-91ea-240f88a5d729"
-
 // CreateDefaultUser creates a default user in the database
 func createDefaultUser(db *gorm.DB) error {
-	defaultUID, err := uuid.FromString(DefaultUserUID)
+
+	// Generate a random uid to the user
+	defaultUserUID, err := uuid.NewV4()
 	if err != nil {
 		return err
 	}
@@ -25,7 +24,7 @@ func createDefaultUser(db *gorm.DB) error {
 	r := repository.NewRepository(db)
 
 	defaultUser := datamodel.User{
-		Base:                   datamodel.Base{UID: defaultUID},
+		Base:                   datamodel.Base{UID: defaultUserUID},
 		ID:                     "local-user",
 		Email:                  sql.NullString{String: "hello@instill.tech", Valid: true},
 		CompanyName:            sql.NullString{String: "Instill AI", Valid: true},
