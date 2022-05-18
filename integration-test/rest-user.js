@@ -105,7 +105,7 @@ export function CheckLookUp() {
     "GET",
     `${constant.mgmtHost}/users/${constant.defaultUser.id}`
   );
-  defaultUid = res.json().user.uid;
+  var defaultUid = res.json().user.uid;
 
   group(`Management API: Look up default user by permalink`, () => {
     check(

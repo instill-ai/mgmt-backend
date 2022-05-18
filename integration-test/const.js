@@ -3,9 +3,9 @@ export const mgmtHost = `http://localhost:8080/${mgmtVersion}`;
 
 export const defaultUser = {
   name: "users/instill",
-  email: "hello@instill.tech",
+  email: "",
   id: "local-user",
-  company_name: "Instill AI",
+  company_name: "",
   role: "",
   usage_data_collection: false,
   newsletter_subscription: false,

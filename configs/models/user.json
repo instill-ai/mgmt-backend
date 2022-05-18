@@ -35,7 +35,7 @@
       "description": "Fill your email address",
       "ui_order": 2,
       "ui_component": "text_email",
-      "ui_placeholder": "hello@instill.tech"
+      "ui_placeholder": ""
     },
     "id": {
       "type": "string",
@@ -58,7 +58,7 @@
       "ui_order": 4,
       "maxLength": 255,
       "ui_component": "text",
-      "ui_placeholder": "Instill AI"
+      "ui_placeholder": ""
     },
     "role": {
       "type": "string",
