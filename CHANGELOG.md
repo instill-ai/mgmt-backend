@@ -1,5 +1,12 @@
 # Changelog
 
+### [0.1.1-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.1.0-alpha...v0.1.1-alpha) (2022-05-18)
+
+
+### Bug Fixes
+
+* use dynamic uid for default user ([eac0d03](https://github.com/instill-ai/mgmt-backend/commit/eac0d035657bff89462b691a01ae3f3d58e58871))
+
 ## [0.1.0-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.0.0-alpha...v0.1.0-alpha) (2022-05-12)
 
 
