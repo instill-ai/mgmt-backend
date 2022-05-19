@@ -3,10 +3,7 @@ server:
   https:
     cert:   # /ssl/tls.crt
     key:    # /ssl/tls.key
-  corsorigins:
-    - http://localhost
-    - https://instill-inc.tech
-    - https://instill.tech
+  corsorigins: http://localhost:3000   # separate domains with ",";
 database:
   username: postgres
   password: password
