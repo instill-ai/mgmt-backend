@@ -30,7 +30,7 @@ type ServerConfig struct {
 		Cert string `koanf:"cert"`
 		Key  string `koanf:"key"`
 	}
-	CORSOrigins []string `koanf:"corsorigins"`
+	CORSOrigins string `koanf:"corsorigins"`
 	Paginate    struct {
 		Salt string `koanf:"salt"`
 	}
