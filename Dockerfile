@@ -17,7 +17,7 @@ WORKDIR /mgmt-backend
 COPY --from=build /mgmt-backend ./
 COPY --from=build /mgmt-backend-migrate ./
 COPY --from=build /mgmt-backend-init ./
-COPY --from=build /go/src/configs ./configs
+COPY --from=build /go/src/config ./config
 COPY --from=build /go/src/internal/db/migration ./internal/db/migration
 
 EXPOSE 8080/tcp

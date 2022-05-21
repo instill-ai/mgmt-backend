@@ -3,7 +3,7 @@ package main
 import (
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 
-	"github.com/instill-ai/mgmt-backend/configs"
+	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/internal/logger"
 
 	database "github.com/instill-ai/mgmt-backend/internal/db"
@@ -19,7 +19,7 @@ func main() {
 
 	grpc_zap.ReplaceGrpcLoggerV2(logger)
 
-	if err := configs.Init(); err != nil {
+	if err := config.Init(); err != nil {
 		logger.Fatal(err.Error())
 	}
 

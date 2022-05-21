@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 
-	configs "github.com/instill-ai/mgmt-backend/configs"
+	config "github.com/instill-ai/mgmt-backend/config"
 )
 
 var db *gorm.DB
@@ -17,7 +17,7 @@ var once sync.Once
 
 func GetConnection() *gorm.DB {
 	once.Do(func() {
-		databaseConfig := configs.Config.Database
+		databaseConfig := config.Config.Database
 		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable TimeZone=%s",
 			databaseConfig.Host,
 			databaseConfig.Username,

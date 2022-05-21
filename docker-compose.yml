@@ -17,7 +17,7 @@ services:
       CFG_DATABASE_USERNAME: postgres
       CFG_DATABASE_PASSWORD: password
     volumes:
-      - ./configs:/mgmt-backend/configs
+      - ./config:/mgmt-backend/config
     entrypoint: ./mgmt-backend-migrate
     depends_on:
       pg_sql:
@@ -35,7 +35,7 @@ services:
       CFG_DATABASE_USERNAME: postgres
       CFG_DATABASE_PASSWORD: password
     volumes:
-      - ./configs:/mgmt-backend/configs
+      - ./config:/mgmt-backend/config
     entrypoint: ./mgmt-backend-init
     depends_on:
       - mgmt_backend_migrate
@@ -56,7 +56,7 @@ services:
     ports:
       - 8080:8080
     volumes:
-      - ./configs:/mgmt-backend/configs
+      - ./config:/mgmt-backend/config
     depends_on:
       - mgmt_backend_init
 
