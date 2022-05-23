@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
@@ -32,48 +33,21 @@ import (
 	mgmtPB "github.com/instill-ai/protogen-go/mgmt/v1alpha"
 )
 
-// contains checks if a string is present in a slice
-func contains(s []string, str string) bool {
-	for _, v := range s {
-		if v == str {
-			return true
-		}
-	}
-	return false
-}
-
-// preflightHandler adds the necessary headers in order to serve
-// CORS from any origin using the methods "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"
-func preflightHandler(w http.ResponseWriter) {
-	headers := []string{"Content-Type", "Accept", "Authorization"}
-	w.Header().Set("Access-Control-Allow-Headers", strings.Join(headers, ","))
-	methods := []string{"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"}
-	w.Header().Set("Access-Control-Allow-Methods", strings.Join(methods, ","))
-}
-
-// allowCORS allows Cross Origin Resource Sharing from given origin.
-// TODO: current function does not allow using wildcard * for subdomains
-func allowCors(w http.ResponseWriter, r *http.Request, CORSOrigins []string) {
-	if origin := r.Header.Get("Origin"); origin != "" && contains(CORSOrigins, origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-		if r.Method == "OPTIONS" && r.Header.Get("Access-Control-Request-Method") != "" {
-			preflightHandler(w)
-		}
-	}
-}
-
 func grpcHandlerFunc(grpcServer *grpc.Server, gwHandler http.Handler, CORSOrigins []string) http.Handler {
 	return h2c.NewHandler(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// CORS
-			allowCors(w, r, CORSOrigins)
-
-			if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
-				grpcServer.ServeHTTP(w, r)
-			} else {
-				gwHandler.ServeHTTP(w, r)
-			}
-		}),
+		cors.New(cors.Options{
+			AllowedOrigins:   CORSOrigins,
+			AllowCredentials: true,
+			AllowedMethods:   []string{http.MethodHead, http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodDelete},
+			Debug:            false,
+		}).Handler(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
+					grpcServer.ServeHTTP(w, r)
+				} else {
+					gwHandler.ServeHTTP(w, r)
+				}
+			})),
 		&http2.Server{})
 }
 
@@ -165,12 +139,9 @@ func main() {
 		logger.Fatal(err.Error())
 	}
 
-	// Allowed domains are separated by ","
-	CORSOrigins := strings.Split(config.Config.Server.CORSOrigins, ",")
-
 	httpServer := &http.Server{
 		Addr:    fmt.Sprintf(":%v", config.Config.Server.Port),
-		Handler: grpcHandlerFunc(grpcS, gwS, CORSOrigins),
+		Handler: grpcHandlerFunc(grpcS, gwS, config.Config.Server.CORSOrigins),
 	}
 
 	// Wait for interrupt signal to gracefully shutdown the server with a timeout of 5 seconds.

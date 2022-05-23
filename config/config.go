@@ -30,7 +30,7 @@ type ServerConfig struct {
 		Cert string `koanf:"cert"`
 		Key  string `koanf:"key"`
 	}
-	CORSOrigins string `koanf:"corsorigins"`
+	CORSOrigins []string `koanf:"corsorigins"`
 	Paginate    struct {
 		Salt string `koanf:"salt"`
 	}
@@ -67,15 +67,18 @@ func Init() error {
 		logger.Fatal(err.Error())
 	}
 
-	if err := k.Load(env.Provider("CFG_", ".", func(s string) string {
-		return strings.Replace(strings.ToLower(
-			strings.TrimPrefix(s, "CFG_")), "_", ".", -1)
+	if err := k.Load(env.ProviderWithValue("CFG_", ".", func(s, v string) (string, interface{}) {
+		key := strings.Replace(strings.ToLower(strings.TrimPrefix(s, "CFG_")), "_", ".", -1)
+		if strings.Contains(v, ",") {
+			return key, strings.Split(strings.TrimSpace(v), ",")
+		}
+		return key, v
 	}), nil); err != nil {
-		logger.Fatal(err.Error())
+		return err
 	}
 
 	if err := k.Unmarshal("", &Config); err != nil {
-		logger.Fatal(err.Error())
+		return err
 	}
 
 	return ValidateConfig(&Config)

@@ -12,6 +12,7 @@ require (
 	github.com/instill-ai/x v0.1.0-alpha.0.20220516185949-c80ecc26af91
 	github.com/knadh/koanf v1.4.1
 	github.com/mennanov/fieldmask-utils v0.5.0
+	github.com/rs/cors v1.8.2
 	go.uber.org/zap v1.21.0
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
 	google.golang.org/grpc v1.46.0
