@@ -30,7 +30,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 
 	database "github.com/instill-ai/mgmt-backend/internal/db"
-	mgmtPB "github.com/instill-ai/protogen-go/mgmt/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 )
 
 func grpcHandlerFunc(grpcServer *grpc.Server, gwHandler http.Handler, CORSOrigins []string) http.Handler {

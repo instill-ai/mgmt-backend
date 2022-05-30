@@ -15,7 +15,8 @@ import (
 
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 
-	mgmtPB "github.com/instill-ai/protogen-go/mgmt/v1alpha"
+	healthcheckPB "github.com/instill-ai/protogen-go/vdp/healthcheck/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 )
 
 // TODO: Validate mask based on the field behavior.
@@ -41,8 +42,8 @@ func NewHandler(s service.Service) mgmtPB.UserServiceServer {
 // Liveness checks the liveness of the server
 func (h *handler) Liveness(ctx context.Context, in *mgmtPB.LivenessRequest) (*mgmtPB.LivenessResponse, error) {
 	return &mgmtPB.LivenessResponse{
-		HealthCheckResponse: &mgmtPB.HealthCheckResponse{
-			Status: mgmtPB.HealthCheckResponse_SERVING_STATUS_SERVING,
+		HealthCheckResponse: &healthcheckPB.HealthCheckResponse{
+			Status: healthcheckPB.HealthCheckResponse_SERVING_STATUS_SERVING,
 		},
 	}, nil
 }
@@ -50,8 +51,8 @@ func (h *handler) Liveness(ctx context.Context, in *mgmtPB.LivenessRequest) (*mg
 // Readiness checks the readiness of the server
 func (h *handler) Readiness(ctx context.Context, in *mgmtPB.ReadinessRequest) (*mgmtPB.ReadinessResponse, error) {
 	return &mgmtPB.ReadinessResponse{
-		HealthCheckResponse: &mgmtPB.HealthCheckResponse{
-			Status: mgmtPB.HealthCheckResponse_SERVING_STATUS_SERVING,
+		HealthCheckResponse: &healthcheckPB.HealthCheckResponse{
+			Status: healthcheckPB.HealthCheckResponse_SERVING_STATUS_SERVING,
 		},
 	}, nil
 }

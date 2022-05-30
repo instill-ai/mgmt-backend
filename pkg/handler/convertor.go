@@ -10,7 +10,7 @@ import (
 
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 
-	mgmtPB "github.com/instill-ai/protogen-go/mgmt/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 )
 
 // DBUser2PBUser converts a database user instance to proto user
