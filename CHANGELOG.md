@@ -1,5 +1,18 @@
 # Changelog
 
+### [0.1.2-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.1.1-alpha...v0.1.2-alpha) (2022-05-31)
+
+
+### Bug Fixes
+
+* support CORS ([#3](https://github.com/instill-ai/mgmt-backend/issues/3)) ([5fb1439](https://github.com/instill-ai/mgmt-backend/commit/5fb14390b7821e5b1c08cd489d9262b69be6c4ee))
+* use cors package to replace naive implementation ([ae49c1c](https://github.com/instill-ai/mgmt-backend/commit/ae49c1c541a2fb08908c068c40b5a7bc17c3be8d))
+
+
+### Miscellaneous Chores
+
+* release 0.1.2-alpha ([21526dd](https://github.com/instill-ai/mgmt-backend/commit/21526dd454e5151912e61972b2f2da1c2c56c893))
+
 ### [0.1.1-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.1.0-alpha...v0.1.1-alpha) (2022-05-18)
 
 
