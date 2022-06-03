@@ -6,6 +6,7 @@ server:
   corsorigins:
     - http://localhost:3000
   env: os
+  enableusage: false
 database:
   username: postgres
   password: password

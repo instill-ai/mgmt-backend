@@ -160,7 +160,10 @@ func main() {
 		logger.Fatal(err.Error())
 	}
 	defer conn.Close()
-	startReporter(ctx, db, conn, logger, usageBackendURL, config.Config.Server.Env, version)
+
+	if config.Config.Server.EnableUsage {
+		startReporter(ctx, db, conn, logger, usageBackendURL, config.Config.Server.Env, version)
+	}
 
 	if err := mgmtPB.RegisterUserServiceHandlerFromEndpoint(ctx, gwS, fmt.Sprintf(":%v", config.Config.Server.Port), dialOpts); err != nil {
 		logger.Fatal(err.Error())

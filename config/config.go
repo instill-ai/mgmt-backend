@@ -33,6 +33,7 @@ type ServerConfig struct {
 	}
 	CORSOrigins []string `koanf:"corsorigins"`
 	Env         string   `koanf:"env"`
+	EnableUsage bool     `koanf:"enableusage"`
 }
 
 // DatabaseConfig related to database
