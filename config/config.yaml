@@ -5,6 +5,7 @@ server:
     key:    # /ssl/tls.key
   corsorigins:
     - http://localhost:3000
+  env: os
 database:
   username: postgres
   password: password
@@ -17,3 +18,9 @@ database:
     idleconnections: 5
     maxconnections: 10
     connlifetime: 30 # In minutes
+usagebackend:
+  host: localhost
+  port: 8084
+  https:
+    cert:  # /ssl/tls.crt
+    key:  # /ssl/tls.crt

@@ -19,8 +19,9 @@ var Config AppConfig
 
 // AppConfig defines
 type AppConfig struct {
-	Server   ServerConfig   `koanf:"server"`
-	Database DatabaseConfig `koanf:"database"`
+	Server       ServerConfig       `koanf:"server"`
+	Database     DatabaseConfig     `koanf:"database"`
+	UsageBackend UsageBackendConfig `koanf:"usagebackend"`
 }
 
 // ServerConfig defines HTTP server configurations
@@ -31,6 +32,7 @@ type ServerConfig struct {
 		Key  string `koanf:"key"`
 	}
 	CORSOrigins []string `koanf:"corsorigins"`
+	Env         string   `koanf:"env"`
 }
 
 // DatabaseConfig related to database
@@ -46,6 +48,15 @@ type DatabaseConfig struct {
 		IdleConnections int           `koanf:"idleconnections"`
 		MaxConnections  int           `koanf:"maxconnections"`
 		ConnLifeTime    time.Duration `koanf:"connlifetime"`
+	}
+}
+
+type UsageBackendConfig struct {
+	Host  string `koanf:"host"`
+	Port  int    `koanf:"port"`
+	HTTPS struct {
+		Cert string `koanf:"cert"`
+		Key  string `koanf:"key"`
 	}
 }
 

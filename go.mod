@@ -9,6 +9,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.2
 	github.com/iancoleman/strcase v0.2.0
 	github.com/instill-ai/protogen-go v0.1.5-alpha.0.20220602224042-3494d2a17c70
+	github.com/instill-ai/usage-client v0.0.0-20220603133424-ba37ba3b2ca3
 	github.com/instill-ai/x v0.1.0-alpha.0.20220517204940-5a70916ce425
 	github.com/knadh/koanf v1.4.1
 	github.com/mennanov/fieldmask-utils v0.5.0
@@ -28,7 +29,6 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/instill-ai/usage-client v0.0.0-20220603133424-ba37ba3b2ca3 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.12.1 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
