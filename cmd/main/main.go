@@ -135,6 +135,33 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Start usage collection
+	version, err := readReleaseTag()
+	if err != nil {
+		logger.Fatal(err.Error())
+	}
+
+	var clientDialOpts grpc.DialOption
+	var usageCreds credentials.TransportCredentials
+	if config.Config.UsageBackend.HTTPS.Cert != "" && config.Config.UsageBackend.HTTPS.Key != "" {
+		usageCreds, err = credentials.NewServerTLSFromFile(config.Config.UsageBackend.HTTPS.Cert, config.Config.UsageBackend.HTTPS.Key)
+		if err != nil {
+			logger.Fatal(err.Error())
+		}
+		clientDialOpts = grpc.WithTransportCredentials(usageCreds)
+	} else {
+		clientDialOpts = grpc.WithTransportCredentials(insecure.NewCredentials())
+	}
+
+	usageBackendURL := fmt.Sprintf("%v:%v", config.Config.UsageBackend.Host, config.Config.UsageBackend.Port)
+
+	conn, err := grpc.DialContext(ctx, usageBackendURL, clientDialOpts)
+	if err != nil {
+		logger.Fatal(err.Error())
+	}
+	defer conn.Close()
+	startReporter(ctx, db, conn, logger, usageBackendURL, config.Config.Server.Env, version)
+
 	if err := mgmtPB.RegisterUserServiceHandlerFromEndpoint(ctx, gwS, fmt.Sprintf(":%v", config.Config.Server.Port), dialOpts); err != nil {
 		logger.Fatal(err.Error())
 	}

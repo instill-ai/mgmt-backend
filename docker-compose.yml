@@ -49,6 +49,7 @@ services:
     environment:
       CFG_SERVER_PORT: 8080
       CFG_SERVER_CORSORIGINS: http://localhost:3000
+      CFG_SERVER_ENV: os
       CFG_DATABASE_HOST: pg_sql
       CFG_DATABASE_PORT: 5432
       CFG_DATABASE_USERNAME: postgres
