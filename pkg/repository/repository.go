@@ -21,6 +21,7 @@ type Repository interface {
 	UpdateUser(uid uuid.UUID, user *datamodel.User) error
 	DeleteUser(uid uuid.UUID) error
 	DeleteUserByID(id string) error
+	GetAllUsers() ([]datamodel.User, error)
 }
 
 type repository struct {
@@ -101,6 +102,15 @@ func (r *repository) GetUser(uid uuid.UUID) (*datamodel.User, error) {
 		return nil, status.Error(codes.NotFound, "the user is not found")
 	}
 	return &user, nil
+}
+
+// GetAllUsers gets all users in the database
+func (r *repository) GetAllUsers() ([]datamodel.User, error) {
+	var users []datamodel.User
+	if result := r.db.Find(&users); result.Error != nil {
+		return users, status.Errorf(codes.Internal, "error %v", result.Error)
+	}
+	return users, nil
 }
 
 // GetUserByID gets a user by ID
