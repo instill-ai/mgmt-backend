@@ -30,7 +30,10 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 
 	database "github.com/instill-ai/mgmt-backend/internal/db"
-	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
+	mgmtv1alpha "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
+	usagev1alpha "github.com/instill-ai/protogen-go/vdp/usage/v1alpha"
+	usageclient "github.com/instill-ai/usage-client/usage"
+	"github.com/instill-ai/x/repo"
 )
 
 func grpcHandlerFunc(grpcServer *grpc.Server, gwHandler http.Handler, CORSOrigins []string) http.Handler {
@@ -106,7 +109,7 @@ func main() {
 	}
 
 	grpcS := grpc.NewServer(grpcServerOpts...)
-	mgmtPB.RegisterUserServiceServer(
+	mgmtv1alpha.RegisterUserServiceServer(
 		grpcS, handler.NewHandler(
 			service.NewService(
 				repository.NewRepository(db))))
@@ -136,7 +139,7 @@ func main() {
 	defer cancel()
 
 	// Start usage collection
-	version, err := readReleaseTag()
+	version, err := repo.ReadReleaseManifest("release-please/manifest.json")
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -162,10 +165,13 @@ func main() {
 	defer conn.Close()
 
 	if config.Config.Server.EnableUsage {
-		startReporter(ctx, db, conn, logger, usageBackendURL, config.Config.Server.Env, version)
+		err = usageclient.StartReporter(ctx, db, conn, usagev1alpha.Session_SERVICE_MGMT, usageBackendURL, config.Config.Server.Env, version, retrieveUsageData)
+		if err != nil {
+			logger.Error(fmt.Sprintf("unable to start reporter: %v\n", err))
+		}
 	}
 
-	if err := mgmtPB.RegisterUserServiceHandlerFromEndpoint(ctx, gwS, fmt.Sprintf(":%v", config.Config.Server.Port), dialOpts); err != nil {
+	if err := mgmtv1alpha.RegisterUserServiceHandlerFromEndpoint(ctx, gwS, fmt.Sprintf(":%v", config.Config.Server.Port), dialOpts); err != nil {
 		logger.Fatal(err.Error())
 	}
 
