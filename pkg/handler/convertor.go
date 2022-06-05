@@ -10,18 +10,18 @@ import (
 
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 
-	mgmtv1alpha "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 )
 
 // DBUser2PBUser converts a database user instance to proto user
-func DBUser2PBUser(dbUser *datamodel.User) (*mgmtv1alpha.User, error) {
+func DBUser2PBUser(dbUser *datamodel.User) (*mgmtPB.User, error) {
 	if dbUser == nil {
 		return nil, errors.New("can't convert a nil user")
 	}
 
 	id := dbUser.ID
 
-	return &mgmtv1alpha.User{
+	return &mgmtPB.User{
 		Name:                   fmt.Sprintf("users/%s", id),
 		Uid:                    dbUser.Base.UID.String(),
 		Email:                  &dbUser.Email.String,
@@ -30,14 +30,14 @@ func DBUser2PBUser(dbUser *datamodel.User) (*mgmtv1alpha.User, error) {
 		Role:                   &dbUser.Role.String,
 		UsageDataCollection:    dbUser.UsageDataCollection,
 		NewsletterSubscription: dbUser.NewsletterSubscription,
-		Type:                   mgmtv1alpha.OwnerType_OWNER_TYPE_USER,
+		Type:                   mgmtPB.OwnerType_OWNER_TYPE_USER,
 		CreateTime:             timestamppb.New(dbUser.Base.CreateTime),
 		UpdateTime:             timestamppb.New(dbUser.Base.UpdateTime),
 	}, nil
 }
 
 // PBUser2DBUser converts a proto user instance to database user
-func PBUser2DBUser(pbUser *mgmtv1alpha.User) (*datamodel.User, error) {
+func PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.User, error) {
 	if pbUser == nil {
 		return nil, errors.New("can't convert a nil user")
 	}

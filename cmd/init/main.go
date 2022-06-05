@@ -1,10 +1,10 @@
 package main
 
 import (
-	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/internal/logger"
+
+	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 
 	database "github.com/instill-ai/mgmt-backend/internal/db"
 )

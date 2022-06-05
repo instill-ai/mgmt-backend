@@ -19,19 +19,19 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
-
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/internal/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/handler"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+
 	database "github.com/instill-ai/mgmt-backend/internal/db"
-	mgmtv1alpha "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
-	usagev1alpha "github.com/instill-ai/protogen-go/vdp/usage/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
+	usagePB "github.com/instill-ai/protogen-go/vdp/usage/v1alpha"
 	usageclient "github.com/instill-ai/usage-client/usage"
 	"github.com/instill-ai/x/repo"
 )
@@ -109,7 +109,7 @@ func main() {
 	}
 
 	grpcS := grpc.NewServer(grpcServerOpts...)
-	mgmtv1alpha.RegisterUserServiceServer(
+	mgmtPB.RegisterUserServiceServer(
 		grpcS, handler.NewHandler(
 			service.NewService(
 				repository.NewRepository(db))))
@@ -165,13 +165,13 @@ func main() {
 	defer conn.Close()
 
 	if config.Config.Server.EnableUsage {
-		err = usageclient.StartReporter(ctx, db, conn, usagev1alpha.Session_SERVICE_MGMT, usageBackendURL, config.Config.Server.Env, version, retrieveUsageData)
+		err = usageclient.StartReporter(ctx, db, conn, usagePB.Session_SERVICE_MGMT, usageBackendURL, config.Config.Server.Env, version, retrieveUsageData)
 		if err != nil {
 			logger.Error(fmt.Sprintf("unable to start reporter: %v\n", err))
 		}
 	}
 
-	if err := mgmtv1alpha.RegisterUserServiceHandlerFromEndpoint(ctx, gwS, fmt.Sprintf(":%v", config.Config.Server.Port), dialOpts); err != nil {
+	if err := mgmtPB.RegisterUserServiceHandlerFromEndpoint(ctx, gwS, fmt.Sprintf(":%v", config.Config.Server.Port), dialOpts); err != nil {
 		logger.Fatal(err.Error())
 	}
 
