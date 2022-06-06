@@ -31,7 +31,7 @@ func NewUsage(r repository.Repository) Usage {
 func (u *usage) RetrieveUsageData() interface{} {
 
 	logger, _ := logger.GetZapLogger()
-	logger.Info("Retrieve usage data...")
+	logger.Debug("Retrieve usage data...")
 
 	dbUsers, err := u.repository.GetAllUsers()
 	if err != nil {
@@ -47,7 +47,7 @@ func (u *usage) RetrieveUsageData() interface{} {
 		pbUsers = append(pbUsers, pbUser)
 	}
 
-	logger.Info("Send retrieved usage data...")
+	logger.Debug("Send retrieved usage data...")
 
 	return &usagePB.SessionReport_MgmtUsageData{
 		MgmtUsageData: &usagePB.MgmtUsageData{
