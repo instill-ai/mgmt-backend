@@ -58,7 +58,7 @@ func grpcHandlerFunc(grpcServer *grpc.Server, gwHandler http.Handler, CORSOrigin
 		&http2.Server{})
 }
 
-func startReporter(ctx context.Context, logger *zap.Logger, repository repository.Repository) {
+func startReporter(ctx context.Context, usageServiceClient usagePB.UsageServiceClient, logger *zap.Logger, repository repository.Repository) {
 	if config.Config.Server.DisableUsage {
 		return
 	}
@@ -67,9 +67,6 @@ func startReporter(ctx context.Context, logger *zap.Logger, repository repositor
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
-
-	usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient()
-	defer usageServiceClientConn.Close()
 
 	go func() {
 		time.Sleep(5 * time.Second)
@@ -139,6 +136,9 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient()
+	defer usageServiceClientConn.Close()
+
 	repository := repository.NewRepository(db)
 
 	grpcS := grpc.NewServer(grpcServerOpts...)
@@ -159,7 +159,7 @@ func main() {
 	)
 
 	// Usage collection
-	startReporter(ctx, logger, repository)
+	startReporter(ctx, usageServiceClient, logger, repository)
 
 	// Start gRPC server
 	var dialOpts []grpc.DialOption
