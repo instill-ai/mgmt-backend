@@ -13,7 +13,6 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/rs/cors"
-	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
@@ -58,10 +57,12 @@ func grpcHandlerFunc(grpcServer *grpc.Server, gwHandler http.Handler, CORSOrigin
 		&http2.Server{})
 }
 
-func startReporter(ctx context.Context, usageServiceClient usagePB.UsageServiceClient, logger *zap.Logger, repository repository.Repository) {
+func startReporter(ctx context.Context, usageServiceClient usagePB.UsageServiceClient, repository repository.Repository) {
 	if config.Config.Server.DisableUsage {
 		return
 	}
+
+	logger, _ := logger.GetZapLogger()
 
 	version, err := repo.ReadReleaseManifest("release-please/manifest.json")
 	if err != nil {
@@ -159,7 +160,7 @@ func main() {
 	)
 
 	// Usage collection
-	startReporter(ctx, usageServiceClient, logger, repository)
+	startReporter(ctx, usageServiceClient, repository)
 
 	// Start gRPC server
 	var dialOpts []grpc.DialOption
