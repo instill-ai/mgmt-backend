@@ -31,9 +31,9 @@ type ServerConfig struct {
 		Cert string `koanf:"cert"`
 		Key  string `koanf:"key"`
 	}
-	CORSOrigins []string `koanf:"corsorigins"`
-	Env         string   `koanf:"env"`
-	EnableUsage bool     `koanf:"enableusage"`
+	CORSOrigins  []string `koanf:"corsorigins"`
+	Env          string   `koanf:"env"`
+	DisableUsage bool     `koanf:"disableusage"`
 }
 
 // DatabaseConfig related to database

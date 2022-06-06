@@ -9,9 +9,11 @@ import (
 	"regexp"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/rs/cors"
+	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
@@ -19,21 +21,23 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/encoding/protojson"
 
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+
 	"github.com/instill-ai/mgmt-backend/config"
+	"github.com/instill-ai/mgmt-backend/internal/external"
 	"github.com/instill-ai/mgmt-backend/internal/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/handler"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
-
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	"github.com/instill-ai/mgmt-backend/pkg/usage"
+	"github.com/instill-ai/x/repo"
 
 	database "github.com/instill-ai/mgmt-backend/internal/db"
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 	usagePB "github.com/instill-ai/protogen-go/vdp/usage/v1alpha"
 	usageclient "github.com/instill-ai/usage-client/usage"
-	"github.com/instill-ai/x/repo"
 )
 
 func grpcHandlerFunc(grpcServer *grpc.Server, gwHandler http.Handler, CORSOrigins []string) http.Handler {
@@ -52,6 +56,30 @@ func grpcHandlerFunc(grpcServer *grpc.Server, gwHandler http.Handler, CORSOrigin
 				}
 			})),
 		&http2.Server{})
+}
+
+func startReporter(ctx context.Context, logger *zap.Logger, repository repository.Repository) {
+	if config.Config.Server.DisableUsage {
+		return
+	}
+
+	version, err := repo.ReadReleaseManifest("release-please/manifest.json")
+	if err != nil {
+		logger.Fatal(err.Error())
+	}
+
+	usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient()
+	defer usageServiceClientConn.Close()
+
+	go func() {
+		time.Sleep(5 * time.Second)
+
+		usg := usage.NewUsage(repository)
+		usageclient.StartReporter(ctx, usageServiceClient, usagePB.Session_SERVICE_MGMT, config.Config.Server.Env, version, usg.RetrieveUsageData)
+		if err != nil {
+			logger.Error(fmt.Sprintf("unable to start reporter: %v\n", err))
+		}
+	}()
 }
 
 func main() {
@@ -108,11 +136,13 @@ func main() {
 		grpcServerOpts = append(grpcServerOpts, grpc.Creds(creds))
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	repository := repository.NewRepository(db)
+
 	grpcS := grpc.NewServer(grpcServerOpts...)
-	mgmtPB.RegisterUserServiceServer(
-		grpcS, handler.NewHandler(
-			service.NewService(
-				repository.NewRepository(db))))
+	mgmtPB.RegisterUserServiceServer(grpcS, handler.NewHandler(service.NewService(repository)))
 
 	gwS := runtime.NewServeMux(
 		runtime.WithForwardResponseOption(httpResponseModifier),
@@ -128,47 +158,15 @@ func main() {
 		}),
 	)
 
+	// Usage collection
+	startReporter(ctx, logger, repository)
+
+	// Start gRPC server
 	var dialOpts []grpc.DialOption
 	if config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "" {
 		dialOpts = []grpc.DialOption{grpc.WithTransportCredentials(creds)}
 	} else {
 		dialOpts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Start usage collection
-	version, err := repo.ReadReleaseManifest("release-please/manifest.json")
-	if err != nil {
-		logger.Fatal(err.Error())
-	}
-
-	var clientDialOpts grpc.DialOption
-	var usageCreds credentials.TransportCredentials
-	if config.Config.UsageBackend.HTTPS.Cert != "" && config.Config.UsageBackend.HTTPS.Key != "" {
-		usageCreds, err = credentials.NewServerTLSFromFile(config.Config.UsageBackend.HTTPS.Cert, config.Config.UsageBackend.HTTPS.Key)
-		if err != nil {
-			logger.Fatal(err.Error())
-		}
-		clientDialOpts = grpc.WithTransportCredentials(usageCreds)
-	} else {
-		clientDialOpts = grpc.WithTransportCredentials(insecure.NewCredentials())
-	}
-
-	usageBackendURL := fmt.Sprintf("%v:%v", config.Config.UsageBackend.Host, config.Config.UsageBackend.Port)
-
-	conn, err := grpc.DialContext(ctx, usageBackendURL, clientDialOpts)
-	if err != nil {
-		logger.Fatal(err.Error())
-	}
-	defer conn.Close()
-
-	if config.Config.Server.EnableUsage {
-		err = usageclient.StartReporter(ctx, db, conn, usagePB.Session_SERVICE_MGMT, usageBackendURL, config.Config.Server.Env, version, retrieveUsageData)
-		if err != nil {
-			logger.Error(fmt.Sprintf("unable to start reporter: %v\n", err))
-		}
 	}
 
 	if err := mgmtPB.RegisterUserServiceHandlerFromEndpoint(ctx, gwS, fmt.Sprintf(":%v", config.Config.Server.Port), dialOpts); err != nil {
