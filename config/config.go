@@ -32,7 +32,7 @@ type ServerConfig struct {
 		Key  string `koanf:"key"`
 	}
 	CORSOrigins  []string `koanf:"corsorigins"`
-	Env          string   `koanf:"env"`
+	Edition      string   `koanf:"edition"`
 	DisableUsage bool     `koanf:"disableusage"`
 }
 

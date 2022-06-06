@@ -5,7 +5,7 @@
   "description": "The user data structure",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "usage_data_collection", "newsletter_subscription"],
+  "required": ["id", "newsletter_subscription"],
   "properties": {
     "name": {
       "type": "string",
@@ -85,21 +85,24 @@
         "Hobbyist (I love Vision AI!)"
       ]
     },
-    "usage_data_collection": {
-      "type": "boolean",
-      "title": "Anonymize usage data collection",
-      "description": "We collect data only for product improvements",
-      "default": false,
-      "ui_order": 6,
-      "ui_component": "toggle"
-    },
     "newsletter_subscription": {
       "type": "boolean",
       "title": "Newsletter subscription",
       "description": "Receive the latest news from Instill AI including open source updates, community highlights, blog posts, useful tutorials and more! You can unsubscribe any time.",
       "default": false,
-      "ui_order": 7,
+      "ui_order": 6,
       "ui_component": "toggle"
+    },
+    "cookie_token": {
+      "type": "string",
+      "title": "Cookie token",
+      "description": "Cookie token",
+      "ui_order": 7,
+      "maxLength": 255,
+      "ui_hidden": true,
+      "ui_disabled": true,
+      "ui_component": "text",
+      "ui_placeholder": ""
     },
     "type": {
       "type": "string",

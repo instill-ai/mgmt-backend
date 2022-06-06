@@ -75,7 +75,7 @@ func startReporter(ctx context.Context, logger *zap.Logger, repository repositor
 		time.Sleep(5 * time.Second)
 
 		usg := usage.NewUsage(repository)
-		usageclient.StartReporter(ctx, usageServiceClient, usagePB.Session_SERVICE_MGMT, config.Config.Server.Env, version, usg.RetrieveUsageData)
+		err = usageclient.StartReporter(ctx, usageServiceClient, usagePB.Session_SERVICE_MGMT, config.Config.Server.Edition, version, usg.RetrieveUsageData)
 		if err != nil {
 			logger.Error(fmt.Sprintf("unable to start reporter: %v\n", err))
 		}

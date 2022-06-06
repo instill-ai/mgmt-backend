@@ -76,10 +76,10 @@ export function CheckGet() {
           (r) => r.json().user.company_name !== undefined,
         [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.id} response role`]:
           (r) => r.json().user.role !== undefined,
-        [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.id} response usage_data_collection`]:
-          (r) => r.json().user.usage_data_collection !== undefined,
         [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.id} response newsletter_subscription`]:
           (r) => r.json().user.newsletter_subscription !== undefined,
+          [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.id} response cookie_token`]:
+          (r) => r.json().user.cookie_token !== undefined,
         [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.id} response type`]:
           (r) => r.json().user.type === "OWNER_TYPE_USER",
         [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.id} response create_time`]:
@@ -130,10 +130,10 @@ export function CheckLookUp() {
         [`GET /${constant.mgmtVersion}/users/${defaultUid} response role`]: (
           r
         ) => r.json().user.role !== undefined,
-        [`GET /${constant.mgmtVersion}/users/${defaultUid} response usage_data_collection`]:
-          (r) => r.json().user.usage_data_collection !== undefined,
         [`GET /${constant.mgmtVersion}/users/${defaultUid} response newsletter_subscription`]:
           (r) => r.json().user.newsletter_subscription !== undefined,
+        [`GET /${constant.mgmtVersion}/users/${defaultUid} response cookie_token`]:
+          (r) => r.json().user.cookie_token !== undefined,
         [`GET /${constant.mgmtVersion}/users/${defaultUid} response type`]: (
           r
         ) => r.json().user.type === "OWNER_TYPE_USER",
@@ -166,8 +166,8 @@ export function CheckUpdate() {
       email: "test@foo.bar",
       company_name: "company",
       role: "Manager",
-      usage_data_collection: true,
       newsletter_subscription: false,
+      cookie_token: "f5730f62-7026-4e11-917a-d890da315d3b",
       type: "OWNER_TYPE_ORGANIZATION",
       create_time: "2000-01-01T00:00:00.000000Z",
       update_time: "2000-01-01T00:00:00.000000Z",
@@ -200,14 +200,12 @@ export function CheckUpdate() {
           (r) => r.json().user.company_name === userUpdate.company_name,
         [`PATCH /${constant.mgmtVersion}/users/${constant.defaultUser.id} response role updated`]:
           (r) => r.json().user.role === userUpdate.role,
-        [`PATCH /${constant.mgmtVersion}/users/${constant.defaultUser.id} response usage_data_collection updated`]:
-          (r) =>
-            r.json().user.usage_data_collection ===
-            userUpdate.usage_data_collection,
         [`PATCH /${constant.mgmtVersion}/users/${constant.defaultUser.id} response newsletter_subscription updated`]:
           (r) =>
             r.json().user.newsletter_subscription ===
             userUpdate.newsletter_subscription,
+        [`PATCH /${constant.mgmtVersion}/users/${constant.defaultUser.id} response cookie_token updated`]:
+            (r) => r.json().user.cookie_token === userUpdate.cookie_token,
         [`PATCH /${constant.mgmtVersion}/users/${constant.defaultUser.id} response type unchanged`]:
           (r) => r.json().user.type === res.json().user.type,
         [`PATCH /${constant.mgmtVersion}/users/${constant.defaultUser.id} response create_time unchanged`]:

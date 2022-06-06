@@ -23,6 +23,6 @@ type User struct {
 	Email                  sql.NullString
 	CompanyName            sql.NullString
 	Role                   sql.NullString
-	UsageDataCollection    bool `gorm:"default:false"`
 	NewsletterSubscription bool `gorm:"default:false"`
+	CookieToken            sql.NullString
 }

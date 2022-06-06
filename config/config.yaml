@@ -5,7 +5,7 @@ server:
     key:    # /ssl/tls.key
   corsorigins:
     - http://localhost:3000
-  env: os
+  edition: local-ce:dev
   disableusage: false
 database:
   username: postgres

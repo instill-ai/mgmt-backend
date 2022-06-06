@@ -29,8 +29,8 @@ func createDefaultUser(db *gorm.DB) error {
 		Email:                  sql.NullString{String: "", Valid: false},
 		CompanyName:            sql.NullString{String: "", Valid: false},
 		Role:                   sql.NullString{String: "", Valid: false},
-		UsageDataCollection:    false,
 		NewsletterSubscription: false,
+		CookieToken:            sql.NullString{String: "", Valid: false},
 	}
 
 	_, err = r.GetUser(defaultUser.Base.UID)

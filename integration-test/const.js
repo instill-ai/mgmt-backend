@@ -7,7 +7,7 @@ export const defaultUser = {
   id: "local-user",
   company_name: "",
   role: "",
-  usage_data_collection: false,
   newsletter_subscription: false,
+  cookie_token: "",
   type: "OWNER_TYPE_USER",
 };

@@ -28,8 +28,8 @@ func DBUser2PBUser(dbUser *datamodel.User) (*mgmtPB.User, error) {
 		Id:                     id,
 		CompanyName:            &dbUser.CompanyName.String,
 		Role:                   &dbUser.Role.String,
-		UsageDataCollection:    dbUser.UsageDataCollection,
 		NewsletterSubscription: dbUser.NewsletterSubscription,
+		CookieToken:            &dbUser.CookieToken.String,
 		Type:                   mgmtPB.OwnerType_OWNER_TYPE_USER,
 		CreateTime:             timestamppb.New(dbUser.Base.CreateTime),
 		UpdateTime:             timestamppb.New(dbUser.Base.UpdateTime),
@@ -49,6 +49,7 @@ func PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.User, error) {
 	email := pbUser.GetEmail()
 	companyName := pbUser.GetCompanyName()
 	role := pbUser.GetRole()
+	cookieToken := pbUser.GetCookieToken()
 
 	return &datamodel.User{
 		Base: datamodel.Base{
@@ -69,7 +70,10 @@ func PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.User, error) {
 			String: role,
 			Valid:  len(role) > 0,
 		},
-		UsageDataCollection:    pbUser.GetUsageDataCollection(),
 		NewsletterSubscription: pbUser.GetNewsletterSubscription(),
+		CookieToken: sql.NullString{
+			String: cookieToken,
+			Valid:  len(cookieToken) > 0,
+		},
 	}, nil
 }
