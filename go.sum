@@ -592,8 +592,12 @@ github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANyt
 github.com/instill-ai/protogen-go v0.1.5-alpha.0.20220606124550-53f79f9c7d74/go.mod h1:d9ebEdwMX2Las4OScym45qbQM+xcBQITqvq/8anTVas=
 github.com/instill-ai/protogen-go v0.1.5-alpha.0.20220606185610-41367e419da8 h1:Qan+q0t1YOnJ/5Zm74CypGUrxrrbzGgdiPLKbatqD7M=
 github.com/instill-ai/protogen-go v0.1.5-alpha.0.20220606185610-41367e419da8/go.mod h1:d9ebEdwMX2Las4OScym45qbQM+xcBQITqvq/8anTVas=
+github.com/instill-ai/protogen-go v0.1.5-alpha.0.20220607142330-56342f37e864 h1:slIrsYIVxo2pJccK3MxM5jVpcDNmB0NcclBOImxgilo=
+github.com/instill-ai/protogen-go v0.1.5-alpha.0.20220607142330-56342f37e864/go.mod h1:d9ebEdwMX2Las4OScym45qbQM+xcBQITqvq/8anTVas=
 github.com/instill-ai/usage-client v0.0.0-20220606142220-c17424a565e4 h1:yJ34x5zUKawwslRAPug8Ad6rziIvhheITQvz7auNyf8=
 github.com/instill-ai/usage-client v0.0.0-20220606142220-c17424a565e4/go.mod h1:ibsksgd0nzO7zHom5qVa9lmb9Y4XuSF8JMjBpkdGW6s=
+github.com/instill-ai/usage-client v0.0.0-20220607201439-d646c37f5b02 h1:7dhRYHERy+NbvESpaQ0NPOo3CiiDpvLsARR90Ftkiqw=
+github.com/instill-ai/usage-client v0.0.0-20220607201439-d646c37f5b02/go.mod h1:saH0H46iHHMxBx+znN3CoE4IOylbTlpQUPj0Do06yKo=
 github.com/instill-ai/x v0.1.0-alpha.0.20220604235252-39fcffc82edb h1:70AJVfr463jWkgPQ1w281zsQ1LK/tOW5INTNc+yOBsI=
 github.com/instill-ai/x v0.1.0-alpha.0.20220604235252-39fcffc82edb/go.mod h1:uMgeUs+q+Bjr43AsYb3QRsFX2Ebxhr74seM8lNdbdLA=
 github.com/j-keck/arping v0.0.0-20160618110441-2cf9dc699c56/go.mod h1:ymszkNOg6tORTn+6F6j+Jc8TOr5osrynvN6ivFWZ2GA=

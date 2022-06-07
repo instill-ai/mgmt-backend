@@ -36,7 +36,7 @@ import (
 	database "github.com/instill-ai/mgmt-backend/internal/db"
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 	usagePB "github.com/instill-ai/protogen-go/vdp/usage/v1alpha"
-	usageclient "github.com/instill-ai/usage-client/usage"
+	usageclient "github.com/instill-ai/usage-client/client"
 )
 
 func grpcHandlerFunc(grpcServer *grpc.Server, gwHandler http.Handler, CORSOrigins []string) http.Handler {
