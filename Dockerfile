@@ -14,12 +14,12 @@ FROM gcr.io/distroless/base AS runtime
 ENV GIN_MODE=release
 WORKDIR /mgmt-backend
 
+COPY --from=build /go/src/config ./config
+COPY --from=build /go/src/release-please ./release-please
+COPY --from=build /go/src/internal/db/migration ./internal/db/migration
+
 COPY --from=build /mgmt-backend ./
 COPY --from=build /mgmt-backend-migrate ./
 COPY --from=build /mgmt-backend-init ./
-COPY --from=build /go/src/config ./config
-COPY --from=build /go/src/internal/db/migration ./internal/db/migration
-COPY --from=build /go/src/release-please ./release-please
 
-EXPOSE 8080/tcp
 ENTRYPOINT ["./mgmt-backend"]
