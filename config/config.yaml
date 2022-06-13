@@ -19,7 +19,7 @@ database:
   pool:
     idleconnections: 5
     maxconnections: 10
-    connlifetime: 30 # In minutes
+    connlifetime: 30m # In minutes, e.g., '60m'
 usagebackend:
   host: localhost
   port: 8084
