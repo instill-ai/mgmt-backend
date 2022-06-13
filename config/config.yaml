@@ -6,7 +6,7 @@ server:
   corsorigins:
     - http://localhost:3000
   edition: local-ce:dev
-  disableusage: false
+  disableusage: true
   debug: false
 database:
   username: postgres
