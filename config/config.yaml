@@ -21,8 +21,5 @@ database:
     maxconnections: 10
     connlifetime: 30m # In minutes, e.g., '60m'
 usagebackend:
-  host: localhost
-  port: 8084
-  https:
-    cert:  # /ssl/tls.crt
-    key:  # /ssl/tls.crt
+  host: usage.instill.tech
+  port: 443
