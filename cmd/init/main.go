@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/internal/logger"
 
@@ -10,18 +12,16 @@ import (
 )
 
 func main() {
+	if err := config.Init(); err != nil {
+		log.Fatal(err.Error())
+	}
 
 	logger, _ := logger.GetZapLogger()
 	defer func() {
 		// can't handle the error due to https://github.com/uber-go/zap/issues/880
 		_ = logger.Sync()
 	}()
-
 	grpc_zap.ReplaceGrpcLoggerV2(logger)
-
-	if err := config.Init(); err != nil {
-		logger.Fatal(err.Error())
-	}
 
 	db := database.GetConnection()
 	defer database.Close(db)
