@@ -1,6 +1,6 @@
 module github.com/instill-ai/mgmt-backend
 
-go 1.17
+go 1.18
 
 require (
 	github.com/gofrs/uuid v4.2.0+incompatible
@@ -9,6 +9,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.10.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/instill-ai/protogen-go v0.2.0-alpha
+	github.com/instill-ai/usage-client v0.1.0-alpha
 	github.com/instill-ai/x v0.1.0-alpha.0.20220604235252-39fcffc82edb
 	github.com/knadh/koanf v1.4.1
 	github.com/mennanov/fieldmask-utils v0.5.0
@@ -21,15 +22,13 @@ require (
 	gorm.io/gorm v1.23.5
 )
 
-require github.com/catalinc/hashcash v0.0.0-20161205220751-e6bc29ff4de9 // indirect
-
 require (
+	github.com/catalinc/hashcash v0.0.0-20161205220751-e6bc29ff4de9 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
-	github.com/instill-ai/usage-client v0.1.0-alpha
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.12.0 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect

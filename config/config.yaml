@@ -6,12 +6,12 @@ server:
   corsorigins:
     - http://localhost:3000
   edition: local-ce:dev
-  disableusage: true
-  debug: false
+  disableusage: false
+  debug: true
 database:
   username: postgres
   password: password
-  host: localhost
+  host: pg-sql
   port: 5432
   name: mgmt
   version: 1
