@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.2.0-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.1.2-alpha...v0.2.0-alpha) (2022-06-22)
+
+
+### Features
+
+* add reporter for usage collection ([320d9a4](https://github.com/instill-ai/mgmt-backend/commit/320d9a430df114187a7df2989db115bf06a8fda7))
+* add retrieve all user function ([da78893](https://github.com/instill-ai/mgmt-backend/commit/da78893ef71611aaac248a9bcdd640066a6b9b55))
+
+
+### Bug Fixes
+
+* add `tlsenabled` in usage backend configuration ([dd8843a](https://github.com/instill-ai/mgmt-backend/commit/dd8843a0851a83cd52614e03a304f301e96a9fec))
+* init config before logger ([455ef7a](https://github.com/instill-ai/mgmt-backend/commit/455ef7ab89434894dd9d0dbbb72332d43002daad))
+* init config first ([4e3dea6](https://github.com/instill-ai/mgmt-backend/commit/4e3dea677c70ff66ac4ef0a285897d3fa471d52f))
+* put client connection in main ([3ff4821](https://github.com/instill-ai/mgmt-backend/commit/3ff48210398bd6cdd4cfa99ec3beb3dadfb93027))
+* refactor usage collection ([c6a41f6](https://github.com/instill-ai/mgmt-backend/commit/c6a41f63b9470455f54ea13ac48960e02fb2f56b))
+* specify time duration unit ([27b77d2](https://github.com/instill-ai/mgmt-backend/commit/27b77d2ffc72d64da6101c64643e02c3af696286))
+
 ### [0.1.2-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.1.1-alpha...v0.1.2-alpha) (2022-05-31)
 
 
