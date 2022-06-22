@@ -8,7 +8,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.10.0
 	github.com/iancoleman/strcase v0.2.0
-	github.com/instill-ai/protogen-go v0.1.5-alpha.0.20220608235949-f5830698018f
+	github.com/instill-ai/protogen-go v0.2.0-alpha
 	github.com/instill-ai/x v0.1.0-alpha.0.20220604235252-39fcffc82edb
 	github.com/knadh/koanf v1.4.1
 	github.com/mennanov/fieldmask-utils v0.5.0
@@ -29,7 +29,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
-	github.com/instill-ai/usage-client v0.0.0-20220607201439-d646c37f5b02
+	github.com/instill-ai/usage-client v0.1.0-alpha
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.12.0 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
