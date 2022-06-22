@@ -33,8 +33,8 @@ func createDefaultUser(db *gorm.DB) error {
 		CookieToken:            sql.NullString{String: "", Valid: false},
 	}
 
-	_, err = r.GetUser(defaultUser.Base.UID)
-	// Already exist
+	_, err = r.GetUserByID(defaultUser.ID)
+	// Already exist `local-user`
 	if err == nil {
 		return nil
 	}
