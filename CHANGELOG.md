@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.2.0-alpha...v0.2.1-alpha) (2022-06-24)
+
+
+### Bug Fixes
+
+* check existing user by id ([dd862a4](https://github.com/instill-ai/mgmt-backend/commit/dd862a455d022cd225b2ff90d33cfd2902b5c5c4))
+
 ## [0.2.0-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.1.2-alpha...v0.2.0-alpha) (2022-06-22)
 
 
