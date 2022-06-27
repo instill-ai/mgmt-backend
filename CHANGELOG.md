@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.2.1-alpha...v0.2.2-alpha) (2022-06-27)
+
+
+### Miscellaneous Chores
+
+* release v0.2.2-alpha ([1ccaadc](https://github.com/instill-ai/mgmt-backend/commit/1ccaadc09a28db880f8987b479a0522cee0a9309))
+
 ## [0.2.1-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.2.0-alpha...v0.2.1-alpha) (2022-06-24)
 
 
