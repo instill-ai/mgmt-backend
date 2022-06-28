@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.2.2-alpha...v0.2.3-alpha) (2022-06-28)
+
+
+### Bug Fixes
+
+* change port from 8080 to 8084 ([364f155](https://github.com/instill-ai/mgmt-backend/commit/364f15579a8b55f142fb50611474cdaee8ca5e91))
+
 ## [0.2.2-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.2.1-alpha...v0.2.2-alpha) (2022-06-27)
 
 
