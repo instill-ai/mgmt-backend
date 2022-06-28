@@ -1,5 +1,6 @@
+export const mgmtPort = 8084
 export const mgmtVersion = "v1alpha";
-export const mgmtHost = `http://mgmt-backend:8080/${mgmtVersion}`;
+export const mgmtHost = `http://mgmt-backend:${mgmtPort}/${mgmtVersion}`;
 
 export const defaultUser = {
   name: "users/instill",
