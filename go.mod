@@ -10,12 +10,13 @@ require (
 	github.com/iancoleman/strcase v0.2.0
 	github.com/instill-ai/protogen-go v0.2.1-alpha
 	github.com/instill-ai/usage-client v0.1.1-alpha
-	github.com/instill-ai/x v0.1.0-alpha.0.20220604235252-39fcffc82edb
+	github.com/instill-ai/x v0.1.0-alpha.0.20220705112420-e3d5e6d36d9b
 	github.com/knadh/koanf v1.4.1
 	github.com/mennanov/fieldmask-utils v0.5.0
 	github.com/rs/cors v1.8.2
 	go.uber.org/zap v1.21.0
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
+	google.golang.org/genproto v0.0.0-20220429170224-98d788798c3e
 	google.golang.org/grpc v1.46.0
 	google.golang.org/protobuf v1.28.0
 	gorm.io/driver/postgres v1.3.5
@@ -49,6 +50,5 @@ require (
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
 	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
 	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/genproto v0.0.0-20220429170224-98d788798c3e // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
