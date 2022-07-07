@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc/status"
 	"gorm.io/gorm"
 
+	"github.com/instill-ai/mgmt-backend/internal/logger"
 	"github.com/instill-ai/mgmt-backend/internal/paginate"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 )
@@ -36,9 +37,14 @@ func NewRepository(db *gorm.DB) Repository {
 }
 
 // ListUser lists users
+// Return error types
+//   - codes.InvalidArgument
+//   - codes.Internal
 func (r *repository) ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int, error) {
+	logger, _ := logger.GetZapLogger()
 	totalSize := int64(0)
 	if result := r.db.Model(&datamodel.User{}).Count(&totalSize); result.Error != nil {
+		logger.Error(result.Error.Error())
 		return nil, "", int(totalSize), status.Errorf(codes.Internal, "error %v", result.Error)
 	}
 
@@ -61,12 +67,14 @@ func (r *repository) ListUser(pageSize int, pageToken string) ([]datamodel.User,
 
 	rows, err := queryBuilder.Rows()
 	if err != nil {
-		return nil, "", int(totalSize), err
+		logger.Error(err.Error())
+		return nil, "", int(totalSize), status.Errorf(codes.Internal, "error %v", err.Error())
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var item datamodel.User
 		if err = r.db.ScanRows(rows, &item); err != nil {
+			logger.Error(err.Error())
 			return nil, "", int(totalSize), status.Errorf(codes.Internal, "error %v", err.Error())
 		}
 		createTime = item.CreateTime
@@ -87,33 +95,44 @@ func (r *repository) ListUser(pageSize int, pageToken string) ([]datamodel.User,
 }
 
 // CreateUser creates a new user
+// Return error types
+//   - codes.Internal
 func (r *repository) CreateUser(user *datamodel.User) error {
+	logger, _ := logger.GetZapLogger()
 	if result := r.db.Model(&datamodel.User{}).Create(user); result.Error != nil {
+		logger.Error(result.Error.Error())
 		return status.Errorf(codes.Internal, "error %v", result.Error)
 	}
 	return nil
 }
 
-// GetUser gets a user by uuid
+// GetUser gets a user by UUID
+// Return error types
+//   - codes.NotFound
 func (r *repository) GetUser(uid uuid.UUID) (*datamodel.User, error) {
 	var user datamodel.User
 	if result := r.db.First(&user, "uid = ?", uid.String()); result.Error != nil {
-
 		return nil, status.Error(codes.NotFound, "the user is not found")
 	}
 	return &user, nil
 }
 
 // GetAllUsers gets all users in the database
+// Return error types
+//   - codes.Internal
 func (r *repository) GetAllUsers() ([]datamodel.User, error) {
+	logger, _ := logger.GetZapLogger()
 	var users []datamodel.User
 	if result := r.db.Find(&users); result.Error != nil {
+		logger.Error(result.Error.Error())
 		return users, status.Errorf(codes.Internal, "error %v", result.Error)
 	}
 	return users, nil
 }
 
 // GetUserByID gets a user by ID
+// Return error types
+//   - codes.NotFound
 func (r *repository) GetUserByID(id string) (*datamodel.User, error) {
 	var user datamodel.User
 	if result := r.db.Model(&datamodel.User{}).Where("id = ?", id).First(&user); result.Error != nil {
@@ -122,19 +141,28 @@ func (r *repository) GetUserByID(id string) (*datamodel.User, error) {
 	return &user, nil
 }
 
-// UpdateUser updates a user by uuid
+// UpdateUser updates a user by UUID
+// Return error types
+//   - codes.Internal
 func (r *repository) UpdateUser(uid uuid.UUID, user *datamodel.User) error {
+	logger, _ := logger.GetZapLogger()
 	if result := r.db.Select("*").Omit("UID").Model(&datamodel.User{}).Where("uid = ?", uid.String()).Updates(user); result.Error != nil {
+		logger.Error(result.Error.Error())
 		return status.Errorf(codes.Internal, "error %v", result.Error)
 	}
 	return nil
 }
 
-// DeleteUser deletes a user by uuid
+// DeleteUser deletes a user by UUID
+// Return error types
+//   - codes.NotFound
+//   - codes.Internal
 func (r *repository) DeleteUser(uid uuid.UUID) error {
+	logger, _ := logger.GetZapLogger()
 	result := r.db.Model(&datamodel.User{}).Where("uid = ?", uid.String()).Delete(&datamodel.User{})
 
 	if result.Error != nil {
+		logger.Error(result.Error.Error())
 		return status.Errorf(codes.Internal, "error %v", result.Error)
 	}
 
@@ -146,10 +174,15 @@ func (r *repository) DeleteUser(uid uuid.UUID) error {
 }
 
 // DeleteUserByID deletes a user by ID
+// Return error types
+//   - codes.NotFound
+//   - codes.Internal
 func (r *repository) DeleteUserByID(id string) error {
+	logger, _ := logger.GetZapLogger()
 	result := r.db.Model(&datamodel.User{}).Where("id = ?", id).Delete(&datamodel.User{})
 
 	if result.Error != nil {
+		logger.Error(result.Error.Error())
 		return status.Errorf(codes.Internal, "error %v", result.Error)
 	}
 

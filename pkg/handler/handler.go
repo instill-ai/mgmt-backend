@@ -9,12 +9,13 @@ import (
 	"github.com/iancoleman/strcase"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
-
-	fieldmask_utils "github.com/mennanov/fieldmask-utils"
+	"google.golang.org/grpc/status"
 
 	"github.com/instill-ai/mgmt-backend/internal/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 	"github.com/instill-ai/x/sterr"
+
+	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 
 	healthcheckPB "github.com/instill-ai/protogen-go/vdp/healthcheck/v1alpha"
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
@@ -61,6 +62,7 @@ func (h *handler) Readiness(ctx context.Context, in *mgmtPB.ReadinessRequest) (*
 
 // ListUser lists all users
 func (h *handler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*mgmtPB.ListUserResponse, error) {
+	logger, _ := logger.GetZapLogger()
 
 	pageSize := req.GetPageSize()
 	if pageSize == 0 {
@@ -70,16 +72,54 @@ func (h *handler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*m
 	}
 
 	dbUsers, nextPageToken, totalSize, err := h.service.ListUser(int(pageSize), req.GetPageToken())
-
 	if err != nil {
-		return &mgmtPB.ListUserResponse{}, err
+		sta := status.Convert(err)
+		switch sta.Code() {
+		case codes.InvalidArgument:
+			st, e := sterr.CreateErrorBadRequest(
+				"[handler] list user error", []*errdetails.BadRequest_FieldViolation{
+					{
+						Field:       "ListUserRequest.page_token",
+						Description: sta.Message(),
+					},
+				})
+			if e != nil {
+				logger.Error(e.Error())
+			}
+			return &mgmtPB.ListUserResponse{}, st.Err()
+		default:
+			st, e := sterr.CreateErrorResourceInfoStatus(
+				sta.Code(),
+				"[handler] list user error",
+				"user",
+				"",
+				"",
+				sta.Message(),
+			)
+			if e != nil {
+				logger.Error(e.Error())
+			}
+			return &mgmtPB.ListUserResponse{}, st.Err()
+		}
 	}
 
 	pbUsers := []*mgmtPB.User{}
 	for _, dbUser := range dbUsers {
 		pbUser, err := DBUser2PBUser(&dbUser)
 		if err != nil {
-			return &mgmtPB.ListUserResponse{}, err
+			logger.Error(err.Error())
+			st, e := sterr.CreateErrorResourceInfoStatus(
+				codes.Internal,
+				"[handler] list user error",
+				"user",
+				fmt.Sprintf("id %s", dbUser.ID),
+				"",
+				err.Error(),
+			)
+			if e != nil {
+				logger.Error(e.Error())
+			}
+			return &mgmtPB.ListUserResponse{}, st.Err()
 		}
 		pbUsers = append(pbUsers, pbUser)
 	}
@@ -132,16 +172,57 @@ func (h *handler) CreateUser(ctx context.Context, req *mgmtPB.CreateUserRequest)
 
 // GetUser gets a user
 func (h *handler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (*mgmtPB.GetUserResponse, error) {
+	logger, _ := logger.GetZapLogger()
+
 	id := strings.TrimPrefix(req.GetName(), "users/")
 
 	dbUser, err := h.service.GetUserByID(id)
 	if err != nil {
-		return &mgmtPB.GetUserResponse{}, err
+		sta := status.Convert(err)
+		switch sta.Code() {
+		case codes.InvalidArgument:
+			st, e := sterr.CreateErrorBadRequest(
+				"[handler] get user error", []*errdetails.BadRequest_FieldViolation{
+					{
+						Field:       "GetUserRequest.name",
+						Description: sta.Message(),
+					},
+				})
+			if e != nil {
+				logger.Error(e.Error())
+			}
+			return &mgmtPB.GetUserResponse{}, st.Err()
+		default:
+			st, e := sterr.CreateErrorResourceInfoStatus(
+				sta.Code(),
+				"[handler] get user error",
+				"user",
+				fmt.Sprintf("id %s", id),
+				"",
+				sta.Message(),
+			)
+			if e != nil {
+				logger.Error(e.Error())
+			}
+			return &mgmtPB.GetUserResponse{}, st.Err()
+		}
 	}
 
 	pbUser, err := DBUser2PBUser(dbUser)
 	if err != nil {
-		return &mgmtPB.GetUserResponse{}, err
+		logger.Error(err.Error())
+		st, e := sterr.CreateErrorResourceInfoStatus(
+			codes.Internal,
+			"[handler] get user error",
+			"user",
+			fmt.Sprintf("id %s", dbUser.ID),
+			"",
+			err.Error(),
+		)
+		if e != nil {
+			logger.Error(e.Error())
+		}
+		return &mgmtPB.GetUserResponse{}, st.Err()
 	}
 
 	resp := mgmtPB.GetUserResponse{
@@ -174,12 +255,51 @@ func (h *handler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserRequest)
 
 	dbUser, err := h.service.GetUser(uid)
 	if err != nil {
-		return &mgmtPB.LookUpUserResponse{}, err
+		sta := status.Convert(err)
+		switch sta.Code() {
+		case codes.InvalidArgument:
+			st, e := sterr.CreateErrorBadRequest(
+				"[handler] look up user error", []*errdetails.BadRequest_FieldViolation{
+					{
+						Field:       "LookUpUserRequest.permalink",
+						Description: sta.Message(),
+					},
+				})
+			if e != nil {
+				logger.Error(e.Error())
+			}
+			return &mgmtPB.LookUpUserResponse{}, st.Err()
+		default:
+			st, e := sterr.CreateErrorResourceInfoStatus(
+				sta.Code(),
+				"[handler] look up user error",
+				"user",
+				fmt.Sprintf("uid %s", uid),
+				"",
+				sta.Message(),
+			)
+			if e != nil {
+				logger.Error(e.Error())
+			}
+			return &mgmtPB.LookUpUserResponse{}, st.Err()
+		}
 	}
 
 	pbUser, err := DBUser2PBUser(dbUser)
 	if err != nil {
-		return &mgmtPB.LookUpUserResponse{}, err
+		logger.Error(err.Error())
+		st, e := sterr.CreateErrorResourceInfoStatus(
+			codes.Internal,
+			"[handler] look up user error",
+			"user",
+			fmt.Sprintf("uid %s", dbUser.UID),
+			"",
+			err.Error(),
+		)
+		if e != nil {
+			logger.Error(e.Error())
+		}
+		return &mgmtPB.LookUpUserResponse{}, st.Err()
 	}
 	resp := mgmtPB.LookUpUserResponse{
 		User: pbUser,
@@ -227,6 +347,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 
 	mask, err := fieldmask_utils.MaskFromProtoFieldMask(reqFieldMask, strcase.ToCamel)
 	if err != nil {
+		logger.Error(err.Error())
 		st, e := sterr.CreateErrorBadRequest(
 			"[handler] update user update mask error", []*errdetails.BadRequest_FieldViolation{
 				{
@@ -260,7 +381,8 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 	// the current user `pbUserToUpdate`: a struct to copy to
 	uid, err := uuid.FromString(pbUserToUpdate.GetUid())
 	if err != nil {
-		st, err := sterr.CreateErrorResourceInfoStatus(
+		logger.Error(err.Error())
+		st, e := sterr.CreateErrorResourceInfoStatus(
 			codes.Internal,
 			"[handler] update user error",
 			"user",
@@ -268,8 +390,8 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 			"",
 			err.Error(),
 		)
-		if err != nil {
-			logger.Error(err.Error())
+		if e != nil {
+			logger.Error(e.Error())
 		}
 		return &mgmtPB.UpdateUserResponse{}, st.Err()
 	}
@@ -294,6 +416,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 	// Only the fields mentioned in the field mask will be copied to `pbUserToUpdate`, other fields are left intact
 	err = fieldmask_utils.StructToStruct(mask, reqUser, pbUserToUpdate)
 	if err != nil {
+		logger.Error(err.Error())
 		st, e := sterr.CreateErrorResourceInfoStatus(
 			codes.Internal,
 			"[handler] update user error", "user", fmt.Sprintf("uid %s", reqUser.Uid),
@@ -308,17 +431,68 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 
 	dbUserToUpd, err := PBUser2DBUser(pbUserToUpdate)
 	if err != nil {
-		return &mgmtPB.UpdateUserResponse{}, err
+		logger.Error(err.Error())
+		st, e := sterr.CreateErrorResourceInfoStatus(
+			codes.Internal,
+			"[handler] update user error",
+			"user",
+			fmt.Sprintf("id %s", pbUserToUpdate.GetId()),
+			"",
+			err.Error(),
+		)
+		if e != nil {
+			logger.Error(e.Error())
+		}
+		return &mgmtPB.UpdateUserResponse{}, st.Err()
 	}
 
 	dbUserUpdated, err := h.service.UpdateUser(uid, dbUserToUpd)
 	if err != nil {
-		return &mgmtPB.UpdateUserResponse{}, err
+		sta := status.Convert(err)
+		switch sta.Code() {
+		case codes.InvalidArgument:
+			st, e := sterr.CreateErrorBadRequest(
+				"[handler] update user error", []*errdetails.BadRequest_FieldViolation{
+					{
+						Field:       "UpdateUserRequest",
+						Description: sta.Message(),
+					},
+				})
+			if e != nil {
+				logger.Error(e.Error())
+			}
+			return &mgmtPB.UpdateUserResponse{}, st.Err()
+		default:
+			st, e := sterr.CreateErrorResourceInfoStatus(
+				sta.Code(),
+				"[handler] update user error",
+				"user",
+				fmt.Sprintf("uid %s", uid.String()),
+				"",
+				sta.Message(),
+			)
+			if e != nil {
+				logger.Error(e.Error())
+			}
+			return &mgmtPB.UpdateUserResponse{}, st.Err()
+		}
 	}
 
 	pbUserUpdated, err := DBUser2PBUser(dbUserUpdated)
 	if err != nil {
-		return &mgmtPB.UpdateUserResponse{}, err
+		logger.Error(err.Error())
+		st, e := sterr.CreateErrorResourceInfoStatus(
+			codes.Internal,
+			"[handler] get user error",
+			"user",
+			fmt.Sprintf("uid %s", dbUserUpdated.UID),
+			"",
+			err.Error(),
+		)
+		if e != nil {
+			logger.Error(e.Error())
+		}
+		return &mgmtPB.UpdateUserResponse{}, st.Err()
 	}
 	resp := mgmtPB.UpdateUserResponse{
 		User: pbUserUpdated,
