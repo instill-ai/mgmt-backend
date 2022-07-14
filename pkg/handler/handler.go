@@ -24,6 +24,7 @@ import (
 
 // TODO: Validate mask based on the field behavior.
 // Currently, the OUTPUT_ONLY fields are hard-coded.
+var createRequiredFields = []string{"email"}
 var outputOnlyFields = []string{"name", "uid", "type", "create_time", "update_time"}
 var immutableFields = []string{"id"}
 
@@ -77,7 +78,7 @@ func (h *handler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*m
 		switch sta.Code() {
 		case codes.InvalidArgument:
 			st, e := sterr.CreateErrorBadRequest(
-				"[handler] list user error", []*errdetails.BadRequest_FieldViolation{
+				"list user error", []*errdetails.BadRequest_FieldViolation{
 					{
 						Field:       "ListUserRequest.page_token",
 						Description: sta.Message(),
@@ -90,7 +91,7 @@ func (h *handler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*m
 		default:
 			st, e := sterr.CreateErrorResourceInfoStatus(
 				sta.Code(),
-				"[handler] list user error",
+				"list user error",
 				"user",
 				"",
 				"",
@@ -110,7 +111,7 @@ func (h *handler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*m
 			logger.Error(err.Error())
 			st, e := sterr.CreateErrorResourceInfoStatus(
 				codes.Internal,
-				"[handler] list user error",
+				"list user error",
 				"user",
 				fmt.Sprintf("id %s", dbUser.ID),
 				"",
@@ -136,6 +137,23 @@ func (h *handler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*m
 func (h *handler) CreateUser(ctx context.Context, req *mgmtPB.CreateUserRequest) (*mgmtPB.CreateUserResponse, error) {
 	logger, _ := logger.GetZapLogger()
 	resp := &mgmtPB.CreateUserResponse{}
+
+	// Return error if REQUIRED fields are not provided in the requested payload pipeline resource
+	if err := checkfield.CheckRequiredFields(req.GetUser(), append(createRequiredFields, immutableFields...)); err != nil {
+		st, e := sterr.CreateErrorBadRequest(
+			"create user bad request error", []*errdetails.BadRequest_FieldViolation{
+				{
+					Field:       fmt.Sprintf("%v, %v", createRequiredFields, immutableFields),
+					Description: err.Error(),
+				},
+			},
+		)
+		if e != nil {
+			logger.Error(e.Error())
+		}
+		return resp, st.Err()
+	}
+
 	// Validate the user id conforms to RFC-1034, which restricts to letters, numbers,
 	// and hyphen, with the first character a letter, the last a letter or a
 	// number, and a 63 character maximum.
@@ -143,7 +161,7 @@ func (h *handler) CreateUser(ctx context.Context, req *mgmtPB.CreateUserRequest)
 	err := checkfield.CheckResourceID(id)
 	if err != nil {
 		st, e := sterr.CreateErrorBadRequest(
-			"[handler] create user bad request error", []*errdetails.BadRequest_FieldViolation{
+			"create user bad request error", []*errdetails.BadRequest_FieldViolation{
 				{
 					Field:       "id",
 					Description: err.Error(),
@@ -158,7 +176,7 @@ func (h *handler) CreateUser(ctx context.Context, req *mgmtPB.CreateUserRequest)
 
 	st, err := sterr.CreateErrorResourceInfoStatus(
 		codes.Unimplemented,
-		"[handler] create user not implemented error",
+		"create user not implemented error",
 		"endpoint",
 		"/users",
 		"",
@@ -182,7 +200,7 @@ func (h *handler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (*mgm
 		switch sta.Code() {
 		case codes.InvalidArgument:
 			st, e := sterr.CreateErrorBadRequest(
-				"[handler] get user error", []*errdetails.BadRequest_FieldViolation{
+				"get user error", []*errdetails.BadRequest_FieldViolation{
 					{
 						Field:       "GetUserRequest.name",
 						Description: sta.Message(),
@@ -195,7 +213,7 @@ func (h *handler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (*mgm
 		default:
 			st, e := sterr.CreateErrorResourceInfoStatus(
 				sta.Code(),
-				"[handler] get user error",
+				"get user error",
 				"user",
 				fmt.Sprintf("id %s", id),
 				"",
@@ -213,7 +231,7 @@ func (h *handler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (*mgm
 		logger.Error(err.Error())
 		st, e := sterr.CreateErrorResourceInfoStatus(
 			codes.Internal,
-			"[handler] get user error",
+			"get user error",
 			"user",
 			fmt.Sprintf("id %s", dbUser.ID),
 			"",
@@ -240,7 +258,7 @@ func (h *handler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserRequest)
 	uid, err := uuid.FromString(uidStr)
 	if err != nil {
 		st, e := sterr.CreateErrorBadRequest(
-			"[handler] look up user invalid uuid error", []*errdetails.BadRequest_FieldViolation{
+			"look up user invalid uuid error", []*errdetails.BadRequest_FieldViolation{
 				{
 					Field:       "LookUpUserRequest.permalink",
 					Description: err.Error(),
@@ -259,7 +277,7 @@ func (h *handler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserRequest)
 		switch sta.Code() {
 		case codes.InvalidArgument:
 			st, e := sterr.CreateErrorBadRequest(
-				"[handler] look up user error", []*errdetails.BadRequest_FieldViolation{
+				"look up user error", []*errdetails.BadRequest_FieldViolation{
 					{
 						Field:       "LookUpUserRequest.permalink",
 						Description: sta.Message(),
@@ -272,7 +290,7 @@ func (h *handler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserRequest)
 		default:
 			st, e := sterr.CreateErrorResourceInfoStatus(
 				sta.Code(),
-				"[handler] look up user error",
+				"look up user error",
 				"user",
 				fmt.Sprintf("uid %s", uid),
 				"",
@@ -290,7 +308,7 @@ func (h *handler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserRequest)
 		logger.Error(err.Error())
 		st, e := sterr.CreateErrorResourceInfoStatus(
 			codes.Internal,
-			"[handler] look up user error",
+			"look up user error",
 			"user",
 			fmt.Sprintf("uid %s", dbUser.UID),
 			"",
@@ -316,7 +334,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 	// Validate the field mask
 	if !req.GetUpdateMask().IsValid(reqUser) {
 		st, e := sterr.CreateErrorBadRequest(
-			"[handler] update user invalid fieidmask error", []*errdetails.BadRequest_FieldViolation{
+			"update user invalid fieidmask error", []*errdetails.BadRequest_FieldViolation{
 				{
 					Field:       "UpdateUserRequest.update_mask",
 					Description: "invalid",
@@ -332,7 +350,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 	reqFieldMask, err := checkfield.CheckUpdateOutputOnlyFields(req.GetUpdateMask(), outputOnlyFields)
 	if err != nil {
 		st, e := sterr.CreateErrorBadRequest(
-			"[handler] update user update OUTPUT_ONLY fields error", []*errdetails.BadRequest_FieldViolation{
+			"update user update OUTPUT_ONLY fields error", []*errdetails.BadRequest_FieldViolation{
 				{
 					Field:       "UpdateUserRequest OUTPUT_ONLY fields",
 					Description: err.Error(),
@@ -349,7 +367,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 	if err != nil {
 		logger.Error(err.Error())
 		st, e := sterr.CreateErrorBadRequest(
-			"[handler] update user update mask error", []*errdetails.BadRequest_FieldViolation{
+			"update user update mask error", []*errdetails.BadRequest_FieldViolation{
 				{
 					Field:       "UpdateUserRequest.update_mask",
 					Description: err.Error(),
@@ -384,7 +402,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 		logger.Error(err.Error())
 		st, e := sterr.CreateErrorResourceInfoStatus(
 			codes.Internal,
-			"[handler] update user error",
+			"update user error",
 			"user",
 			fmt.Sprintf("user %v", pbUserToUpdate),
 			"",
@@ -400,7 +418,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 	err = checkfield.CheckUpdateImmutableFields(reqUser, pbUserToUpdate, immutableFields)
 	if err != nil {
 		st, e := sterr.CreateErrorBadRequest(
-			"[handler] update user update IMMUTABLE fields error", []*errdetails.BadRequest_FieldViolation{
+			"update user update IMMUTABLE fields error", []*errdetails.BadRequest_FieldViolation{
 				{
 					Field:       "UpdateUserRequest IMMUTABLE fields",
 					Description: err.Error(),
@@ -419,7 +437,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 		logger.Error(err.Error())
 		st, e := sterr.CreateErrorResourceInfoStatus(
 			codes.Internal,
-			"[handler] update user error", "user", fmt.Sprintf("uid %s", reqUser.Uid),
+			"update user error", "user", fmt.Sprintf("uid %s", reqUser.Uid),
 			"",
 			err.Error(),
 		)
@@ -434,7 +452,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 		logger.Error(err.Error())
 		st, e := sterr.CreateErrorResourceInfoStatus(
 			codes.Internal,
-			"[handler] update user error",
+			"update user error",
 			"user",
 			fmt.Sprintf("id %s", pbUserToUpdate.GetId()),
 			"",
@@ -452,7 +470,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 		switch sta.Code() {
 		case codes.InvalidArgument:
 			st, e := sterr.CreateErrorBadRequest(
-				"[handler] update user error", []*errdetails.BadRequest_FieldViolation{
+				"update user error", []*errdetails.BadRequest_FieldViolation{
 					{
 						Field:       "UpdateUserRequest",
 						Description: sta.Message(),
@@ -465,7 +483,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 		default:
 			st, e := sterr.CreateErrorResourceInfoStatus(
 				sta.Code(),
-				"[handler] update user error",
+				"update user error",
 				"user",
 				fmt.Sprintf("uid %s", uid.String()),
 				"",
@@ -483,7 +501,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 		logger.Error(err.Error())
 		st, e := sterr.CreateErrorResourceInfoStatus(
 			codes.Internal,
-			"[handler] get user error",
+			"get user error",
 			"user",
 			fmt.Sprintf("uid %s", dbUserUpdated.UID),
 			"",
@@ -506,7 +524,7 @@ func (h *handler) DeleteUser(ctx context.Context, req *mgmtPB.DeleteUserRequest)
 
 	st, err := sterr.CreateErrorResourceInfoStatus(
 		codes.Unimplemented,
-		"[handler] delete user not implemented error",
+		"delete user not implemented error",
 		"endpoint",
 		"/users/{user}",
 		"",

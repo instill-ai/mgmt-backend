@@ -28,7 +28,7 @@ func createDefaultUser(db *gorm.DB) error {
 	defaultUser := datamodel.User{
 		Base:                   datamodel.Base{UID: defaultUserUID},
 		ID:                     "local-user",
-		Email:                  sql.NullString{String: "", Valid: false},
+		Email:                  sql.NullString{String: "local-user@instill.tech", Valid: true},
 		CompanyName:            sql.NullString{String: "", Valid: false},
 		Role:                   sql.NullString{String: "", Valid: false},
 		NewsletterSubscription: false,

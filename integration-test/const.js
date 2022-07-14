@@ -4,7 +4,7 @@ export const mgmtHost = `http://mgmt-backend:${mgmtPort}/${mgmtVersion}`;
 
 export const defaultUser = {
   name: "users/instill",
-  email: "",
+  email: "local-user@instill.tech",
   id: "local-user",
   company_name: "",
   role: "",
