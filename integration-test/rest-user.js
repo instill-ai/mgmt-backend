@@ -334,6 +334,24 @@ export function CheckCreate() {
         }
       ),
       {
+        [`POST /${constant.mgmtVersion}/users response status 400`]:
+          (r) => r.status === 400,
+      }
+    );
+
+    check(
+      http.request(
+        "POST",
+        `${constant.mgmtHost}/users`,
+        JSON.stringify({
+          id: "local-user",
+          email: "local-user@instill.tech"
+        }),
+        {
+          headers: {"Content-Type": "application/json"},
+        }
+      ),
+      {
         [`POST /${constant.mgmtVersion}/users response status 501 [not implemented]`]:
           (r) => r.status === 501,
       }

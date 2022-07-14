@@ -40,11 +40,18 @@ func (s *service) ListRole() []string {
 }
 
 // ListUser lists all users
+// Return error types
+//   - codes.InvalidArgument
+//   - codes.Internal
 func (s *service) ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int, error) {
 	return s.repository.ListUser(pageSize, pageToken)
 }
 
 // CreateUser creates an user instance
+// Return error types
+//   - codes.InvalidArgument
+//   - codes.NotFound
+//   - codes.Internal
 func (s *service) CreateUser(user *datamodel.User) (*datamodel.User, error) {
 	//TODO: validate spec JSON schema
 
@@ -63,6 +70,9 @@ func (s *service) CreateUser(user *datamodel.User) (*datamodel.User, error) {
 }
 
 // GetUserByID gets a user by ID
+// Return error types
+//   - codes.InvalidArgument
+//   - codes.NotFound
 func (s *service) GetUserByID(id string) (*datamodel.User, error) {
 	// Validation: Required field
 	if id == "" {
@@ -72,7 +82,10 @@ func (s *service) GetUserByID(id string) (*datamodel.User, error) {
 	return s.repository.GetUserByID(id)
 }
 
-// GetUser gets a user by uuid
+// GetUser gets a user by UUID
+// Return error types
+//   - codes.InvalidArgument
+//   - codes.NotFound
 func (s *service) GetUser(uid uuid.UUID) (*datamodel.User, error) {
 	// Validation: Required field
 	if uid.IsNil() {
@@ -81,7 +94,11 @@ func (s *service) GetUser(uid uuid.UUID) (*datamodel.User, error) {
 	return s.repository.GetUser(uid)
 }
 
-// UpdateUser updates a user by uuid
+// UpdateUser updates a user by UUID
+// Return error types
+//   - codes.InvalidArgument
+//   - codes.NotFound
+//   - codes.Internal
 func (s *service) UpdateUser(uid uuid.UUID, user *datamodel.User) (*datamodel.User, error) {
 	// Validation: Required field
 	if uid.IsNil() {
@@ -95,6 +112,11 @@ func (s *service) UpdateUser(uid uuid.UUID, user *datamodel.User) (*datamodel.Us
 		}
 	}
 
+	// Check if the user exists
+	if _, err := s.repository.GetUser(uid); err != nil {
+		return nil, err
+	}
+
 	// Update the user
 	if err := s.repository.UpdateUser(uid, user); err != nil {
 		return nil, err
@@ -104,7 +126,11 @@ func (s *service) UpdateUser(uid uuid.UUID, user *datamodel.User) (*datamodel.Us
 	return s.repository.GetUser(uid)
 }
 
-// DeleteUser deletes a user by uuid
+// DeleteUser deletes a user by UUID
+// Return error types
+//   - codes.InvalidArgument
+//   - codes.NotFound
+//   - codes.Internal
 func (s *service) DeleteUser(uid uuid.UUID) error {
 	// Validation: Required field
 	if uid.IsNil() {
@@ -114,6 +140,10 @@ func (s *service) DeleteUser(uid uuid.UUID) error {
 }
 
 // DeleteUserByID deletes a user by ID
+// Return error types
+//   - codes.InvalidArgument
+//   - codes.NotFound
+//   - codes.Internal
 func (s *service) DeleteUserByID(id string) error {
 	// Validation: Required field
 	if id == "" {

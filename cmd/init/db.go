@@ -13,12 +13,14 @@ import (
 )
 
 // CreateDefaultUser creates a default user in the database
+// Return error types
+//   - codes.Internal
 func createDefaultUser(db *gorm.DB) error {
 
 	// Generate a random uid to the user
 	defaultUserUID, err := uuid.NewV4()
 	if err != nil {
-		return err
+		return status.Errorf(codes.Internal, "error %v", err)
 	}
 
 	r := repository.NewRepository(db)
@@ -26,7 +28,7 @@ func createDefaultUser(db *gorm.DB) error {
 	defaultUser := datamodel.User{
 		Base:                   datamodel.Base{UID: defaultUserUID},
 		ID:                     "local-user",
-		Email:                  sql.NullString{String: "", Valid: false},
+		Email:                  sql.NullString{String: "local-user@instill.tech", Valid: true},
 		CompanyName:            sql.NullString{String: "", Valid: false},
 		Role:                   sql.NullString{String: "", Valid: false},
 		NewsletterSubscription: false,
