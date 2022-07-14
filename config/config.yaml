@@ -5,7 +5,7 @@ server:
     key:    # /ssl/tls.key
   corsorigins:
     - http://localhost:3000
-  edition: local-ce:dev
+  edition: local-ce:latest
   disableusage: false
   debug: true
 database:
