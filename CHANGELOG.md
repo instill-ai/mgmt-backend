@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.4-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.2.3-alpha...v0.2.4-alpha) (2022-07-19)
+
+
+### Bug Fixes
+
+* change edition to local-ce:dev ([037d738](https://github.com/instill-ai/mgmt-backend/commit/037d73816b7ceb0aec9dd34d684c7cb8e7ee6d81))
+* refactor error code ([#11](https://github.com/instill-ai/mgmt-backend/issues/11)) ([4114e8e](https://github.com/instill-ai/mgmt-backend/commit/4114e8e5494723fdec9a39a87e47f08316fab307))
+
 ## [0.2.3-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.2.2-alpha...v0.2.3-alpha) (2022-07-07)
 
 
