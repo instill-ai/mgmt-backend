@@ -1,4 +1,4 @@
-package handler
+package datamodel
 
 import (
 	"database/sql"
@@ -9,13 +9,11 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
-
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 )
 
 // DBUser2PBUser converts a database user instance to proto user
-func DBUser2PBUser(dbUser *datamodel.User) (*mgmtPB.User, error) {
+func DBUser2PBUser(dbUser *User) (*mgmtPB.User, error) {
 	if dbUser == nil {
 		return nil, status.Error(codes.Internal, "can't convert a nil user")
 	}
@@ -38,7 +36,7 @@ func DBUser2PBUser(dbUser *datamodel.User) (*mgmtPB.User, error) {
 }
 
 // PBUser2DBUser converts a proto user instance to database user
-func PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.User, error) {
+func PBUser2DBUser(pbUser *mgmtPB.User) (*User, error) {
 	if pbUser == nil {
 		return nil, status.Error(codes.Internal, "can't convert a nil user")
 	}
@@ -52,8 +50,8 @@ func PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.User, error) {
 	role := pbUser.GetRole()
 	cookieToken := pbUser.GetCookieToken()
 
-	return &datamodel.User{
-		Base: datamodel.Base{
+	return &User{
+		Base: Base{
 			UID:        uid,
 			CreateTime: pbUser.GetCreateTime().AsTime(),
 			UpdateTime: pbUser.GetUpdateTime().AsTime(),

@@ -9,7 +9,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.10.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/instill-ai/protogen-go v0.3.1-alpha
-	github.com/instill-ai/usage-client v0.1.1-alpha
+	github.com/instill-ai/usage-client v0.1.2-alpha
 	github.com/instill-ai/x v0.1.0-alpha.0.20220705112420-e3d5e6d36d9b
 	github.com/knadh/koanf v1.4.1
 	github.com/mennanov/fieldmask-utils v0.5.0

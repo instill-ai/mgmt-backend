@@ -11,8 +11,12 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/internal/logger"
+	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
+	"github.com/instill-ai/mgmt-backend/pkg/usage"
+
 	"github.com/instill-ai/x/sterr"
 
 	fieldmask_utils "github.com/mennanov/fieldmask-utils"
@@ -34,12 +38,14 @@ const maxPageSize = int64(100)
 type handler struct {
 	mgmtPB.UnimplementedUserServiceServer
 	service service.Service
+	usg     usage.Usage
 }
 
 // NewHandler initiates a handler instance
-func NewHandler(s service.Service) mgmtPB.UserServiceServer {
+func NewHandler(s service.Service, u usage.Usage) mgmtPB.UserServiceServer {
 	return &handler{
 		service: s,
+		usg:     u,
 	}
 }
 
@@ -106,7 +112,7 @@ func (h *handler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*m
 
 	pbUsers := []*mgmtPB.User{}
 	for _, dbUser := range dbUsers {
-		pbUser, err := DBUser2PBUser(&dbUser)
+		pbUser, err := datamodel.DBUser2PBUser(&dbUser)
 		if err != nil {
 			logger.Error(err.Error())
 			st, e := sterr.CreateErrorResourceInfoStatus(
@@ -226,7 +232,7 @@ func (h *handler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (*mgm
 		}
 	}
 
-	pbUser, err := DBUser2PBUser(dbUser)
+	pbUser, err := datamodel.DBUser2PBUser(dbUser)
 	if err != nil {
 		logger.Error(err.Error())
 		st, e := sterr.CreateErrorResourceInfoStatus(
@@ -303,7 +309,7 @@ func (h *handler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserRequest)
 		}
 	}
 
-	pbUser, err := DBUser2PBUser(dbUser)
+	pbUser, err := datamodel.DBUser2PBUser(dbUser)
 	if err != nil {
 		logger.Error(err.Error())
 		st, e := sterr.CreateErrorResourceInfoStatus(
@@ -447,7 +453,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 		return &mgmtPB.UpdateUserResponse{}, st.Err()
 	}
 
-	dbUserToUpd, err := PBUser2DBUser(pbUserToUpdate)
+	dbUserToUpd, err := datamodel.PBUser2DBUser(pbUserToUpdate)
 	if err != nil {
 		logger.Error(err.Error())
 		st, e := sterr.CreateErrorResourceInfoStatus(
@@ -496,7 +502,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 		}
 	}
 
-	pbUserUpdated, err := DBUser2PBUser(dbUserUpdated)
+	pbUserUpdated, err := datamodel.DBUser2PBUser(dbUserUpdated)
 	if err != nil {
 		logger.Error(err.Error())
 		st, e := sterr.CreateErrorResourceInfoStatus(
@@ -515,6 +521,12 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 	resp := mgmtPB.UpdateUserResponse{
 		User: pbUserUpdated,
 	}
+
+	// Trigger single reporter
+	if !config.Config.Server.DisableUsage {
+		h.usg.TriggerSingleReporter(ctx)
+	}
+
 	return &resp, nil
 }
 
