@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.6-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.2.5-alpha...v0.2.6-alpha) (2022-08-21)
+
+
+### Bug Fixes
+
+* update usage ([6d607a9](https://github.com/instill-ai/mgmt-backend/commit/6d607a9bd3287744b1bf7ba480720fffe92893fc))
+
 ## [0.2.5-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.2.4-alpha...v0.2.5-alpha) (2022-08-17)
 
 
