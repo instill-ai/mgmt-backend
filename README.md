@@ -1,6 +1,6 @@
 # mgmt-backend
 
-mgmt-backend manages the user resources in [Visual Data Preparation](https://github.com/instill-ai/vdp).
+mgmt-backend communicates with [Visual Data Preparation (VDP)](https://github.com/instill-ai/vdp) to manage the user resources.
 
 ## Local dev
 
