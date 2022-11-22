@@ -188,7 +188,7 @@ func main() {
 	case err := <-errSig:
 		logger.Error(fmt.Sprintf("Fatal error: %v\n", err))
 	case <-quitSig:
-		if !config.Config.Server.DisableUsage {
+		if !config.Config.Server.DisableUsage && usg != nil {
 			usg.TriggerSingleReporter(ctx)
 		}
 		logger.Info("Shutting down server...")
