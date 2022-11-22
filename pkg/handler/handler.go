@@ -523,7 +523,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 	}
 
 	// Trigger single reporter
-	if !config.Config.Server.DisableUsage {
+	if !config.Config.Server.DisableUsage && h.usg != nil {
 		h.usg.TriggerSingleReporter(ctx)
 	}
 
