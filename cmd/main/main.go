@@ -140,7 +140,7 @@ func main() {
 		}),
 	)
 
-	if !config.Config.Server.DisableUsage {
+	if !config.Config.Server.DisableUsage && usg != nil {
 		usg.StartReporter(ctx)
 	}
 
