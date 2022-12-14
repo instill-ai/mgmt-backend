@@ -14,7 +14,7 @@ import (
 // Service interface
 type Service interface {
 	ListRole() []string
-	ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int, error)
+	ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int64, error)
 	CreateUser(user *datamodel.User) (*datamodel.User, error)
 	GetUser(uid uuid.UUID) (*datamodel.User, error)
 	GetUserByID(id string) (*datamodel.User, error)
@@ -43,7 +43,7 @@ func (s *service) ListRole() []string {
 // Return error types
 //   - codes.InvalidArgument
 //   - codes.Internal
-func (s *service) ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int, error) {
+func (s *service) ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int64, error) {
 	return s.repository.ListUser(pageSize, pageToken)
 }
 

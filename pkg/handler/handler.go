@@ -132,9 +132,9 @@ func (h *handler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*m
 	}
 
 	resp := mgmtPB.ListUserResponse{
-		Users:         pbUsers,
+		Users: pbUsers,
 		NextPageToken: nextPageToken,
-		TotalSize:     int64(totalSize),
+		TotalSize: totalSize,
 	}
 	return &resp, nil
 }

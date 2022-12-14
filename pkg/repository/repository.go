@@ -15,7 +15,7 @@ import (
 
 // Repository interface
 type Repository interface {
-	ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int, error)
+	ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int64, error)
 	CreateUser(user *datamodel.User) error
 	GetUser(uid uuid.UUID) (*datamodel.User, error)
 	GetUserByID(id string) (*datamodel.User, error)
@@ -40,12 +40,12 @@ func NewRepository(db *gorm.DB) Repository {
 // Return error types
 //   - codes.InvalidArgument
 //   - codes.Internal
-func (r *repository) ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int, error) {
+func (r *repository) ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int64, error) {
 	logger, _ := logger.GetZapLogger()
 	totalSize := int64(0)
 	if result := r.db.Model(&datamodel.User{}).Count(&totalSize); result.Error != nil {
 		logger.Error(result.Error.Error())
-		return nil, "", int(totalSize), status.Errorf(codes.Internal, "error %v", result.Error)
+		return nil, "", totalSize, status.Errorf(codes.Internal, "error %v", result.Error)
 	}
 
 	queryBuilder := r.db.Model(&datamodel.User{}).Order("create_time DESC, id DESC")
@@ -57,7 +57,7 @@ func (r *repository) ListUser(pageSize int, pageToken string) ([]datamodel.User,
 	if pageToken != "" {
 		createTime, id, err := paginate.DecodeToken(pageToken)
 		if err != nil {
-			return nil, "", int(totalSize), status.Errorf(codes.InvalidArgument, "Invalid page token: %s", err.Error())
+			return nil, "", totalSize, status.Errorf(codes.InvalidArgument, "Invalid page token: %s", err.Error())
 		}
 		queryBuilder = queryBuilder.Where("(create_time,id) < (?::timestamp, ?)", createTime, id)
 	}
@@ -68,14 +68,14 @@ func (r *repository) ListUser(pageSize int, pageToken string) ([]datamodel.User,
 	rows, err := queryBuilder.Rows()
 	if err != nil {
 		logger.Error(err.Error())
-		return nil, "", int(totalSize), status.Errorf(codes.Internal, "error %v", err.Error())
+		return nil, "", totalSize, status.Errorf(codes.Internal, "error %v", err.Error())
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var item datamodel.User
 		if err = r.db.ScanRows(rows, &item); err != nil {
 			logger.Error(err.Error())
-			return nil, "", int(totalSize), status.Errorf(codes.Internal, "error %v", err.Error())
+			return nil, "", totalSize, status.Errorf(codes.Internal, "error %v", err.Error())
 		}
 		createTime = item.CreateTime
 		users = append(users, item)
@@ -83,15 +83,15 @@ func (r *repository) ListUser(pageSize int, pageToken string) ([]datamodel.User,
 
 	if len(users) > 0 {
 		// Last page
-		if (len(users) < pageSize) || (len(users) == pageSize && len(users) == int(totalSize)) {
-			return users, "", int(totalSize), nil
+		if (len(users) < pageSize) || (len(users) == pageSize && int64(len(users)) == totalSize) {
+			return users, "", totalSize, nil
 		}
 		// Not last page
 		nextPageToken := paginate.EncodeToken(createTime, (users)[len(users)-1].UID.String())
-		return users, nextPageToken, int(totalSize), nil
+		return users, nextPageToken, totalSize, nil
 	}
 
-	return users, "", int(totalSize), nil
+	return users, "", totalSize, nil
 }
 
 // CreateUser creates a new user

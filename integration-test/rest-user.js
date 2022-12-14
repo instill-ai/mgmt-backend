@@ -1,6 +1,6 @@
 import http from "k6/http";
-import {check, group} from "k6";
-import {randomString} from "https://jslib.k6.io/k6-utils/1.1.0/index.js";
+import { check, group } from "k6";
+import { randomString } from "https://jslib.k6.io/k6-utils/1.1.0/index.js";
 import * as constant from "./const.js";
 import * as helper from "./helper.js";
 
@@ -78,7 +78,7 @@ export function CheckGet() {
           (r) => r.json().user.role !== undefined,
         [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.id} response newsletter_subscription`]:
           (r) => r.json().user.newsletter_subscription !== undefined,
-          [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.id} response cookie_token`]:
+        [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.id} response cookie_token`]:
           (r) => r.json().user.cookie_token !== undefined,
         [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.id} response type`]:
           (r) => r.json().user.type === "OWNER_TYPE_USER",
@@ -109,7 +109,7 @@ export function CheckLookUp() {
 
   group(`Management API: Look up default user by permalink`, () => {
     check(
-      http.request("GET", `${constant.mgmtHost}/users/${defaultUid}:lookUp`),
+      http.request("GET", `${constant.mgmtHost}/users/${defaultUid}/lookUp`),
       {
         [`GET /${constant.mgmtVersion}/users/${defaultUid} response status 200`]:
           (r) => r.status === 200,
@@ -148,7 +148,7 @@ export function CheckLookUp() {
   var nonExistUID = "2a06c2f7-8da9-4046-91ea-240f88a5d000";
   group(`Management API: Look up non-exist user by permalink`, () => {
     check(
-      http.request("GET", `${constant.mgmtHost}/users/${nonExistUID}:lookUp`),
+      http.request("GET", `${constant.mgmtHost}/users/${nonExistUID}/lookUp`),
       {
         [`GET /${constant.mgmtVersion}/users/${nonExistUID} response status 404`]:
           (r) => r.status === 404,
@@ -183,7 +183,7 @@ export function CheckUpdate() {
         "PATCH",
         `${constant.mgmtHost}/users/${constant.defaultUser.id}`,
         JSON.stringify(userUpdate),
-        {headers: {"Content-Type": "application/json"}}
+        { headers: { "Content-Type": "application/json" } }
       ),
       {
         [`PATCH /${constant.mgmtVersion}/users/${constant.defaultUser.id} response 200`]:
@@ -205,7 +205,7 @@ export function CheckUpdate() {
             r.json().user.newsletter_subscription ===
             userUpdate.newsletter_subscription,
         [`PATCH /${constant.mgmtVersion}/users/${constant.defaultUser.id} response cookie_token updated`]:
-            (r) => r.json().user.cookie_token === userUpdate.cookie_token,
+          (r) => r.json().user.cookie_token === userUpdate.cookie_token,
         [`PATCH /${constant.mgmtVersion}/users/${constant.defaultUser.id} response type unchanged`]:
           (r) => r.json().user.type === res.json().user.type,
         [`PATCH /${constant.mgmtVersion}/users/${constant.defaultUser.id} response create_time unchanged`]:
@@ -223,7 +223,7 @@ export function CheckUpdate() {
         "PATCH",
         `${constant.mgmtHost}/users/${constant.defaultUser.id}`,
         JSON.stringify(constant.defaultUser),
-        {headers: {"Content-Type": "application/json"}}
+        { headers: { "Content-Type": "application/json" } }
       ),
       {
         [`PATCH /${constant.mgmtVersion}/users/${constant.defaultUser.id} response status 200`]:
@@ -252,7 +252,7 @@ export function CheckUpdate() {
         "PATCH",
         `${constant.mgmtHost}/users/${constant.defaultUser.id}`,
         JSON.stringify(userUpdate),
-        {headers: {"Content-Type": "application/json"}}
+        { headers: { "Content-Type": "application/json" } }
       ),
       {
         [`PATCH /${constant.mgmtVersion}/users/${constant.defaultUser.id} response status 400`]:
@@ -270,7 +270,7 @@ export function CheckUpdate() {
         "PATCH",
         `${constant.mgmtHost}/users/${constant.defaultUser.id}`,
         JSON.stringify(userUpdate),
-        {headers: {"Content-Type": "application/json"}}
+        { headers: { "Content-Type": "application/json" } }
       ),
       {
         [`PATCH /${constant.mgmtVersion}/users/${constant.defaultUser.id} response status 400`]:
@@ -294,9 +294,9 @@ export function CheckCreate() {
       http.request(
         "POST",
         `${constant.mgmtHost}/users`,
-        JSON.stringify({id: "2a06c2f7-8da9-4046-91ea-240f88a5d000"}),
+        JSON.stringify({ id: "2a06c2f7-8da9-4046-91ea-240f88a5d000" }),
         {
-          headers: {"Content-Type": "application/json"},
+          headers: { "Content-Type": "application/json" },
         }
       ),
       {
@@ -310,9 +310,9 @@ export function CheckCreate() {
       http.request(
         "POST",
         `${constant.mgmtHost}/users`,
-        JSON.stringify({id: "local user"}),
+        JSON.stringify({ id: "local user" }),
         {
-          headers: {"Content-Type": "application/json"},
+          headers: { "Content-Type": "application/json" },
         }
       ),
       {
@@ -330,7 +330,7 @@ export function CheckCreate() {
           id: "local-user",
         }),
         {
-          headers: {"Content-Type": "application/json"},
+          headers: { "Content-Type": "application/json" },
         }
       ),
       {
@@ -348,7 +348,7 @@ export function CheckCreate() {
           email: "local-user@instill.tech"
         }),
         {
-          headers: {"Content-Type": "application/json"},
+          headers: { "Content-Type": "application/json" },
         }
       ),
       {
@@ -367,7 +367,7 @@ export function CheckDelete() {
         `${constant.mgmtHost}/users/${constant.defaultUser.id}`,
         JSON.stringify({}),
         {
-          headers: {"Content-Type": "application/json"},
+          headers: { "Content-Type": "application/json" },
         }
       ),
       {

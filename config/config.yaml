@@ -1,10 +1,9 @@
 server:
   port: 8084
   https:
-    cert: # /ssl/tls.crt
-    key: # /ssl/tls.key
+    cert:
+    key:
   corsorigins:
-    - http://localhost:3000
   edition: local-ce:dev
   disableusage: false
   debug: true
