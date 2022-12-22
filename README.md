@@ -1,6 +1,6 @@
 # mgmt-backend
 
-mgmt-backend communicates with [Visual Data Preparation (VDP)](https://github.com/instill-ai/vdp) to manage the user resources.
+mgmt-backend communicates with [Versatile Data Pipeline (VDP)](https://github.com/instill-ai/vdp) to manage the user resources.
 
 ## Local dev
 
