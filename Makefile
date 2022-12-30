@@ -12,13 +12,16 @@ K6BIN := $(if $(shell command -v k6 2> /dev/null),k6,$(shell mktemp -d)/k6)
 
 .PHONY: dev
 dev:							## Run dev container
+	@docker compose ls -q | grep -q "instill-vdp" && true || \
+		(echo "Error: Run \"make dev PROFILE=mgmt\" in vdp repository (https://github.com/instill-ai/vdp) in your local machine first." && exit 1)
 	@docker inspect --type container ${SERVICE_NAME} >/dev/null 2>&1 && echo "A container named ${SERVICE_NAME} is already running." || \
-	echo "Run dev container ${SERVICE_NAME}. To stop it, run \"make stop\"." && \
-	docker run -d --rm -v $(PWD):/${SERVICE_NAME} \
-	-p ${SERVICE_PORT}:${SERVICE_PORT} \
-	--network instill-network \
-	--name ${SERVICE_NAME} \
-	instill/${SERVICE_NAME}:dev >/dev/null 2>&1
+		echo "Run dev container ${SERVICE_NAME}. To stop it, run \"make stop\"."
+	@docker run -d --rm \
+		-v $(PWD):/${SERVICE_NAME} \
+		-p ${SERVICE_PORT}:${SERVICE_PORT} \
+		--network instill-network \
+		--name ${SERVICE_NAME} \
+		instill/${SERVICE_NAME}:dev >/dev/null 2>&1
 
 .PHONY: logs
 logs:							## Tail container logs with -n 10
