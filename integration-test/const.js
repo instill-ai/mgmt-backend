@@ -1,6 +1,21 @@
-export const mgmtPort = 8084
+let proto
+let host
+let port
+
+if (__ENV.HOST == "localhost") {
+  // api-gateway mode (outside container)
+  proto = "https"
+  host = "localhost"
+  port = 8080
+} else {
+  // container mode (inside container)
+  proto = "http"
+  host = "mgmt-backend"
+  port = 8084
+}
+
 export const mgmtVersion = "v1alpha";
-export const mgmtHost = __ENV.HOST ? `http://${__ENV.HOST}:${mgmtPort}/${mgmtVersion}` : `http://mgmt-backend:${mgmtPort}/${mgmtVersion}`;
+export const mgmtHost = `${proto}://${host}:${port}/${mgmtVersion}`
 
 export const defaultUser = {
   name: "users/instill",
