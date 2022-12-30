@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -113,7 +114,7 @@ func main() {
 	repository := repository.NewRepository(db)
 
 	grpcS := grpc.NewServer(grpcServerOpts...)
-	svc := service.NewService(repository)
+	reflection.Register(grpcS)
 
 	// Usage collection
 	var usg usage.Usage
@@ -123,7 +124,9 @@ func main() {
 		usg = usage.NewUsage(ctx, repository, usageServiceClient)
 	}
 
-	mgmtPB.RegisterUserServiceServer(grpcS, handler.NewHandler(svc, usg))
+	mgmtPB.RegisterUserServiceServer(
+		grpcS,
+		handler.NewHandler(service.NewService(repository), usg))
 
 	gwS := runtime.NewServeMux(
 		runtime.WithForwardResponseOption(httpResponseModifier),
