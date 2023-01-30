@@ -20,8 +20,13 @@ type Base struct {
 type User struct {
 	Base
 	ID                     string `gorm:"unique;not null;"`
-	Email                  sql.NullString
-	CompanyName            sql.NullString
+	OwnerType              sql.NullString
+	Email                  string `gorm:"unique;not null;"`
+	Plan                   sql.NullString
+	BillingId              sql.NullString
+	FirstName              sql.NullString
+	LastName               sql.NullString
+	OrgName                sql.NullString
 	Role                   sql.NullString
 	NewsletterSubscription bool `gorm:"default:false"`
 	CookieToken            sql.NullString

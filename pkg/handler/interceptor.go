@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"google.golang.org/grpc/codes"
@@ -8,7 +8,7 @@ import (
 )
 
 // RecoveryInterceptor - panic handler
-func recoveryInterceptorOpt() grpc_recovery.Option {
+func RecoveryInterceptorOpt() grpc_recovery.Option {
 	return grpc_recovery.WithRecoveryHandler(func(p interface{}) (err error) {
 		return status.Errorf(codes.Unknown, "panic triggered: %v", p)
 	})

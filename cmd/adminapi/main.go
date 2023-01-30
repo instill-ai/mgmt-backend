@@ -26,12 +26,10 @@ import (
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 
 	"github.com/instill-ai/mgmt-backend/config"
-	"github.com/instill-ai/mgmt-backend/internal/external"
 	"github.com/instill-ai/mgmt-backend/internal/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/handler"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
-	"github.com/instill-ai/mgmt-backend/pkg/usage"
 
 	database "github.com/instill-ai/mgmt-backend/internal/db"
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
@@ -85,7 +83,7 @@ func main() {
 		grpc_zap.WithDecider(func(fullMethodName string, err error) bool {
 			// will not log gRPC calls if it was a call to liveness or readiness and no error was raised
 			if err == nil {
-				if match, _ := regexp.MatchString("vdp.mgmt.v1alpha.UserService/.*ness$", fullMethodName); match {
+				if match, _ := regexp.MatchString("instill.connector.v1alpha.MgmtService/.*ness$", fullMethodName); match {
 					return false
 				}
 			}
@@ -97,11 +95,11 @@ func main() {
 	grpcServerOpts := []grpc.ServerOption{
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
 			grpc_zap.StreamServerInterceptor(logger, opts...),
-			grpc_recovery.StreamServerInterceptor(recoveryInterceptorOpt()),
+			grpc_recovery.StreamServerInterceptor(handler.RecoveryInterceptorOpt()),
 		)),
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			grpc_zap.UnaryServerInterceptor(logger, opts...),
-			grpc_recovery.UnaryServerInterceptor(recoveryInterceptorOpt()),
+			grpc_recovery.UnaryServerInterceptor(handler.RecoveryInterceptorOpt()),
 		)),
 	}
 	if config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "" {
@@ -116,21 +114,13 @@ func main() {
 	grpcS := grpc.NewServer(grpcServerOpts...)
 	reflection.Register(grpcS)
 
-	// Usage collection
-	var usg usage.Usage
-	if !config.Config.Server.DisableUsage {
-		usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient()
-		defer usageServiceClientConn.Close()
-		usg = usage.NewUsage(ctx, repository, usageServiceClient)
-	}
-
-	mgmtPB.RegisterUserServiceServer(
+	mgmtPB.RegisterUserAdminServiceServer(
 		grpcS,
-		handler.NewHandler(service.NewService(repository), usg))
+		handler.NewAdminHandler(service.NewService(repository)))
 
 	gwS := runtime.NewServeMux(
-		runtime.WithForwardResponseOption(httpResponseModifier),
-		runtime.WithErrorHandler(errorHandler),
+		runtime.WithForwardResponseOption(handler.HttpResponseModifier),
+		runtime.WithErrorHandler(handler.ErrorHandler),
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
 			MarshalOptions: protojson.MarshalOptions{
 				UseProtoNames:   true,
@@ -143,10 +133,6 @@ func main() {
 		}),
 	)
 
-	if !config.Config.Server.DisableUsage && usg != nil {
-		usg.StartReporter(ctx)
-	}
-
 	// Start gRPC server
 	var dialOpts []grpc.DialOption
 	if config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "" {
@@ -155,12 +141,12 @@ func main() {
 		dialOpts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	}
 
-	if err := mgmtPB.RegisterUserServiceHandlerFromEndpoint(ctx, gwS, fmt.Sprintf(":%v", config.Config.Server.Port), dialOpts); err != nil {
+	if err := mgmtPB.RegisterUserAdminServiceHandlerFromEndpoint(ctx, gwS, fmt.Sprintf(":%v", config.Config.Server.AdminPort), dialOpts); err != nil {
 		logger.Fatal(err.Error())
 	}
 
 	httpServer := &http.Server{
-		Addr:    fmt.Sprintf(":%v", config.Config.Server.Port),
+		Addr:    fmt.Sprintf(":%v", config.Config.Server.AdminPort),
 		Handler: grpcHandlerFunc(grpcS, gwS, config.Config.Server.CORSOrigins),
 	}
 
@@ -191,9 +177,6 @@ func main() {
 	case err := <-errSig:
 		logger.Error(fmt.Sprintf("Fatal error: %v\n", err))
 	case <-quitSig:
-		if !config.Config.Server.DisableUsage && usg != nil {
-			usg.TriggerSingleReporter(ctx)
-		}
 		logger.Info("Shutting down server...")
 		grpcS.GracefulStop()
 	}

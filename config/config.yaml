@@ -1,11 +1,12 @@
 server:
-  port: 8084
+  adminport: 3084
+  publicport: 8084
   https:
     cert:
     key:
   corsorigins:
   edition: local-ce:dev
-  disableusage: false
+  disableusage: true
   debug: true
 database:
   username: postgres

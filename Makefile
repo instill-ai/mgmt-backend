@@ -17,7 +17,8 @@ dev:							## Run dev container
 	@docker run -d --rm \
 		-u $(id -u):$(id -g) \
 		-v $(PWD):/${SERVICE_NAME} \
-		-p ${SERVICE_PORT}:${SERVICE_PORT} \
+		-p ${PUBLIC_SERVICE_PORT}:${PUBLIC_SERVICE_PORT} \
+		-p ${ADMIN_SERVICE_PORT}:${ADMIN_SERVICE_PORT} \
 		--network instill-network \
 		--name ${SERVICE_NAME} \
 		instill/${SERVICE_NAME}:dev >/dev/null 2>&1

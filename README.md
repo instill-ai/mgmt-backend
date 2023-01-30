@@ -39,7 +39,7 @@ Now, you have the Go project set up in the container, in which you can compile a
 $ docker exec -it mgmt-backend /bin/bash
 $ go run ./cmd/migration
 $ go run ./cmd/init
-$ go run ./cmd/main
+$ go run ./cmd/public_api
 ```
 
 ### Run the integration test
