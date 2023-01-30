@@ -19,7 +19,7 @@ database:
     idleconnections: 5
     maxconnections: 10
     connlifetime: 30m # In minutes, e.g., '60m'
-usagebackend:
+usageserver:
   tlsenabled: true
   host: usage.instill.tech
   port: 443

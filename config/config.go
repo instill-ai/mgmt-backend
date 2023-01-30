@@ -18,9 +18,9 @@ var Config AppConfig
 
 // AppConfig defines
 type AppConfig struct {
-	Server       ServerConfig       `koanf:"server"`
-	Database     DatabaseConfig     `koanf:"database"`
-	UsageBackend UsageBackendConfig `koanf:"usagebackend"`
+	Server      ServerConfig      `koanf:"server"`
+	Database    DatabaseConfig    `koanf:"database"`
+	UsageServer UsageServerConfig `koanf:"usageserver"`
 }
 
 // ServerConfig defines HTTP server configurations
@@ -52,7 +52,7 @@ type DatabaseConfig struct {
 	}
 }
 
-type UsageBackendConfig struct {
+type UsageServerConfig struct {
 	TLSEnabled bool   `koanf:"tlsenabled"`
 	Host       string `koanf:"host"`
 	Port       int    `koanf:"port"`
