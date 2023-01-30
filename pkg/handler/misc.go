@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/instill-ai/mgmt-backend/internal/logger"
+	"github.com/instill-ai/mgmt-backend/pkg/logger"
 )
 
 func HttpResponseModifier(ctx context.Context, w http.ResponseWriter, p proto.Message) error {

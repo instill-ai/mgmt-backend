@@ -8,19 +8,26 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/iancoleman/strcase"
 	"github.com/instill-ai/mgmt-backend/config"
-	"github.com/instill-ai/mgmt-backend/internal/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
+	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 	"github.com/instill-ai/mgmt-backend/pkg/usage"
-	healthcheckPB "github.com/instill-ai/protogen-go/vdp/healthcheck/v1alpha"
-	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
-	checkfield "github.com/instill-ai/x/checkfield"
 	"github.com/instill-ai/x/sterr"
-	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	healthcheckPB "github.com/instill-ai/protogen-go/vdp/healthcheck/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
+	checkfield "github.com/instill-ai/x/checkfield"
+	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 )
+
+// TODO: Validate mask based on the field behavior. Currently, the fields are hard-coded.
+// We stipulate that the ID of the user is IMMUTABLE
+var createRequiredFields = []string{"id", "email", "newsletter_subscription"}
+var outputOnlyFields = []string{"name", "type", "create_time", "update_time"}
+var immutableFields = []string{"uid", "id"}
 
 type publicHandler struct {
 	mgmtPB.UnimplementedUserPublicServiceServer

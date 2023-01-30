@@ -11,8 +11,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/instill-ai/mgmt-backend/internal/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
+	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 
 	"github.com/instill-ai/x/sterr"
@@ -22,12 +22,6 @@ import (
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 	checkfield "github.com/instill-ai/x/checkfield"
 )
-
-// TODO: Validate mask based on the field behavior. Currently, the fields are hard-coded.
-// We stipulate that the ID of the user is IMMUTABLE
-var createRequiredFields = []string{"id", "email", "newsletter_subscription"}
-var outputOnlyFields = []string{"name", "type", "create_time", "update_time"}
-var immutableFields = []string{"uid", "id"}
 
 const defaultPageSize = int64(10)
 const maxPageSize = int64(100)
