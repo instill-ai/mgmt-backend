@@ -187,7 +187,7 @@ func (r *repository) DeleteUserByID(id string) error {
 	}
 
 	if result.RowsAffected == 0 {
-		return status.Error(codes.NotFound, "the user is not found")
+		return status.Errorf(codes.NotFound, "the user with id %s is not found", id)
 	}
 
 	return nil

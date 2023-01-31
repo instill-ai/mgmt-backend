@@ -136,7 +136,7 @@ func (h *publicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 	// Validate the field mask
 	if !req.GetUpdateMask().IsValid(reqUser) {
 		st, e := sterr.CreateErrorBadRequest(
-			"update user invalid fieidmask error", []*errdetails.BadRequest_FieldViolation{
+			"update user invalid fieldmask error", []*errdetails.BadRequest_FieldViolation{
 				{
 					Field:       "UpdateAuthenticatedUserRequest.update_mask",
 					Description: "invalid",
@@ -333,7 +333,26 @@ func (h *publicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUser
 
 	id := strings.TrimPrefix(req.GetName(), "users/")
 
-	_, err := h.service.GetUserByID(id)
+	// Validate the user id conforms to RFC-1034, which restricts to letters, numbers,
+	// and hyphen, with the first character a letter, the last a letter or a
+	// number, and a 63 character maximum.
+	err := checkfield.CheckResourceID(id)
+	if err != nil {
+		st, e := sterr.CreateErrorBadRequest(
+			"verify whether username is occupied bad request error", []*errdetails.BadRequest_FieldViolation{
+				{
+					Field:       "id",
+					Description: err.Error(),
+				},
+			},
+		)
+		if e != nil {
+			logger.Error(e.Error())
+		}
+		return &mgmtPB.ExistUsernameResponse{}, st.Err()
+	}
+
+	_, err = h.service.GetUserByID(id)
 	if err != nil {
 		sta := status.Convert(err)
 		switch sta.Code() {

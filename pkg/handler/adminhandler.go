@@ -117,7 +117,7 @@ func (h *adminHandler) CreateUser(ctx context.Context, req *mgmtPB.CreateUserReq
 	logger, _ := logger.GetZapLogger()
 	resp := &mgmtPB.CreateUserResponse{}
 
-	// Return error if REQUIRED fields are not provided in the requested payload pipeline resource
+	// Return error if REQUIRED fields are not provided in the requested payload resource
 	if err := checkfield.CheckRequiredFields(req.GetUser(), createRequiredFields); err != nil {
 		st, e := sterr.CreateErrorBadRequest(
 			"create user bad request error", []*errdetails.BadRequest_FieldViolation{
@@ -313,7 +313,7 @@ func (h *adminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 	// Validate the field mask
 	if !req.GetUpdateMask().IsValid(reqUser) {
 		st, e := sterr.CreateErrorBadRequest(
-			"update user invalid fieidmask error", []*errdetails.BadRequest_FieldViolation{
+			"update user invalid fieldmask error", []*errdetails.BadRequest_FieldViolation{
 				{
 					Field:       "UpdateUserRequest.update_mask",
 					Description: "invalid",
