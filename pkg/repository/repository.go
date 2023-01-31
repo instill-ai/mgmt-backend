@@ -179,7 +179,9 @@ func (r *repository) DeleteUser(uid uuid.UUID) error {
 //   - codes.Internal
 func (r *repository) DeleteUserByID(id string) error {
 	logger, _ := logger.GetZapLogger()
-	result := r.db.Model(&datamodel.User{}).Where("id = ?", id).Delete(&datamodel.User{})
+	result := r.db.Model(&datamodel.User{}).
+		Where("id = ?", id).
+		Delete(&datamodel.User{})
 
 	if result.Error != nil {
 		logger.Error(result.Error.Error())

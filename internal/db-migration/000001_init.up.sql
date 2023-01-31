@@ -15,7 +15,6 @@ CREATE TABLE IF NOT EXISTS public.user(
   cookie_token VARCHAR(255),
   create_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   update_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  delete_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT user_pkey PRIMARY KEY (uid)
 );
 CREATE INDEX user_id_create_time_pagination ON public.user (uid, create_time);
