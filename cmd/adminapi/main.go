@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"regexp"
 	"strings"
 	"syscall"
 
@@ -82,12 +81,6 @@ func main() {
 	// Shared options for the logger, with a custom gRPC code to log level functions.
 	opts := []grpc_zap.Option{
 		grpc_zap.WithDecider(func(fullMethodName string, err error) bool {
-			// will not log gRPC calls if it was a call to liveness or readiness and no error was raised
-			if err == nil {
-				if match, _ := regexp.MatchString("instill.connector.v1alpha.MgmtService/.*ness$", fullMethodName); match {
-					return false
-				}
-			}
 			// by default everything will be logged
 			return true
 		}),
