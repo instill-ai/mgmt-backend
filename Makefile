@@ -11,10 +11,11 @@ export
 .PHONY: dev
 dev:							## Run dev container
 	@docker compose ls -q | grep -q "instill-vdp" && true || \
-		(echo "Error: Run \"make dev PROFILE=mgmt\" in vdp repository (https://github.com/instill-ai/vdp) in your local machine first." && exit 1)
+		(echo "Error: Run \"make dev PROFILE=mgmt ITMODE=true\" in vdp repository (https://github.com/instill-ai/vdp) in your local machine first." && exit 1)
 	@docker inspect --type container ${SERVICE_NAME} >/dev/null 2>&1 && echo "A container named ${SERVICE_NAME} is already running." || \
 		echo "Run dev container ${SERVICE_NAME}. To stop it, run \"make stop\"."
 	@docker run -d --rm \
+		-u $(id -u):$(id -g) \
 		-v $(PWD):/${SERVICE_NAME} \
 		-p ${SERVICE_PORT}:${SERVICE_PORT} \
 		--network instill-network \
