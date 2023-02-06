@@ -85,7 +85,7 @@ func main() {
 		grpc_zap.WithDecider(func(fullMethodName string, err error) bool {
 			// will not log gRPC calls if it was a call to liveness or readiness and no error was raised
 			if err == nil {
-				if match, _ := regexp.MatchString("instill.connector.v1alpha.MgmtService/.*ness$", fullMethodName); match {
+				if match, _ := regexp.MatchString("vdp.mgmt.v1alpha.UserService/.*ness$", fullMethodName); match {
 					return false
 				}
 			}
