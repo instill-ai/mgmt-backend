@@ -30,13 +30,13 @@ var outputOnlyFields = []string{"name", "type", "create_time", "update_time"}
 var immutableFields = []string{"uid", "id"}
 
 type publicHandler struct {
-	mgmtPB.UnimplementedUserPublicServiceServer
+	mgmtPB.UnimplementedMgmtPublicServiceServer
 	service service.Service
 	usg     usage.Usage
 }
 
 // NewPublicHandler initiates a public handler instance
-func NewPublicHandler(s service.Service, u usage.Usage) mgmtPB.UserPublicServiceServer {
+func NewPublicHandler(s service.Service, u usage.Usage) mgmtPB.MgmtPublicServiceServer {
 	return &publicHandler{
 		service: s,
 		usg:     u,

@@ -27,12 +27,12 @@ const defaultPageSize = int64(10)
 const maxPageSize = int64(100)
 
 type adminHandler struct {
-	mgmtPB.UnimplementedUserAdminServiceServer
+	mgmtPB.UnimplementedMgmtAdminServiceServer
 	service service.Service
 }
 
 // NewAdminHandler initiates an admin handler instance
-func NewAdminHandler(s service.Service) mgmtPB.UserAdminServiceServer {
+func NewAdminHandler(s service.Service) mgmtPB.MgmtAdminServiceServer {
 	return &adminHandler{
 		service: s,
 	}

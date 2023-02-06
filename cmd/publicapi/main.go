@@ -124,7 +124,7 @@ func main() {
 		usg = usage.NewUsage(ctx, repository, usageServiceClient)
 	}
 
-	mgmtPB.RegisterUserPublicServiceServer(
+	mgmtPB.RegisterMgmtPublicServiceServer(
 		grpcS,
 		handler.NewPublicHandler(service.NewService(repository), usg))
 
@@ -155,7 +155,7 @@ func main() {
 		dialOpts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	}
 
-	if err := mgmtPB.RegisterUserPublicServiceHandlerFromEndpoint(ctx, gwS, fmt.Sprintf(":%v", config.Config.Server.PublicPort), dialOpts); err != nil {
+	if err := mgmtPB.RegisterMgmtPublicServiceHandlerFromEndpoint(ctx, gwS, fmt.Sprintf(":%v", config.Config.Server.PublicPort), dialOpts); err != nil {
 		logger.Fatal(err.Error())
 	}
 

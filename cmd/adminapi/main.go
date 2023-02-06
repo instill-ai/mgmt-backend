@@ -115,7 +115,7 @@ func main() {
 	grpcS := grpc.NewServer(grpcServerOpts...)
 	reflection.Register(grpcS)
 
-	mgmtPB.RegisterUserAdminServiceServer(
+	mgmtPB.RegisterMgmtAdminServiceServer(
 		grpcS,
 		handler.NewAdminHandler(service.NewService(repository)))
 
@@ -142,7 +142,7 @@ func main() {
 		dialOpts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	}
 
-	if err := mgmtPB.RegisterUserAdminServiceHandlerFromEndpoint(ctx, gwS, fmt.Sprintf(":%v", config.Config.Server.AdminPort), dialOpts); err != nil {
+	if err := mgmtPB.RegisterMgmtAdminServiceHandlerFromEndpoint(ctx, gwS, fmt.Sprintf(":%v", config.Config.Server.AdminPort), dialOpts); err != nil {
 		logger.Fatal(err.Error())
 	}
 
