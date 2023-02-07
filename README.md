@@ -9,7 +9,7 @@ On the local machine, clone `vdp` repository in your workspace, move to the repo
 $ cd <your-workspace>
 $ git clone https://github.com/instill-ai/vdp.git
 $ cd vdp
-$ make dev PROFILE=mgmt
+$ make dev PROFILE=mgmt ITMODE=true
 ```
 
 Clone `mgmt-backend` repository in your workspace and move to the repository folder:
@@ -39,7 +39,20 @@ Now, you have the Go project set up in the container, in which you can compile a
 $ docker exec -it mgmt-backend /bin/bash
 $ go run ./cmd/migration
 $ go run ./cmd/init
-$ go run ./cmd/public_api
+```
+
+### Run the public server
+
+```bash
+$ docker exec -it mgmt-backend /bin/bash
+$ go run ./cmd/publicapi
+```
+
+### Run the admin server
+
+```bash
+$ docker exec -it mgmt-backend /bin/bash
+$ go run ./cmd/adminapi
 ```
 
 ### Run the integration test
