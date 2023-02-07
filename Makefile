@@ -18,7 +18,6 @@ dev:							## Run dev container
 		-u $(id -u):$(id -g) \
 		-v $(PWD):/${SERVICE_NAME} \
 		-p ${PUBLIC_SERVICE_PORT}:${PUBLIC_SERVICE_PORT} \
-		-p ${ADMIN_SERVICE_PORT}:${ADMIN_SERVICE_PORT} \
 		--network instill-network \
 		--name ${SERVICE_NAME} \
 		instill/${SERVICE_NAME}:dev >/dev/null 2>&1
