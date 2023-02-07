@@ -30,7 +30,8 @@ COPY --from=build --chown=nonroot:nonroot /src/internal/db/migration ./internal/
 
 COPY --from=build --chown=nonroot:nonroot /${SERVICE_NAME}-migrate ./
 COPY --from=build --chown=nonroot:nonroot /${SERVICE_NAME}-init ./
-COPY --from=build --chown=nonroot:nonroot /${SERVICE_NAME} ./
+COPY --from=build --chown=nonroot:nonroot /${SERVICE_NAME}-admin ./
+COPY --from=build --chown=nonroot:nonroot /${SERVICE_NAME}-public ./
 
 COPY --from=build --chown=nonroot:nonroot /etc/vdp /etc/vdp
 COPY --from=build --chown=nonroot:nonroot /vdp /vdp
