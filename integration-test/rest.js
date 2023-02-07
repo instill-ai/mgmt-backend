@@ -1,6 +1,3 @@
-import http from "k6/http";
-import {check, group} from "k6";
-
 import * as constant from "./const.js";
 import * as adminAPI from "./rest-admin-user.js";
 import * as publicAPI from "./rest-public-user.js"
