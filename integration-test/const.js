@@ -7,22 +7,22 @@ let admin_port
 if (__ENV.MODE == "api-gateway") {
   // api-gateway mode
   proto = "http"
-  admin_host = "mgmt-backend"
+  admin_host = "mgmt-backend-admin"
   public_host = "api-gateway"
   admin_port = 3084
   public_port = 8080
 } else if (__ENV.MODE == "localhost") {
   // localhost mode for GitHub Actions
   proto = "http"
-  admin_host = "mgmt-backend"
+  admin_host = "mgmt-backend-admin"
   public_host = "localhost"
   admin_port = 3084
   public_port = 8080
 } else {
   // direct microservice mode
   proto = "http"
-  admin_host = "mgmt-backend"
-  public_host = "mgmt-backend"
+  admin_host = "mgmt-backend-admin"
+  public_host = "mgmt-backend-public"
   admin_port = 3084
   public_port = 8084
 }
