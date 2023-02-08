@@ -19,13 +19,17 @@ export default function (data) {
    * Management API - API CALLS
    */
 
-  // ======== Admin API
-  adminAPI.CheckAdminList();
-  adminAPI.CheckAdminCreate();
-  adminAPI.CheckAdminGet();
-  adminAPI.CheckAdminLookUp();
-  adminAPI.CheckAdminUpdate();
-  adminAPI.CheckAdminDelete();
+  if (__ENV.MODE != "api-gateway") {
+
+    // ======== Admin API
+    adminAPI.CheckAdminList();
+    adminAPI.CheckAdminCreate();
+    adminAPI.CheckAdminGet();
+    adminAPI.CheckAdminLookUp();
+    adminAPI.CheckAdminUpdate();
+    adminAPI.CheckAdminDelete();
+
+  }
 
   // ======== Public API
   publicAPI.CheckHealth();
