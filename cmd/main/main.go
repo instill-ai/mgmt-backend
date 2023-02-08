@@ -26,10 +26,12 @@ import (
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 
 	"github.com/instill-ai/mgmt-backend/config"
+	"github.com/instill-ai/mgmt-backend/internal/external"
 	"github.com/instill-ai/mgmt-backend/pkg/handler"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
+	"github.com/instill-ai/mgmt-backend/pkg/usage"
 
 	database "github.com/instill-ai/mgmt-backend/internal/db"
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
@@ -86,6 +88,9 @@ func main() {
 				if match, _ := regexp.MatchString("vdp.mgmt.v1alpha.MgmtAdminService/.*ness$", fullMethodName); match {
 					return false
 				}
+				if match, _ := regexp.MatchString("vdp.mgmt.v1alpha.MgmtPublicService/.*ness$", fullMethodName); match {
+					return false
+				}
 			}
 			// by default everything will be logged
 			return true
@@ -118,6 +123,18 @@ func main() {
 		grpcS,
 		handler.NewAdminHandler(service.NewService(repository)))
 
+	// Usage collection
+	var usg usage.Usage
+	if !config.Config.Server.DisableUsage {
+		usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient()
+		defer usageServiceClientConn.Close()
+		usg = usage.NewUsage(ctx, repository, usageServiceClient)
+	}
+
+	mgmtPB.RegisterMgmtPublicServiceServer(
+		grpcS,
+		handler.NewPublicHandler(service.NewService(repository), usg))
+
 	gwS := runtime.NewServeMux(
 		runtime.WithForwardResponseOption(handler.HttpResponseModifier),
 		runtime.WithErrorHandler(handler.ErrorHandler),
@@ -145,8 +162,17 @@ func main() {
 		logger.Fatal(err.Error())
 	}
 
-	httpServer := &http.Server{
+	if err := mgmtPB.RegisterMgmtPublicServiceHandlerFromEndpoint(ctx, gwS, fmt.Sprintf(":%v", config.Config.Server.PublicPort), dialOpts); err != nil {
+		logger.Fatal(err.Error())
+	}
+
+	adminHttpServer := &http.Server{
 		Addr:    fmt.Sprintf(":%v", config.Config.Server.AdminPort),
+		Handler: grpcHandlerFunc(grpcS, gwS, config.Config.Server.CORSOrigins),
+	}
+
+	publicHttpServer := &http.Server{
+		Addr:    fmt.Sprintf(":%v", config.Config.Server.PublicPort),
 		Handler: grpcHandlerFunc(grpcS, gwS, config.Config.Server.CORSOrigins),
 	}
 
@@ -155,13 +181,23 @@ func main() {
 	errSig := make(chan error)
 	if config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "" {
 		go func() {
-			if err := httpServer.ListenAndServeTLS(config.Config.Server.HTTPS.Cert, config.Config.Server.HTTPS.Key); err != nil {
+			if err := adminHttpServer.ListenAndServeTLS(config.Config.Server.HTTPS.Cert, config.Config.Server.HTTPS.Key); err != nil {
+				errSig <- err
+			}
+		}()
+		go func() {
+			if err := publicHttpServer.ListenAndServeTLS(config.Config.Server.HTTPS.Cert, config.Config.Server.HTTPS.Key); err != nil {
 				errSig <- err
 			}
 		}()
 	} else {
 		go func() {
-			if err := httpServer.ListenAndServe(); err != nil {
+			if err := adminHttpServer.ListenAndServe(); err != nil {
+				errSig <- err
+			}
+		}()
+		go func() {
+			if err := publicHttpServer.ListenAndServe(); err != nil {
 				errSig <- err
 			}
 		}()
