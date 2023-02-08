@@ -1,9 +1,11 @@
 package repository
 
 import (
+	"errors"
 	"time"
 
 	"github.com/gofrs/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gorm.io/gorm"
@@ -100,6 +102,12 @@ func (r *repository) ListUser(pageSize int, pageToken string) ([]datamodel.User,
 func (r *repository) CreateUser(user *datamodel.User) error {
 	logger, _ := logger.GetZapLogger()
 	if result := r.db.Model(&datamodel.User{}).Create(user); result.Error != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(result.Error, &pgErr) {
+			if pgErr.Code == "23505" {
+				return status.Errorf(codes.AlreadyExists, pgErr.Message)
+			}
+		}
 		logger.Error(result.Error.Error())
 		return status.Errorf(codes.Internal, "error %v", result.Error)
 	}
