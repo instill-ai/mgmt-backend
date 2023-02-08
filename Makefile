@@ -12,41 +12,27 @@ export
 dev:							## Run dev container
 	@docker compose ls -q | grep -q "instill-vdp" && true || \
 		(echo "Error: Run \"make dev PROFILE=mgmt ITMODE=true\" in vdp repository (https://github.com/instill-ai/vdp) in your local machine first." && exit 1)
-	@docker inspect --type container ${SERVICE_NAME}-public >/dev/null 2>&1 && echo "A container named ${SERVICE_NAME}-public is already running." || \
-		echo "Run dev container ${SERVICE_NAME}-public. To stop it, run \"make stop\"."
+	@docker inspect --type container ${SERVICE_NAME} >/dev/null 2>&1 && echo "A container named ${SERVICE_NAME} is already running." || \
+		echo "Run dev container ${SERVICE_NAME}. To stop it, run \"make stop\"."
 	@docker run -d --rm \
-		-u $(id -u):$(id -g) \
 		-v $(PWD):/${SERVICE_NAME} \
 		-p ${PUBLIC_SERVICE_PORT}:${PUBLIC_SERVICE_PORT} \
+		-p ${ADMIN_SERVICE_PORT}:${ADMIN_SERVICE_PORT} \
 		--network instill-network \
-		--name ${SERVICE_NAME}-public \
-		instill/${SERVICE_NAME}:dev >/dev/null 2>&1
-	@docker inspect --type container ${SERVICE_NAME}-admin >/dev/null 2>&1 && echo "A container named ${SERVICE_NAME}-admin is already running." || \
-		echo "Run dev container ${SERVICE_NAME}-admin. To stop it, run \"make stop\"."
-	@docker run -d --rm \
-		-u $(id -u):$(id -g) \
-		-v $(PWD):/${SERVICE_NAME} \
-		--network instill-network \
-		--name ${SERVICE_NAME}-admin \
+		--name ${SERVICE_NAME} \
 		instill/${SERVICE_NAME}:dev >/dev/null 2>&1
 
-.PHONY: logs-public
-logs-public:					## Tail public service container logs with -n 10
-	@docker logs ${SERVICE_NAME}-public --follow --tail=10
-
-.PHONY: logs-admin
-logs-admin:						## Tail admin service container logs with -n 10
-	@docker logs ${SERVICE_NAME}-admin --follow --tail=10
+.PHONY: logs
+logs:					## Tail service container logs with -n 10
+	@docker logs ${SERVICE_NAME} --follow --tail=10
 
 .PHONY: stop
 stop:							## Stop container
-	@docker stop -t 1 ${SERVICE_NAME}-public
-	@docker stop -t 1 ${SERVICE_NAME}-admin
+	@docker stop -t 1 ${SERVICE_NAME}
 
 .PHONY: top
 top:							## Display all running service processes
-	@docker top ${SERVICE_NAME}-public
-	@docker top ${SERVICE_NAME}-admin
+	@docker top ${SERVICE_NAME}
 
 .PHONY: build
 build:							## Build dev docker image

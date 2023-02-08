@@ -14,6 +14,7 @@ import (
 var db *gorm.DB
 var once sync.Once
 
+// GetConnection returns a database instance
 func GetConnection() *gorm.DB {
 	once.Do(func() {
 		databaseConfig := config.Config.Database
@@ -52,6 +53,7 @@ func GetConnection() *gorm.DB {
 	return db
 }
 
+// Close closes the db connection
 func Close(db *gorm.DB) {
 	// https://github.com/go-gorm/gorm/issues/3216
 	//

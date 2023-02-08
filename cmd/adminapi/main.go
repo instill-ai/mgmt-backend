@@ -31,7 +31,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 
-	database "github.com/instill-ai/mgmt-backend/pkg/db"
+	database "github.com/instill-ai/mgmt-backend/internal/db"
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 )
 
