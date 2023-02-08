@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"context"
@@ -14,10 +14,10 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/instill-ai/mgmt-backend/internal/logger"
+	"github.com/instill-ai/mgmt-backend/pkg/logger"
 )
 
-func httpResponseModifier(ctx context.Context, w http.ResponseWriter, p proto.Message) error {
+func HttpResponseModifier(ctx context.Context, w http.ResponseWriter, p proto.Message) error {
 	md, ok := runtime.ServerMetadataFromContext(ctx)
 	if !ok {
 		return nil
@@ -41,7 +41,7 @@ func httpResponseModifier(ctx context.Context, w http.ResponseWriter, p proto.Me
 	return nil
 }
 
-func errorHandler(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.Marshaler, w http.ResponseWriter, r *http.Request, err error) {
+func ErrorHandler(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.Marshaler, w http.ResponseWriter, r *http.Request, err error) {
 	logger, _ := logger.GetZapLogger()
 
 	// return Internal when Marshal failed

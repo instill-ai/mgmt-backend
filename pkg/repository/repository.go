@@ -8,9 +8,9 @@ import (
 	"google.golang.org/grpc/status"
 	"gorm.io/gorm"
 
-	"github.com/instill-ai/mgmt-backend/internal/logger"
 	"github.com/instill-ai/mgmt-backend/internal/paginate"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
+	"github.com/instill-ai/mgmt-backend/pkg/logger"
 )
 
 // Repository interface
@@ -179,7 +179,9 @@ func (r *repository) DeleteUser(uid uuid.UUID) error {
 //   - codes.Internal
 func (r *repository) DeleteUserByID(id string) error {
 	logger, _ := logger.GetZapLogger()
-	result := r.db.Model(&datamodel.User{}).Where("id = ?", id).Delete(&datamodel.User{})
+	result := r.db.Model(&datamodel.User{}).
+		Where("id = ?", id).
+		Delete(&datamodel.User{})
 
 	if result.Error != nil {
 		logger.Error(result.Error.Error())
@@ -187,7 +189,7 @@ func (r *repository) DeleteUserByID(id string) error {
 	}
 
 	if result.RowsAffected == 0 {
-		return status.Error(codes.NotFound, "the user is not found")
+		return status.Errorf(codes.NotFound, "the user with id %s is not found", id)
 	}
 
 	return nil

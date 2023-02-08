@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/instill-ai/mgmt-backend/config"
-	"github.com/instill-ai/mgmt-backend/internal/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
+	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 	"github.com/instill-ai/x/repo"
 

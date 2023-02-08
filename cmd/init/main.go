@@ -4,11 +4,11 @@ import (
 	"log"
 
 	"github.com/instill-ai/mgmt-backend/config"
-	"github.com/instill-ai/mgmt-backend/internal/logger"
+	"github.com/instill-ai/mgmt-backend/pkg/logger"
 
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 
-	database "github.com/instill-ai/mgmt-backend/internal/db"
+	database "github.com/instill-ai/mgmt-backend/pkg/db"
 )
 
 func main() {

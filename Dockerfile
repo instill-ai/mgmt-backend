@@ -10,7 +10,8 @@ RUN go mod download
 COPY . .
 
 ARG TARGETOS TARGETARCH
-RUN --mount=target=. --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /${SERVICE_NAME} ./cmd/main
+RUN --mount=target=. --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /${SERVICE_NAME}-admin ./cmd/adminapi
+RUN --mount=target=. --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /${SERVICE_NAME}-public ./cmd/publicapi
 RUN --mount=target=. --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /${SERVICE_NAME}-migrate ./cmd/migration
 RUN --mount=target=. --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /${SERVICE_NAME}-init ./cmd/init
 
@@ -29,7 +30,8 @@ COPY --from=build --chown=nonroot:nonroot /src/internal/db/migration ./internal/
 
 COPY --from=build --chown=nonroot:nonroot /${SERVICE_NAME}-migrate ./
 COPY --from=build --chown=nonroot:nonroot /${SERVICE_NAME}-init ./
-COPY --from=build --chown=nonroot:nonroot /${SERVICE_NAME} ./
+COPY --from=build --chown=nonroot:nonroot /${SERVICE_NAME}-admin ./
+COPY --from=build --chown=nonroot:nonroot /${SERVICE_NAME}-public ./
 
 COPY --from=build --chown=nonroot:nonroot /etc/vdp /etc/vdp
 COPY --from=build --chown=nonroot:nonroot /vdp /vdp

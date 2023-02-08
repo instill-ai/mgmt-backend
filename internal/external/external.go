@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/instill-ai/mgmt-backend/config"
-	"github.com/instill-ai/mgmt-backend/internal/logger"
+	"github.com/instill-ai/mgmt-backend/pkg/logger"
 
 	usagePB "github.com/instill-ai/protogen-go/vdp/usage/v1alpha"
 )

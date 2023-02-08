@@ -13,6 +13,9 @@ import (
 	"github.com/knadh/koanf/providers/file"
 )
 
+const DefaultUserID = "local-user"
+const DefaultUserEmail = "local-user@instill.tech"
+
 // Config - Global variable to export
 var Config AppConfig
 
@@ -25,8 +28,9 @@ type AppConfig struct {
 
 // ServerConfig defines HTTP server configurations
 type ServerConfig struct {
-	Port  int `koanf:"port"`
-	HTTPS struct {
+	AdminPort  int `koanf:"adminport"`
+	PublicPort int `koanf:"publicport"`
+	HTTPS      struct {
 		Cert string `koanf:"cert"`
 		Key  string `koanf:"key"`
 	}

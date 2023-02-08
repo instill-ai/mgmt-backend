@@ -11,64 +11,37 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/instill-ai/mgmt-backend/config"
-	"github.com/instill-ai/mgmt-backend/internal/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
+	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
-	"github.com/instill-ai/mgmt-backend/pkg/usage"
 
 	"github.com/instill-ai/x/sterr"
 
 	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 
-	healthcheckPB "github.com/instill-ai/protogen-go/vdp/healthcheck/v1alpha"
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 	checkfield "github.com/instill-ai/x/checkfield"
 )
 
-// TODO: Validate mask based on the field behavior.
-// Currently, the OUTPUT_ONLY fields are hard-coded.
-var createRequiredFields = []string{"email"}
-var outputOnlyFields = []string{"name", "uid", "type", "create_time", "update_time"}
-var immutableFields = []string{"id"}
-
 const defaultPageSize = int64(10)
 const maxPageSize = int64(100)
 
-type handler struct {
-	mgmtPB.UnimplementedUserServiceServer
+type adminHandler struct {
+	mgmtPB.UnimplementedMgmtAdminServiceServer
 	service service.Service
-	usg     usage.Usage
 }
 
-// NewHandler initiates a handler instance
-func NewHandler(s service.Service, u usage.Usage) mgmtPB.UserServiceServer {
-	return &handler{
+// NewAdminHandler initiates an admin handler instance
+func NewAdminHandler(s service.Service) mgmtPB.MgmtAdminServiceServer {
+	return &adminHandler{
 		service: s,
-		usg:     u,
 	}
 }
 
-// Liveness checks the liveness of the server
-func (h *handler) Liveness(ctx context.Context, in *mgmtPB.LivenessRequest) (*mgmtPB.LivenessResponse, error) {
-	return &mgmtPB.LivenessResponse{
-		HealthCheckResponse: &healthcheckPB.HealthCheckResponse{
-			Status: healthcheckPB.HealthCheckResponse_SERVING_STATUS_SERVING,
-		},
-	}, nil
-}
-
-// Readiness checks the readiness of the server
-func (h *handler) Readiness(ctx context.Context, in *mgmtPB.ReadinessRequest) (*mgmtPB.ReadinessResponse, error) {
-	return &mgmtPB.ReadinessResponse{
-		HealthCheckResponse: &healthcheckPB.HealthCheckResponse{
-			Status: healthcheckPB.HealthCheckResponse_SERVING_STATUS_SERVING,
-		},
-	}, nil
-}
+// ========== Admin API
 
 // ListUser lists all users
-func (h *handler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*mgmtPB.ListUserResponse, error) {
+func (h *adminHandler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*mgmtPB.ListUserResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
 	pageSize := req.GetPageSize()
@@ -132,24 +105,24 @@ func (h *handler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*m
 	}
 
 	resp := mgmtPB.ListUserResponse{
-		Users: pbUsers,
+		Users:         pbUsers,
 		NextPageToken: nextPageToken,
-		TotalSize: totalSize,
+		TotalSize:     totalSize,
 	}
 	return &resp, nil
 }
 
 // CreateUser creates a user. This endpoint is not supported.
-func (h *handler) CreateUser(ctx context.Context, req *mgmtPB.CreateUserRequest) (*mgmtPB.CreateUserResponse, error) {
+func (h *adminHandler) CreateUser(ctx context.Context, req *mgmtPB.CreateUserRequest) (*mgmtPB.CreateUserResponse, error) {
 	logger, _ := logger.GetZapLogger()
 	resp := &mgmtPB.CreateUserResponse{}
 
-	// Return error if REQUIRED fields are not provided in the requested payload pipeline resource
-	if err := checkfield.CheckRequiredFields(req.GetUser(), append(createRequiredFields, immutableFields...)); err != nil {
+	// Return error if REQUIRED fields are not provided in the requested payload resource
+	if err := checkfield.CheckRequiredFields(req.GetUser(), createRequiredFields); err != nil {
 		st, e := sterr.CreateErrorBadRequest(
 			"create user bad request error", []*errdetails.BadRequest_FieldViolation{
 				{
-					Field:       fmt.Sprintf("%v, %v", createRequiredFields, immutableFields),
+					Field:       fmt.Sprintf("%v", createRequiredFields),
 					Description: err.Error(),
 				},
 			},
@@ -195,7 +168,7 @@ func (h *handler) CreateUser(ctx context.Context, req *mgmtPB.CreateUserRequest)
 }
 
 // GetUser gets a user
-func (h *handler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (*mgmtPB.GetUserResponse, error) {
+func (h *adminHandler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (*mgmtPB.GetUserResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
 	id := strings.TrimPrefix(req.GetName(), "users/")
@@ -256,7 +229,7 @@ func (h *handler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (*mgm
 }
 
 // LookUpUser gets a user by permalink
-func (h *handler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserRequest) (*mgmtPB.LookUpUserResponse, error) {
+func (h *adminHandler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserRequest) (*mgmtPB.LookUpUserResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
 	uidStr := strings.TrimPrefix(req.GetPermalink(), "users/")
@@ -332,7 +305,7 @@ func (h *handler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserRequest)
 }
 
 // UpdateUser updates an existing user
-func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest) (*mgmtPB.UpdateUserResponse, error) {
+func (h *adminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest) (*mgmtPB.UpdateUserResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
 	reqUser := req.GetUser()
@@ -340,7 +313,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 	// Validate the field mask
 	if !req.GetUpdateMask().IsValid(reqUser) {
 		st, e := sterr.CreateErrorBadRequest(
-			"update user invalid fieidmask error", []*errdetails.BadRequest_FieldViolation{
+			"update user invalid fieldmask error", []*errdetails.BadRequest_FieldViolation{
 				{
 					Field:       "UpdateUserRequest.update_mask",
 					Description: "invalid",
@@ -443,7 +416,7 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 		logger.Error(err.Error())
 		st, e := sterr.CreateErrorResourceInfoStatus(
 			codes.Internal,
-			"update user error", "user", fmt.Sprintf("uid %s", reqUser.Uid),
+			"update user error", "user", fmt.Sprintf("uid %s", *reqUser.Uid),
 			"",
 			err.Error(),
 		)
@@ -522,16 +495,11 @@ func (h *handler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest)
 		User: pbUserUpdated,
 	}
 
-	// Trigger single reporter
-	if !config.Config.Server.DisableUsage && h.usg != nil {
-		h.usg.TriggerSingleReporter(ctx)
-	}
-
 	return &resp, nil
 }
 
 // DeleteUser deletes a user. This endpoint is not supported.
-func (h *handler) DeleteUser(ctx context.Context, req *mgmtPB.DeleteUserRequest) (*mgmtPB.DeleteUserResponse, error) {
+func (h *adminHandler) DeleteUser(ctx context.Context, req *mgmtPB.DeleteUserRequest) (*mgmtPB.DeleteUserResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
 	st, err := sterr.CreateErrorResourceInfoStatus(

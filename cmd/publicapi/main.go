@@ -27,13 +27,13 @@ import (
 
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/internal/external"
-	"github.com/instill-ai/mgmt-backend/internal/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/handler"
+	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 	"github.com/instill-ai/mgmt-backend/pkg/usage"
 
-	database "github.com/instill-ai/mgmt-backend/internal/db"
+	database "github.com/instill-ai/mgmt-backend/pkg/db"
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 )
 
@@ -85,7 +85,7 @@ func main() {
 		grpc_zap.WithDecider(func(fullMethodName string, err error) bool {
 			// will not log gRPC calls if it was a call to liveness or readiness and no error was raised
 			if err == nil {
-				if match, _ := regexp.MatchString("vdp.mgmt.v1alpha.UserService/.*ness$", fullMethodName); match {
+				if match, _ := regexp.MatchString("vdp.mgmt.v1alpha.MgmtPublicService/.*ness$", fullMethodName); match {
 					return false
 				}
 			}
@@ -97,11 +97,11 @@ func main() {
 	grpcServerOpts := []grpc.ServerOption{
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
 			grpc_zap.StreamServerInterceptor(logger, opts...),
-			grpc_recovery.StreamServerInterceptor(recoveryInterceptorOpt()),
+			grpc_recovery.StreamServerInterceptor(handler.RecoveryInterceptorOpt()),
 		)),
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			grpc_zap.UnaryServerInterceptor(logger, opts...),
-			grpc_recovery.UnaryServerInterceptor(recoveryInterceptorOpt()),
+			grpc_recovery.UnaryServerInterceptor(handler.RecoveryInterceptorOpt()),
 		)),
 	}
 	if config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "" {
@@ -124,13 +124,13 @@ func main() {
 		usg = usage.NewUsage(ctx, repository, usageServiceClient)
 	}
 
-	mgmtPB.RegisterUserServiceServer(
+	mgmtPB.RegisterMgmtPublicServiceServer(
 		grpcS,
-		handler.NewHandler(service.NewService(repository), usg))
+		handler.NewPublicHandler(service.NewService(repository), usg))
 
 	gwS := runtime.NewServeMux(
-		runtime.WithForwardResponseOption(httpResponseModifier),
-		runtime.WithErrorHandler(errorHandler),
+		runtime.WithForwardResponseOption(handler.HttpResponseModifier),
+		runtime.WithErrorHandler(handler.ErrorHandler),
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
 			MarshalOptions: protojson.MarshalOptions{
 				UseProtoNames:   true,
@@ -155,12 +155,12 @@ func main() {
 		dialOpts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	}
 
-	if err := mgmtPB.RegisterUserServiceHandlerFromEndpoint(ctx, gwS, fmt.Sprintf(":%v", config.Config.Server.Port), dialOpts); err != nil {
+	if err := mgmtPB.RegisterMgmtPublicServiceHandlerFromEndpoint(ctx, gwS, fmt.Sprintf(":%v", config.Config.Server.PublicPort), dialOpts); err != nil {
 		logger.Fatal(err.Error())
 	}
 
 	httpServer := &http.Server{
-		Addr:    fmt.Sprintf(":%v", config.Config.Server.Port),
+		Addr:    fmt.Sprintf(":%v", config.Config.Server.PublicPort),
 		Handler: grpcHandlerFunc(grpcS, gwS, config.Config.Server.CORSOrigins),
 	}
 
