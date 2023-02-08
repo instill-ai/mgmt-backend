@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
 	"strings"
 	"syscall"
 
@@ -25,7 +26,6 @@ import (
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 
 	"github.com/instill-ai/mgmt-backend/config"
-
 	"github.com/instill-ai/mgmt-backend/pkg/handler"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
@@ -81,6 +81,12 @@ func main() {
 	// Shared options for the logger, with a custom gRPC code to log level functions.
 	opts := []grpc_zap.Option{
 		grpc_zap.WithDecider(func(fullMethodName string, err error) bool {
+			// will not log gRPC calls if it was a call to liveness or readiness and no error was raised
+			if err == nil {
+				if match, _ := regexp.MatchString("vdp.mgmt.v1alpha.MgmtAdminService/.*ness$", fullMethodName); match {
+					return false
+				}
+			}
 			// by default everything will be logged
 			return true
 		}),
