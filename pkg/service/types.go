@@ -28,13 +28,13 @@ func ListAllowedRoleName() []string {
 
 // Define roles
 const (
-	Manager           Role = "Manager"
-	AIResearcher      Role = "AI Researcher"
-	AIEngineer        Role = "AI Engineer"
-	DataEngineer      Role = "Data Engineer"
-	DataScientist     Role = "Data Scientist"
-	AnalyticsEngineer Role = "Analytics Engineer"
-	Hobbyist          Role = "Hobbyist"
+	Manager           Role = "manager"
+	AIResearcher      Role = "ai-researcher"
+	AIEngineer        Role = "ai-engineer"
+	DataEngineer      Role = "data-engineer"
+	DataScientist     Role = "data-scientist"
+	AnalyticsEngineer Role = "analytics-engineer"
+	Hobbyist          Role = "hobbyist"
 )
 
 var AllowedRoles = []Role{

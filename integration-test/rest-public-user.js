@@ -77,7 +77,7 @@ export function CheckPublicUpdate(){
       first_name: "test",
       last_name: "foo",
       org_name: "company",
-      role: "Manager",
+      role: "ai-engineer",
       newsletter_subscription: true,
       cookie_token: "f5730f62-7026-4e11-917a-d890da315d3b",
       create_time: "2000-01-01T00:00:00.000000Z",
