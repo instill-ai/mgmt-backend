@@ -19,7 +19,7 @@ export default function (data) {
    * Management API - API CALLS
    */
 
-  if (__ENV.MODE != "api-gateway") {
+  if (__ENV.MODE != "api-gateway" && __ENV.MODE != "localhost") {
 
     // ======== Admin API
     adminAPI.CheckAdminList();
