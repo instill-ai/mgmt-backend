@@ -126,9 +126,14 @@ func main() {
 	// Usage collection
 	var usg usage.Usage
 	if !config.Config.Server.DisableUsage {
-		usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient()
-		defer usageServiceClientConn.Close()
-		usg = usage.NewUsage(ctx, repository, usageServiceClient)
+		usageServiceClient, usageServiceClientConn, ok := external.InitUsageServiceClient()
+		if ok {
+			defer usageServiceClientConn.Close()
+			usg = usage.NewUsage(ctx, repository, usageServiceClient)
+			if usg != nil {
+				usg.StartReporter(ctx)
+			}
+		}
 	}
 
 	mgmtPB.RegisterMgmtPublicServiceServer(

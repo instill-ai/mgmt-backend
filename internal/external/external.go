@@ -18,14 +18,14 @@ import (
 )
 
 // InitUsageServiceClient initializes a UsageServiceClient instance
-func InitUsageServiceClient() (usagePB.UsageServiceClient, *grpc.ClientConn) {
+func InitUsageServiceClient() (usagePB.UsageServiceClient, *grpc.ClientConn, bool) {
 	logger, _ := logger.GetZapLogger()
 
 	var clientDialOpts grpc.DialOption
 	if config.Config.UsageServer.TLSEnabled {
 		roots, err := x509.SystemCertPool()
 		if err != nil {
-			logger.Fatal(err.Error())
+			logger.Error(err.Error())
 		}
 
 		tlsConfig := tls.Config{
@@ -53,9 +53,9 @@ func InitUsageServiceClient() (usagePB.UsageServiceClient, *grpc.ClientConn) {
 	)
 
 	if err != nil {
-		logger.Fatal(err.Error())
+		logger.Error(err.Error())
+		return nil, nil, false
 	}
 
-	return usagePB.NewUsageServiceClient(clientConn), clientConn
-
+	return usagePB.NewUsageServiceClient(clientConn), clientConn, true
 }
