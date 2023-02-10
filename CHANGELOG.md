@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.2.9-alpha...v0.3.0-alpha) (2023-02-10)
+
+
+### Features
+
+* refactor to admin/public services ([#26](https://github.com/instill-ai/mgmt-backend/issues/26)) ([426ab1c](https://github.com/instill-ai/mgmt-backend/commit/426ab1c9ce53aec1d1d7cc43fa6a9507a71f2d87))
+
+
+### Bug Fixes
+
+* update roles to follow the protobuf ([208d95d](https://github.com/instill-ai/mgmt-backend/commit/208d95dc4e6d944b8d0e2ae15d4f692c218c3578))
+* use error logs for usage ([88ab8d4](https://github.com/instill-ai/mgmt-backend/commit/88ab8d448cc6f009f39ab347b8c782bc1d411f87))
+
 ## [0.2.9-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.2.8-alpha...v0.2.9-alpha) (2023-01-30)
 
 
