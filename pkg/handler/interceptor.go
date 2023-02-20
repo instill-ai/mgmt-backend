@@ -7,7 +7,7 @@ import (
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 )
 
-// RecoveryInterceptor - panic handler
+// RecoveryInterceptorOpt - panic handler
 func RecoveryInterceptorOpt() grpc_recovery.Option {
 	return grpc_recovery.WithRecoveryHandler(func(p interface{}) (err error) {
 		return status.Errorf(codes.Unknown, "panic triggered: %v", p)

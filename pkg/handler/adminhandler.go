@@ -11,13 +11,12 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	fieldmask_utils "github.com/mennanov/fieldmask-utils"
+
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
-
 	"github.com/instill-ai/x/sterr"
-
-	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 	checkfield "github.com/instill-ai/x/checkfield"

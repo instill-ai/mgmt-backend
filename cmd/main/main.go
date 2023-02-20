@@ -116,11 +116,14 @@ func main() {
 
 	repository := repository.NewRepository(db)
 
-	grpcS := grpc.NewServer(grpcServerOpts...)
-	reflection.Register(grpcS)
+	adminGrpcS := grpc.NewServer(grpcServerOpts...)
+	reflection.Register(adminGrpcS)
+
+	publicGrpcS := grpc.NewServer(grpcServerOpts...)
+	reflection.Register(publicGrpcS)
 
 	mgmtPB.RegisterMgmtAdminServiceServer(
-		grpcS,
+		adminGrpcS,
 		handler.NewAdminHandler(service.NewService(repository)))
 
 	// Usage collection
@@ -137,10 +140,25 @@ func main() {
 	}
 
 	mgmtPB.RegisterMgmtPublicServiceServer(
-		grpcS,
+		publicGrpcS,
 		handler.NewPublicHandler(service.NewService(repository), usg))
 
-	gwS := runtime.NewServeMux(
+	adminServeMux := runtime.NewServeMux(
+		runtime.WithForwardResponseOption(handler.HttpResponseModifier),
+		runtime.WithErrorHandler(handler.ErrorHandler),
+		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
+			MarshalOptions: protojson.MarshalOptions{
+				UseProtoNames:   true,
+				EmitUnpopulated: true,
+				UseEnumNumbers:  false,
+			},
+			UnmarshalOptions: protojson.UnmarshalOptions{
+				DiscardUnknown: true,
+			},
+		}),
+	)
+
+	publicServeMux := runtime.NewServeMux(
 		runtime.WithForwardResponseOption(handler.HttpResponseModifier),
 		runtime.WithErrorHandler(handler.ErrorHandler),
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
@@ -163,22 +181,22 @@ func main() {
 		dialOpts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	}
 
-	if err := mgmtPB.RegisterMgmtAdminServiceHandlerFromEndpoint(ctx, gwS, fmt.Sprintf(":%v", config.Config.Server.AdminPort), dialOpts); err != nil {
+	if err := mgmtPB.RegisterMgmtAdminServiceHandlerFromEndpoint(ctx, adminServeMux, fmt.Sprintf(":%v", config.Config.Server.AdminPort), dialOpts); err != nil {
 		logger.Fatal(err.Error())
 	}
 
-	if err := mgmtPB.RegisterMgmtPublicServiceHandlerFromEndpoint(ctx, gwS, fmt.Sprintf(":%v", config.Config.Server.PublicPort), dialOpts); err != nil {
+	if err := mgmtPB.RegisterMgmtPublicServiceHandlerFromEndpoint(ctx, publicServeMux, fmt.Sprintf(":%v", config.Config.Server.PublicPort), dialOpts); err != nil {
 		logger.Fatal(err.Error())
 	}
 
-	adminHttpServer := &http.Server{
+	adminHTTPServer := &http.Server{
 		Addr:    fmt.Sprintf(":%v", config.Config.Server.AdminPort),
-		Handler: grpcHandlerFunc(grpcS, gwS, config.Config.Server.CORSOrigins),
+		Handler: grpcHandlerFunc(adminGrpcS, adminServeMux, config.Config.Server.CORSOrigins),
 	}
 
-	publicHttpServer := &http.Server{
+	publicHTTPServer := &http.Server{
 		Addr:    fmt.Sprintf(":%v", config.Config.Server.PublicPort),
-		Handler: grpcHandlerFunc(grpcS, gwS, config.Config.Server.CORSOrigins),
+		Handler: grpcHandlerFunc(publicGrpcS, publicServeMux, config.Config.Server.CORSOrigins),
 	}
 
 	// Wait for interrupt signal to gracefully shutdown the server with a timeout of 5 seconds.
@@ -186,28 +204,28 @@ func main() {
 	errSig := make(chan error)
 	if config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "" {
 		go func() {
-			if err := adminHttpServer.ListenAndServeTLS(config.Config.Server.HTTPS.Cert, config.Config.Server.HTTPS.Key); err != nil {
+			if err := adminHTTPServer.ListenAndServeTLS(config.Config.Server.HTTPS.Cert, config.Config.Server.HTTPS.Key); err != nil {
 				errSig <- err
 			}
 		}()
 		go func() {
-			if err := publicHttpServer.ListenAndServeTLS(config.Config.Server.HTTPS.Cert, config.Config.Server.HTTPS.Key); err != nil {
+			if err := publicHTTPServer.ListenAndServeTLS(config.Config.Server.HTTPS.Cert, config.Config.Server.HTTPS.Key); err != nil {
 				errSig <- err
 			}
 		}()
 	} else {
 		go func() {
-			if err := adminHttpServer.ListenAndServe(); err != nil {
+			if err := adminHTTPServer.ListenAndServe(); err != nil {
 				errSig <- err
 			}
 		}()
 		go func() {
-			if err := publicHttpServer.ListenAndServe(); err != nil {
+			if err := publicHTTPServer.ListenAndServe(); err != nil {
 				errSig <- err
 			}
 		}()
 	}
-	logger.Info("gRPC server is running.")
+	logger.Info("gRPC servers are running.")
 
 	// kill (no param) default send syscall.SIGTERM
 	// kill -2 is syscall.SIGINT
@@ -219,6 +237,7 @@ func main() {
 		logger.Error(fmt.Sprintf("Fatal error: %v\n", err))
 	case <-quitSig:
 		logger.Info("Shutting down server...")
-		grpcS.GracefulStop()
+		adminGrpcS.GracefulStop()
+		publicGrpcS.GracefulStop()
 	}
 }

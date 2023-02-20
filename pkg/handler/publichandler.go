@@ -7,20 +7,22 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/iancoleman/strcase"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	fieldmask_utils "github.com/mennanov/fieldmask-utils"
+
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 	"github.com/instill-ai/mgmt-backend/pkg/usage"
 	"github.com/instill-ai/x/sterr"
-	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	healthcheckPB "github.com/instill-ai/protogen-go/vdp/healthcheck/v1alpha"
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 	checkfield "github.com/instill-ai/x/checkfield"
-	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 )
 
 // TODO: Validate mask based on the field behavior. Currently, the fields are hard-coded.
