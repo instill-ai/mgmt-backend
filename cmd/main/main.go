@@ -129,8 +129,8 @@ func main() {
 	// Usage collection
 	var usg usage.Usage
 	if !config.Config.Server.DisableUsage {
-		usageServiceClient, usageServiceClientConn, ok := external.InitUsageServiceClient()
-		if ok {
+		usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient()
+		if usageServiceClientConn != nil {
 			defer usageServiceClientConn.Close()
 			usg = usage.NewUsage(ctx, repository, usageServiceClient)
 			if usg != nil {
