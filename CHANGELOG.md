@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.3.0-alpha...v0.3.1-alpha) (2023-02-20)
+
+
+### Bug Fixes
+
+* fix admin and public servers mixed issue ([8f8adef](https://github.com/instill-ai/mgmt-backend/commit/8f8adef36bab2212effe38a35ab918daaa628675))
+
 ## [0.3.0-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.2.9-alpha...v0.3.0-alpha) (2023-02-10)
 
 
