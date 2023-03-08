@@ -299,7 +299,7 @@ export function CheckAdminUpdate() {
     );
   });
 
-  group(`Management Admin API: Update user UID [not allowed]`, () =>{
+  group(`Management Admin API: Update user UID [not allowed]`, () => {
     var nonExistUID = "2a06c2f7-8da9-4046-91ea-240f88a5d000";
     var userUpdate = {
       uid: nonExistUID,

@@ -25,14 +25,14 @@ import (
 const defaultPageSize = int64(10)
 const maxPageSize = int64(100)
 
-type adminHandler struct {
+type AdminHandler struct {
 	mgmtPB.UnimplementedMgmtAdminServiceServer
 	service service.Service
 }
 
 // NewAdminHandler initiates an admin handler instance
 func NewAdminHandler(s service.Service) mgmtPB.MgmtAdminServiceServer {
-	return &adminHandler{
+	return &AdminHandler{
 		service: s,
 	}
 }
@@ -40,7 +40,7 @@ func NewAdminHandler(s service.Service) mgmtPB.MgmtAdminServiceServer {
 // ========== Admin API
 
 // ListUser lists all users
-func (h *adminHandler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*mgmtPB.ListUserResponse, error) {
+func (h *AdminHandler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*mgmtPB.ListUserResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
 	pageSize := req.GetPageSize()
@@ -67,7 +67,7 @@ func (h *adminHandler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest
 			}
 			return &mgmtPB.ListUserResponse{}, st.Err()
 		default:
-			st, e := sterr.CreateErrorResourceInfoStatus(
+			st, e := sterr.CreateErrorResourceInfo(
 				sta.Code(),
 				"list user error",
 				"user",
@@ -87,7 +87,7 @@ func (h *adminHandler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest
 		pbUser, err := datamodel.DBUser2PBUser(&dbUser)
 		if err != nil {
 			logger.Error(err.Error())
-			st, e := sterr.CreateErrorResourceInfoStatus(
+			st, e := sterr.CreateErrorResourceInfo(
 				codes.Internal,
 				"list user error",
 				"user",
@@ -112,7 +112,7 @@ func (h *adminHandler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest
 }
 
 // CreateUser creates a user. This endpoint is not supported.
-func (h *adminHandler) CreateUser(ctx context.Context, req *mgmtPB.CreateUserRequest) (*mgmtPB.CreateUserResponse, error) {
+func (h *AdminHandler) CreateUser(ctx context.Context, req *mgmtPB.CreateUserRequest) (*mgmtPB.CreateUserResponse, error) {
 	logger, _ := logger.GetZapLogger()
 	resp := &mgmtPB.CreateUserResponse{}
 
@@ -152,7 +152,7 @@ func (h *adminHandler) CreateUser(ctx context.Context, req *mgmtPB.CreateUserReq
 		return resp, st.Err()
 	}
 
-	st, err := sterr.CreateErrorResourceInfoStatus(
+	st, err := sterr.CreateErrorResourceInfo(
 		codes.Unimplemented,
 		"create user not implemented error",
 		"endpoint",
@@ -167,7 +167,7 @@ func (h *adminHandler) CreateUser(ctx context.Context, req *mgmtPB.CreateUserReq
 }
 
 // GetUser gets a user
-func (h *adminHandler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (*mgmtPB.GetUserResponse, error) {
+func (h *AdminHandler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (*mgmtPB.GetUserResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
 	id := strings.TrimPrefix(req.GetName(), "users/")
@@ -189,7 +189,7 @@ func (h *adminHandler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) 
 			}
 			return &mgmtPB.GetUserResponse{}, st.Err()
 		default:
-			st, e := sterr.CreateErrorResourceInfoStatus(
+			st, e := sterr.CreateErrorResourceInfo(
 				sta.Code(),
 				"get user error",
 				"user",
@@ -207,7 +207,7 @@ func (h *adminHandler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) 
 	pbUser, err := datamodel.DBUser2PBUser(dbUser)
 	if err != nil {
 		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfoStatus(
+		st, e := sterr.CreateErrorResourceInfo(
 			codes.Internal,
 			"get user error",
 			"user",
@@ -228,7 +228,7 @@ func (h *adminHandler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) 
 }
 
 // LookUpUser gets a user by permalink
-func (h *adminHandler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserRequest) (*mgmtPB.LookUpUserResponse, error) {
+func (h *AdminHandler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserRequest) (*mgmtPB.LookUpUserResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
 	uidStr := strings.TrimPrefix(req.GetPermalink(), "users/")
@@ -266,7 +266,7 @@ func (h *adminHandler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserReq
 			}
 			return &mgmtPB.LookUpUserResponse{}, st.Err()
 		default:
-			st, e := sterr.CreateErrorResourceInfoStatus(
+			st, e := sterr.CreateErrorResourceInfo(
 				sta.Code(),
 				"look up user error",
 				"user",
@@ -284,7 +284,7 @@ func (h *adminHandler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserReq
 	pbUser, err := datamodel.DBUser2PBUser(dbUser)
 	if err != nil {
 		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfoStatus(
+		st, e := sterr.CreateErrorResourceInfo(
 			codes.Internal,
 			"look up user error",
 			"user",
@@ -304,7 +304,7 @@ func (h *adminHandler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserReq
 }
 
 // UpdateUser updates an existing user
-func (h *adminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest) (*mgmtPB.UpdateUserResponse, error) {
+func (h *AdminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest) (*mgmtPB.UpdateUserResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
 	reqUser := req.GetUser()
@@ -378,7 +378,7 @@ func (h *adminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 	uid, err := uuid.FromString(pbUserToUpdate.GetUid())
 	if err != nil {
 		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfoStatus(
+		st, e := sterr.CreateErrorResourceInfo(
 			codes.Internal,
 			"update user error",
 			"user",
@@ -413,7 +413,7 @@ func (h *adminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 	err = fieldmask_utils.StructToStruct(mask, reqUser, pbUserToUpdate)
 	if err != nil {
 		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfoStatus(
+		st, e := sterr.CreateErrorResourceInfo(
 			codes.Internal,
 			"update user error", "user", fmt.Sprintf("uid %s", *reqUser.Uid),
 			"",
@@ -428,7 +428,7 @@ func (h *adminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 	dbUserToUpd, err := datamodel.PBUser2DBUser(pbUserToUpdate)
 	if err != nil {
 		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfoStatus(
+		st, e := sterr.CreateErrorResourceInfo(
 			codes.Internal,
 			"update user error",
 			"user",
@@ -459,7 +459,7 @@ func (h *adminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 			}
 			return &mgmtPB.UpdateUserResponse{}, st.Err()
 		default:
-			st, e := sterr.CreateErrorResourceInfoStatus(
+			st, e := sterr.CreateErrorResourceInfo(
 				sta.Code(),
 				"update user error",
 				"user",
@@ -477,7 +477,7 @@ func (h *adminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 	pbUserUpdated, err := datamodel.DBUser2PBUser(dbUserUpdated)
 	if err != nil {
 		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfoStatus(
+		st, e := sterr.CreateErrorResourceInfo(
 			codes.Internal,
 			"get user error",
 			"user",
@@ -498,10 +498,10 @@ func (h *adminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 }
 
 // DeleteUser deletes a user. This endpoint is not supported.
-func (h *adminHandler) DeleteUser(ctx context.Context, req *mgmtPB.DeleteUserRequest) (*mgmtPB.DeleteUserResponse, error) {
+func (h *AdminHandler) DeleteUser(ctx context.Context, req *mgmtPB.DeleteUserRequest) (*mgmtPB.DeleteUserResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
-	st, err := sterr.CreateErrorResourceInfoStatus(
+	st, err := sterr.CreateErrorResourceInfo(
 		codes.Unimplemented,
 		"delete user not implemented error",
 		"endpoint",

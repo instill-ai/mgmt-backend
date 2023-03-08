@@ -37,4 +37,6 @@ export default function (data) {
   publicAPI.CheckPublicUpdate();
 }
 
-export function teardown(data) {}
+export function teardown(data) {
+
+}

@@ -6,6 +6,7 @@ server:
     key:
   corsorigins:
   edition: local-ce:dev
+  plugin: plugin
   disableusage: false
   debug: true
 database:

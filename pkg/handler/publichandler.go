@@ -31,7 +31,7 @@ var createRequiredFields = []string{"id", "email", "newsletter_subscription"}
 var outputOnlyFields = []string{"name", "type", "create_time", "update_time"}
 var immutableFields = []string{"uid", "id"}
 
-type publicHandler struct {
+type PublicHandler struct {
 	mgmtPB.UnimplementedMgmtPublicServiceServer
 	service service.Service
 	usg     usage.Usage
@@ -39,14 +39,14 @@ type publicHandler struct {
 
 // NewPublicHandler initiates a public handler instance
 func NewPublicHandler(s service.Service, u usage.Usage) mgmtPB.MgmtPublicServiceServer {
-	return &publicHandler{
+	return &PublicHandler{
 		service: s,
 		usg:     u,
 	}
 }
 
 // Liveness checks the liveness of the server
-func (h *publicHandler) Liveness(ctx context.Context, in *mgmtPB.LivenessRequest) (*mgmtPB.LivenessResponse, error) {
+func (h *PublicHandler) Liveness(ctx context.Context, in *mgmtPB.LivenessRequest) (*mgmtPB.LivenessResponse, error) {
 	return &mgmtPB.LivenessResponse{
 		HealthCheckResponse: &healthcheckPB.HealthCheckResponse{
 			Status: healthcheckPB.HealthCheckResponse_SERVING_STATUS_SERVING,
@@ -55,7 +55,7 @@ func (h *publicHandler) Liveness(ctx context.Context, in *mgmtPB.LivenessRequest
 }
 
 // Readiness checks the readiness of the server
-func (h *publicHandler) Readiness(ctx context.Context, in *mgmtPB.ReadinessRequest) (*mgmtPB.ReadinessResponse, error) {
+func (h *PublicHandler) Readiness(ctx context.Context, in *mgmtPB.ReadinessRequest) (*mgmtPB.ReadinessResponse, error) {
 	return &mgmtPB.ReadinessResponse{
 		HealthCheckResponse: &healthcheckPB.HealthCheckResponse{
 			Status: healthcheckPB.HealthCheckResponse_SERVING_STATUS_SERVING,
@@ -63,11 +63,9 @@ func (h *publicHandler) Readiness(ctx context.Context, in *mgmtPB.ReadinessReque
 	}, nil
 }
 
-// ========== Public API
-
 // GetAuthenticatedUser gets the authenticated user.
 // Note: this endpoint is hard-coded, assuming the ID of the authenticated user is the default user.
-func (h *publicHandler) GetAuthenticatedUser(ctx context.Context, req *mgmtPB.GetAuthenticatedUserRequest) (*mgmtPB.GetAuthenticatedUserResponse, error) {
+func (h *PublicHandler) GetAuthenticatedUser(ctx context.Context, req *mgmtPB.GetAuthenticatedUserRequest) (*mgmtPB.GetAuthenticatedUserResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
 	id := config.DefaultUserID
@@ -89,7 +87,7 @@ func (h *publicHandler) GetAuthenticatedUser(ctx context.Context, req *mgmtPB.Ge
 			}
 			return &mgmtPB.GetAuthenticatedUserResponse{}, st.Err()
 		default:
-			st, e := sterr.CreateErrorResourceInfoStatus(
+			st, e := sterr.CreateErrorResourceInfo(
 				sta.Code(),
 				"get user error",
 				"user",
@@ -107,7 +105,7 @@ func (h *publicHandler) GetAuthenticatedUser(ctx context.Context, req *mgmtPB.Ge
 	pbUser, err := datamodel.DBUser2PBUser(dbUser)
 	if err != nil {
 		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfoStatus(
+		st, e := sterr.CreateErrorResourceInfo(
 			codes.Internal,
 			"get user error",
 			"user",
@@ -130,7 +128,7 @@ func (h *publicHandler) GetAuthenticatedUser(ctx context.Context, req *mgmtPB.Ge
 
 // UpdateAuthenticatedUser updates the authenticated user.
 // Note: this endpoint is hard-coded, assuming the ID of the authenticated user is the default user.
-func (h *publicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB.UpdateAuthenticatedUserRequest) (*mgmtPB.UpdateAuthenticatedUserResponse, error) {
+func (h *PublicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB.UpdateAuthenticatedUserRequest) (*mgmtPB.UpdateAuthenticatedUserResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
 	reqUser := req.GetUser()
@@ -205,7 +203,7 @@ func (h *publicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 	uid, err := uuid.FromString(pbUserToUpdate.GetUid())
 	if err != nil {
 		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfoStatus(
+		st, e := sterr.CreateErrorResourceInfo(
 			codes.Internal,
 			"update authenticated user error",
 			"user",
@@ -240,7 +238,7 @@ func (h *publicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 	err = fieldmask_utils.StructToStruct(mask, reqUser, pbUserToUpdate)
 	if err != nil {
 		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfoStatus(
+		st, e := sterr.CreateErrorResourceInfo(
 			codes.Internal,
 			"update authenticated user error", "user", fmt.Sprintf("uid %s", *reqUser.Uid),
 			"",
@@ -255,7 +253,7 @@ func (h *publicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 	dbUserToUpd, err := datamodel.PBUser2DBUser(pbUserToUpdate)
 	if err != nil {
 		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfoStatus(
+		st, e := sterr.CreateErrorResourceInfo(
 			codes.Internal,
 			"update authenticated user error",
 			"user",
@@ -286,7 +284,7 @@ func (h *publicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 			}
 			return &mgmtPB.UpdateAuthenticatedUserResponse{}, st.Err()
 		default:
-			st, e := sterr.CreateErrorResourceInfoStatus(
+			st, e := sterr.CreateErrorResourceInfo(
 				sta.Code(),
 				"update authenticated user error",
 				"user",
@@ -304,7 +302,7 @@ func (h *publicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 	pbUserUpdated, err := datamodel.DBUser2PBUser(dbUserUpdated)
 	if err != nil {
 		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfoStatus(
+		st, e := sterr.CreateErrorResourceInfo(
 			codes.Internal,
 			"get authenticated user error",
 			"user",
@@ -330,7 +328,7 @@ func (h *publicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 }
 
 // ExistUsername verifies if a username (ID) has been occupied
-func (h *publicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUsernameRequest) (*mgmtPB.ExistUsernameResponse, error) {
+func (h *PublicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUsernameRequest) (*mgmtPB.ExistUsernameResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
 	id := strings.TrimPrefix(req.GetName(), "users/")
@@ -378,7 +376,7 @@ func (h *publicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUser
 			}
 			return &mgmtPB.ExistUsernameResponse{}, st.Err()
 		default:
-			st, e := sterr.CreateErrorResourceInfoStatus(
+			st, e := sterr.CreateErrorResourceInfo(
 				sta.Code(),
 				"verify whether username is occupied error",
 				"user",

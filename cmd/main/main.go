@@ -6,12 +6,15 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"path"
 	"regexp"
 	"strings"
 	"syscall"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/hashicorp/go-plugin"
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -24,14 +27,11 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	hclog "github.com/hashicorp/go-hclog"
 
 	"github.com/instill-ai/mgmt-backend/config"
-	"github.com/instill-ai/mgmt-backend/internal/external"
-	"github.com/instill-ai/mgmt-backend/pkg/handler"
+	"github.com/instill-ai/mgmt-backend/internal/shared"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
-	"github.com/instill-ai/mgmt-backend/pkg/repository"
-	"github.com/instill-ai/mgmt-backend/pkg/service"
-	"github.com/instill-ai/mgmt-backend/pkg/usage"
 
 	database "github.com/instill-ai/mgmt-backend/internal/db"
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
@@ -100,21 +100,62 @@ func main() {
 	grpcServerOpts := []grpc.ServerOption{
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
 			grpc_zap.StreamServerInterceptor(logger, opts...),
-			grpc_recovery.StreamServerInterceptor(handler.RecoveryInterceptorOpt()),
+			grpc_recovery.StreamServerInterceptor(RecoveryInterceptorOpt()),
 		)),
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			grpc_zap.UnaryServerInterceptor(logger, opts...),
-			grpc_recovery.UnaryServerInterceptor(handler.RecoveryInterceptorOpt()),
+			grpc_recovery.UnaryServerInterceptor(RecoveryInterceptorOpt()),
 		)),
 	}
 	if config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "" {
 		grpcServerOpts = append(grpcServerOpts, grpc.Creds(creds))
 	}
 
+	ex, err := os.Executable()
+	if err != nil {
+		logger.Fatal(err.Error())
+	}
+
+	// host and launch the plugin process.
+	client := plugin.NewClient(&plugin.ClientConfig{
+		HandshakeConfig: shared.Handshake,
+		Plugins: map[string]plugin.Plugin{
+			"admin handler":  &shared.HandlerAdminPlugin{},
+			"public handler": &shared.HandlerPublicPlugin{},
+		},
+		Cmd: exec.Command(fmt.Sprintf("%s/%s", path.Dir(ex), config.Config.Server.Plugin)),
+		Logger: hclog.New(&hclog.LoggerOptions{
+			Name:   "plugin",
+			Output: os.Stdout,
+			Level: func() hclog.Level {
+				if config.Config.Server.Debug {
+					return hclog.Debug
+				}
+				return hclog.Info
+			}(),
+		}),
+	})
+	defer client.Kill()
+
+	// Connect via RPC
+	rpcClient, err := client.Client()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Request the plugin
+	rawAdminHandler, err := rpcClient.Dispense("admin handler")
+	if err != nil {
+		logger.Fatal(err.Error())
+	}
+
+	rawPublicHandler, err := rpcClient.Dispense("public handler")
+	if err != nil {
+		logger.Fatal(err.Error())
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	repository := repository.NewRepository(db)
 
 	adminGrpcS := grpc.NewServer(grpcServerOpts...)
 	reflection.Register(adminGrpcS)
@@ -122,30 +163,15 @@ func main() {
 	publicGrpcS := grpc.NewServer(grpcServerOpts...)
 	reflection.Register(publicGrpcS)
 
-	mgmtPB.RegisterMgmtAdminServiceServer(
-		adminGrpcS,
-		handler.NewAdminHandler(service.NewService(repository)))
+	adminHandler := rawAdminHandler.(mgmtPB.MgmtAdminServiceServer)
+	mgmtPB.RegisterMgmtAdminServiceServer(adminGrpcS, adminHandler)
 
-	// Usage collection
-	var usg usage.Usage
-	if !config.Config.Server.DisableUsage {
-		usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient()
-		if usageServiceClientConn != nil {
-			defer usageServiceClientConn.Close()
-			usg = usage.NewUsage(ctx, repository, usageServiceClient)
-			if usg != nil {
-				usg.StartReporter(ctx)
-			}
-		}
-	}
-
-	mgmtPB.RegisterMgmtPublicServiceServer(
-		publicGrpcS,
-		handler.NewPublicHandler(service.NewService(repository), usg))
+	publicHandler := rawPublicHandler.(mgmtPB.MgmtPublicServiceServer)
+	mgmtPB.RegisterMgmtPublicServiceServer(publicGrpcS, publicHandler)
 
 	adminServeMux := runtime.NewServeMux(
-		runtime.WithForwardResponseOption(handler.HttpResponseModifier),
-		runtime.WithErrorHandler(handler.ErrorHandler),
+		runtime.WithForwardResponseOption(HttpResponseModifier),
+		runtime.WithErrorHandler(ErrorHandler),
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
 			MarshalOptions: protojson.MarshalOptions{
 				UseProtoNames:   true,
@@ -159,8 +185,8 @@ func main() {
 	)
 
 	publicServeMux := runtime.NewServeMux(
-		runtime.WithForwardResponseOption(handler.HttpResponseModifier),
-		runtime.WithErrorHandler(handler.ErrorHandler),
+		runtime.WithForwardResponseOption(HttpResponseModifier),
+		runtime.WithErrorHandler(ErrorHandler),
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
 			MarshalOptions: protojson.MarshalOptions{
 				UseProtoNames:   true,

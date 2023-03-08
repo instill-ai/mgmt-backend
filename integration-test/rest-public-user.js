@@ -5,7 +5,7 @@ import * as constant from "./const.js";
 import * as helper from "./helper.js";
 
 
-export function CheckHealth(){
+export function CheckHealth() {
   // Health check
   group("Management API: Health check", () => {
     check(http.request("GET", `${constant.mgmtPublicHost}/health/mgmt`), {
@@ -22,7 +22,7 @@ export function CheckHealth(){
   });
 }
 
-export function CheckPublicGet(){
+export function CheckPublicGet() {
   group(`Management Public API: Get authenticated user`, () => {
     check(
       http.request(
@@ -67,7 +67,7 @@ export function CheckPublicGet(){
   })
 }
 
-export function CheckPublicUpdate(){
+export function CheckPublicUpdate() {
   group(`Management Public API: Update authenticated user`, () => {
     var userUpdate = {
       type: "OWNER_TYPE_ORGANIZATION",
@@ -196,7 +196,7 @@ export function CheckPublicUpdate(){
     );
   });
 
-  group(`Management Public API: Update authenticated user UID [not allowed]`, () =>{
+  group(`Management Public API: Update authenticated user UID [not allowed]`, () => {
     var nonExistUID = "2a06c2f7-8da9-4046-91ea-240f88a5d000";
     var userUpdate = {
       uid: nonExistUID,
