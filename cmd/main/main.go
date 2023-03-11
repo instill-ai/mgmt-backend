@@ -170,8 +170,9 @@ func main() {
 	mgmtPB.RegisterMgmtPublicServiceServer(publicGrpcS, publicHandler)
 
 	adminServeMux := runtime.NewServeMux(
-		runtime.WithForwardResponseOption(HttpResponseModifier),
-		runtime.WithErrorHandler(ErrorHandler),
+		runtime.WithIncomingHeaderMatcher(customMatcher),
+		runtime.WithForwardResponseOption(httpResponseModifier),
+		runtime.WithErrorHandler(errorHandler),
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
 			MarshalOptions: protojson.MarshalOptions{
 				UseProtoNames:   true,
@@ -185,8 +186,9 @@ func main() {
 	)
 
 	publicServeMux := runtime.NewServeMux(
-		runtime.WithForwardResponseOption(HttpResponseModifier),
-		runtime.WithErrorHandler(ErrorHandler),
+		runtime.WithIncomingHeaderMatcher(customMatcher),
+		runtime.WithForwardResponseOption(httpResponseModifier),
+		runtime.WithErrorHandler(errorHandler),
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
 			MarshalOptions: protojson.MarshalOptions{
 				UseProtoNames:   true,
