@@ -30,10 +30,10 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 
 	"github.com/instill-ai/mgmt-backend/config"
-	"github.com/instill-ai/mgmt-backend/internal/shared"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
+	"github.com/instill-ai/mgmt-backend/pkg/shared"
 
-	database "github.com/instill-ai/mgmt-backend/internal/db"
+	database "github.com/instill-ai/mgmt-backend/pkg/db"
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 )
 

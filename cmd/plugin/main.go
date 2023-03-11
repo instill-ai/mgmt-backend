@@ -1,6 +1,3 @@
-// Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
-
 package main
 
 import (
@@ -12,15 +9,15 @@ import (
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 
 	"github.com/instill-ai/mgmt-backend/config"
-	"github.com/instill-ai/mgmt-backend/internal/external"
-	"github.com/instill-ai/mgmt-backend/internal/shared"
+	"github.com/instill-ai/mgmt-backend/pkg/external"
 	"github.com/instill-ai/mgmt-backend/pkg/handler"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
+	"github.com/instill-ai/mgmt-backend/pkg/shared"
 	"github.com/instill-ai/mgmt-backend/pkg/usage"
 
-	database "github.com/instill-ai/mgmt-backend/internal/db"
+	database "github.com/instill-ai/mgmt-backend/pkg/db"
 )
 
 func main() {
