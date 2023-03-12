@@ -36,7 +36,6 @@ type ServerConfig struct {
 	}
 	CORSOrigins  []string `koanf:"corsorigins"`
 	Edition      string   `koanf:"edition"`
-	Plugin       string   `koanf:"plugin"`
 	DisableUsage bool     `koanf:"disableusage"`
 	Debug        bool     `koanf:"debug"`
 }
