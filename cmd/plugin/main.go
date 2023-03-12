@@ -56,12 +56,17 @@ func main() {
 	plugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: shared.Handshake,
 		Plugins: map[string]plugin.Plugin{
-			"admin handler": &shared.HandlerAdminPlugin{
-				Impl: handler.NewAdminHandler(service.NewService(repository)),
+			"private handler": &shared.HandlerPrivatePlugin{
+				Impl: handler.NewPrivateHandler(service.NewService(repository)),
 			},
 			"public handler": &shared.HandlerPublicPlugin{
 				Impl: handler.NewPublicHandler(service.NewService(repository), usg),
 			},
 		},
 	})
+
+	// send out the usage report at exit
+	if !config.Config.Server.DisableUsage && usg != nil {
+		usg.TriggerSingleReporter(ctx)
+	}
 }

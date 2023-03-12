@@ -1,55 +1,58 @@
 package shared
 
 import (
-	"context"
-
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 )
 
-// Admin API
+// Public API
 
-// HandlerAdminRPCServer is the RPC server that HandlerRPC talks to, conforming to
+// HandlerPrivateRPCServer is the RPC server that HandlerRPC talks to, conforming to
 // the requirements of net/rpc
-type HandlerAdminRPCServer struct {
+type HandlerPrivateRPCServer struct {
 	// This is the real implementation
 	Impl mgmtPB.MgmtAdminServiceServer
 }
 
 // ListUser is the implementation for plugin server
-func (h *HandlerAdminRPCServer) ListUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
-	resp, err := h.Impl.ListUser(context.Background(), reqW.RequestMessage.(*mgmtPB.ListUserRequest))
+func (h *HandlerPrivateRPCServer) ListUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
+	resp, err := h.Impl.ListUser(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.ListUserRequest))
+	passMetadataContext(reqW, respW)
 	return serverGlue(serverWrapResponse(respW, resp), resp, err)
 }
 
 // CreateUser is the implementation for plugin server
-func (h *HandlerAdminRPCServer) CreateUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
-	resp, err := h.Impl.CreateUser(context.Background(), reqW.RequestMessage.(*mgmtPB.CreateUserRequest))
+func (h *HandlerPrivateRPCServer) CreateUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
+	resp, err := h.Impl.CreateUser(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.CreateUserRequest))
+	passMetadataContext(reqW, respW)
 	return serverGlue(serverWrapResponse(respW, resp), resp, err)
 }
 
 // GetUser is the implementation for plugin server
-func (h *HandlerAdminRPCServer) GetUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
-	resp, err := h.Impl.GetUser(context.Background(), reqW.RequestMessage.(*mgmtPB.GetUserRequest))
+func (h *HandlerPrivateRPCServer) GetUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
+	resp, err := h.Impl.GetUser(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.GetUserRequest))
+	passMetadataContext(reqW, respW)
 	return serverGlue(serverWrapResponse(respW, resp), resp, err)
 }
 
 // UpdateUser is the implementation for plugin server
-func (h *HandlerAdminRPCServer) UpdateUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
-	resp, err := h.Impl.UpdateUser(context.Background(), reqW.RequestMessage.(*mgmtPB.UpdateUserRequest))
+func (h *HandlerPrivateRPCServer) UpdateUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
+	resp, err := h.Impl.UpdateUser(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.UpdateUserRequest))
+	passMetadataContext(reqW, respW)
 	return serverGlue(serverWrapResponse(respW, resp), resp, err)
 }
 
 // DeleteUser is the implementation for plugin server
-func (h *HandlerAdminRPCServer) DeleteUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
-	resp, err := h.Impl.DeleteUser(context.Background(), reqW.RequestMessage.(*mgmtPB.DeleteUserRequest))
-
+func (h *HandlerPrivateRPCServer) DeleteUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
+	resp, err := h.Impl.DeleteUser(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.DeleteUserRequest))
+	passMetadataContext(reqW, respW)
 	err = serverGlue(serverWrapResponse(respW, resp), resp, err)
 	return err
 }
 
 // LookUpUser is the implementation for plugin server
-func (h *HandlerAdminRPCServer) LookUpUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
-	resp, err := h.Impl.LookUpUser(context.Background(), reqW.RequestMessage.(*mgmtPB.LookUpUserRequest))
+func (h *HandlerPrivateRPCServer) LookUpUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
+	resp, err := h.Impl.LookUpUser(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.LookUpUserRequest))
+	passMetadataContext(reqW, respW)
 	return serverGlue(serverWrapResponse(respW, resp), resp, err)
 }
 
@@ -64,31 +67,35 @@ type HandlerPublicRPCServer struct {
 
 // Liveness is method interface for plugin server
 func (h *HandlerPublicRPCServer) Liveness(reqW *RequestWrapper, respW *ResponseWrapper) error {
-	resp, err := h.Impl.Liveness(context.Background(), reqW.RequestMessage.(*mgmtPB.LivenessRequest))
+	resp, err := h.Impl.Liveness(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.LivenessRequest))
+	passMetadataContext(reqW, respW)
 	return serverGlue(serverWrapResponse(respW, resp), resp, err)
 }
 
 // Readiness is method interface for plugin server
 func (h *HandlerPublicRPCServer) Readiness(reqW *RequestWrapper, respW *ResponseWrapper) error {
-	resp, err := h.Impl.Readiness(context.Background(), reqW.RequestMessage.(*mgmtPB.ReadinessRequest))
+	resp, err := h.Impl.Readiness(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.ReadinessRequest))
+	passMetadataContext(reqW, respW)
 	return serverGlue(serverWrapResponse(respW, resp), resp, err)
 }
 
 // GetAuthenticatedUser is method interface for plugin server
 func (h *HandlerPublicRPCServer) GetAuthenticatedUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
-	// resp, err := h.Impl.GetAuthenticatedUser(context.Background(), reqW.RequestMessage.(*mgmtPB.GetAuthenticatedUserRequest))
-	resp, err := h.Impl.GetAuthenticatedUser(context.Background(), &mgmtPB.GetAuthenticatedUserRequest{})
+	resp, err := h.Impl.GetAuthenticatedUser(reqW.MetadataContext, &mgmtPB.GetAuthenticatedUserRequest{})
+	passMetadataContext(reqW, respW)
 	return serverGlue(serverWrapResponse(respW, resp), resp, err)
 }
 
 // UpdateAuthenticatedUser is method interface for plugin server
 func (h *HandlerPublicRPCServer) UpdateAuthenticatedUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
-	resp, err := h.Impl.UpdateAuthenticatedUser(context.Background(), reqW.RequestMessage.(*mgmtPB.UpdateAuthenticatedUserRequest))
+	resp, err := h.Impl.UpdateAuthenticatedUser(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.UpdateAuthenticatedUserRequest))
+	passMetadataContext(reqW, respW)
 	return serverGlue(serverWrapResponse(respW, resp), resp, err)
 }
 
 // ExistUsername is method interface for plugin server
 func (h *HandlerPublicRPCServer) ExistUsername(reqW *RequestWrapper, respW *ResponseWrapper) error {
-	resp, err := h.Impl.ExistUsername(context.Background(), reqW.RequestMessage.(*mgmtPB.ExistUsernameRequest))
+	resp, err := h.Impl.ExistUsername(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.ExistUsernameRequest))
+	passMetadataContext(reqW, respW)
 	return serverGlue(serverWrapResponse(respW, resp), resp, err)
 }

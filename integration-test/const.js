@@ -1,30 +1,30 @@
 let proto
 let host
 let publicPort
-let adminPort
+let privatePort
 
 if (__ENV.MODE == "api-gateway") {
   // api-gateway mode
   proto = "http"
   host = "api-gateway"
-  adminPort = 3084
+  privatePort = 3084
   publicPort = 8080
 } else if (__ENV.MODE == "localhost") {
   // localhost mode for GitHub Actions
   proto = "http"
   host = "localhost"
-  adminPort = 3084
+  privatePort = 3084
   publicPort = 8080
 } else {
   // direct microservice mode
   proto = "http"
   host = "mgmt-backend"
-  adminPort = 3084
+  privatePort = 3084
   publicPort = 8084
 }
 
 export const mgmtVersion = "v1alpha";
-export const mgmtAdminHost = `${proto}://${host}:${adminPort}/${mgmtVersion}/admin`
+export const mgmtPrivateHost = `${proto}://${host}:${privatePort}/${mgmtVersion}/admin`
 export const mgmtPublicHost = `${proto}://${host}:${publicPort}/${mgmtVersion}`
 
 export const defaultUser = {

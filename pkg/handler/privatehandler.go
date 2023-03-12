@@ -30,14 +30,14 @@ type AdminHandler struct {
 	service service.Service
 }
 
-// NewAdminHandler initiates an admin handler instance
-func NewAdminHandler(s service.Service) mgmtPB.MgmtAdminServiceServer {
+// NewPrivateHandler initiates an private handler instance
+func NewPrivateHandler(s service.Service) mgmtPB.MgmtAdminServiceServer {
 	return &AdminHandler{
 		service: s,
 	}
 }
 
-// ========== Admin API
+// ========== Private API
 
 // ListUser lists all users
 func (h *AdminHandler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*mgmtPB.ListUserResponse, error) {

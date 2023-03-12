@@ -120,10 +120,10 @@ func main() {
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: shared.Handshake,
 		Plugins: map[string]plugin.Plugin{
-			"admin handler":  &shared.HandlerAdminPlugin{},
-			"public handler": &shared.HandlerPublicPlugin{},
+			"private handler": &shared.HandlerPrivatePlugin{},
+			"public handler":  &shared.HandlerPublicPlugin{},
 		},
-		Cmd: exec.Command(fmt.Sprintf("%s/%s", path.Dir(ex), config.Config.Server.Plugin)),
+		Cmd: exec.Command(fmt.Sprintf("%s/%s", path.Dir(ex), "plugin")),
 		Logger: hclog.New(&hclog.LoggerOptions{
 			Name:   "plugin",
 			Output: os.Stdout,
@@ -144,7 +144,7 @@ func main() {
 	}
 
 	// Request the plugin
-	rawAdminHandler, err := rpcClient.Dispense("admin handler")
+	rawAdminHandler, err := rpcClient.Dispense("private handler")
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -170,8 +170,8 @@ func main() {
 	mgmtPB.RegisterMgmtPublicServiceServer(publicGrpcS, publicHandler)
 
 	adminServeMux := runtime.NewServeMux(
-		runtime.WithIncomingHeaderMatcher(customMatcher),
 		runtime.WithForwardResponseOption(httpResponseModifier),
+		runtime.WithIncomingHeaderMatcher(customMatcher),
 		runtime.WithErrorHandler(errorHandler),
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
 			MarshalOptions: protojson.MarshalOptions{
@@ -209,7 +209,7 @@ func main() {
 		dialOpts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	}
 
-	if err := mgmtPB.RegisterMgmtAdminServiceHandlerFromEndpoint(ctx, adminServeMux, fmt.Sprintf(":%v", config.Config.Server.AdminPort), dialOpts); err != nil {
+	if err := mgmtPB.RegisterMgmtAdminServiceHandlerFromEndpoint(ctx, adminServeMux, fmt.Sprintf(":%v", config.Config.Server.PrivatePort), dialOpts); err != nil {
 		logger.Fatal(err.Error())
 	}
 
@@ -218,7 +218,7 @@ func main() {
 	}
 
 	adminHTTPServer := &http.Server{
-		Addr:    fmt.Sprintf(":%v", config.Config.Server.AdminPort),
+		Addr:    fmt.Sprintf(":%v", config.Config.Server.PrivatePort),
 		Handler: grpcHandlerFunc(adminGrpcS, adminServeMux, config.Config.Server.CORSOrigins),
 	}
 

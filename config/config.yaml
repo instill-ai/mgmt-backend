@@ -1,5 +1,5 @@
 server:
-  adminport: 3084
+  privateport: 3084
   publicport: 8084
   https:
     cert:

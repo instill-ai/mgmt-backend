@@ -20,7 +20,6 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 )
 
-
 var customHeaders = []string{constant.HeaderUserUIDKey, "Jwt-Aud", "Jwt-Iss", "Jwt-Scope", "Jwt-Client-Id"}
 
 func customMatcher(key string) (string, bool) {
@@ -49,9 +48,6 @@ func httpResponseModifier(ctx context.Context, w http.ResponseWriter, p proto.Me
 		// delete the headers to not expose any grpc-metadata in http response
 		delete(md.HeaderMD, "x-http-code")
 		delete(w.Header(), "Grpc-Metadata-X-Http-Code")
-		delete(w.Header(), "Grpc-Metadata-Content-Type")
-		delete(w.Header(), "Grpc-Metadata-Trailer")
-
 		w.WriteHeader(code)
 	}
 

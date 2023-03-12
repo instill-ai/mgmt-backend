@@ -319,9 +319,9 @@ func (h *PublicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 		User: pbUserUpdated,
 	}
 
-	// Trigger single reporter
+	// Trigger single reporter right after user updated
 	if !config.Config.Server.DisableUsage && h.usg != nil {
-		h.usg.TriggerSingleReporter(ctx)
+		h.usg.TriggerSingleReporter(context.Background())
 	}
 
 	return &resp, nil

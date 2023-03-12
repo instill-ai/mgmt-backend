@@ -28,9 +28,9 @@ type AppConfig struct {
 
 // ServerConfig defines HTTP server configurations
 type ServerConfig struct {
-	AdminPort  int `koanf:"adminport"`
-	PublicPort int `koanf:"publicport"`
-	HTTPS      struct {
+	PrivatePort int `koanf:"privateport"`
+	PublicPort  int `koanf:"publicport"`
+	HTTPS       struct {
 		Cert string `koanf:"cert"`
 		Key  string `koanf:"key"`
 	}
