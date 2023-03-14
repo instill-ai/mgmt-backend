@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/go-hclog v0.8.0
 	github.com/hashicorp/go-plugin v1.0.1
 	github.com/iancoleman/strcase v0.2.0
-	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20230208111005-837647917b3e
+	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20230314114458-7c5de5468c22
 	github.com/instill-ai/usage-client v0.2.2-alpha
 	github.com/instill-ai/x v0.2.0-alpha.0.20230308180651-fca77e54bedb
 	github.com/jackc/pgx/v5 v5.2.0

@@ -4,54 +4,54 @@ import (
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 )
 
-// Public API
+// Private API
 
 // HandlerPrivateRPCServer is the RPC server that HandlerRPC talks to, conforming to
 // the requirements of net/rpc
 type HandlerPrivateRPCServer struct {
 	// This is the real implementation
-	Impl mgmtPB.MgmtAdminServiceServer
+	Impl mgmtPB.MgmtPrivateServiceServer
 }
 
-// ListUser is the implementation for plugin server
-func (h *HandlerPrivateRPCServer) ListUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
-	resp, err := h.Impl.ListUser(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.ListUserRequest))
+// ListUsersAdmin is the implementation for plugin server
+func (h *HandlerPrivateRPCServer) ListUsersAdmin(reqW *RequestWrapper, respW *ResponseWrapper) error {
+	resp, err := h.Impl.ListUsersAdmin(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.ListUsersAdminRequest))
 	passMetadataContext(reqW, respW)
 	return serverGlue(serverWrapResponse(respW, resp), resp, err)
 }
 
-// CreateUser is the implementation for plugin server
-func (h *HandlerPrivateRPCServer) CreateUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
-	resp, err := h.Impl.CreateUser(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.CreateUserRequest))
+// CreateUserAdmin is the implementation for plugin server
+func (h *HandlerPrivateRPCServer) CreateUserAdmin(reqW *RequestWrapper, respW *ResponseWrapper) error {
+	resp, err := h.Impl.CreateUserAdmin(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.CreateUserAdminRequest))
 	passMetadataContext(reqW, respW)
 	return serverGlue(serverWrapResponse(respW, resp), resp, err)
 }
 
-// GetUser is the implementation for plugin server
-func (h *HandlerPrivateRPCServer) GetUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
-	resp, err := h.Impl.GetUser(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.GetUserRequest))
+// GetUserAdmin is the implementation for plugin server
+func (h *HandlerPrivateRPCServer) GetUserAdmin(reqW *RequestWrapper, respW *ResponseWrapper) error {
+	resp, err := h.Impl.GetUserAdmin(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.GetUserAdminRequest))
 	passMetadataContext(reqW, respW)
 	return serverGlue(serverWrapResponse(respW, resp), resp, err)
 }
 
-// UpdateUser is the implementation for plugin server
-func (h *HandlerPrivateRPCServer) UpdateUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
-	resp, err := h.Impl.UpdateUser(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.UpdateUserRequest))
+// UpdateUserAdmin is the implementation for plugin server
+func (h *HandlerPrivateRPCServer) UpdateUserAdmin(reqW *RequestWrapper, respW *ResponseWrapper) error {
+	resp, err := h.Impl.UpdateUserAdmin(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.UpdateUserAdminRequest))
 	passMetadataContext(reqW, respW)
 	return serverGlue(serverWrapResponse(respW, resp), resp, err)
 }
 
-// DeleteUser is the implementation for plugin server
-func (h *HandlerPrivateRPCServer) DeleteUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
-	resp, err := h.Impl.DeleteUser(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.DeleteUserRequest))
+// DeleteUserAdmin is the implementation for plugin server
+func (h *HandlerPrivateRPCServer) DeleteUserAdmin(reqW *RequestWrapper, respW *ResponseWrapper) error {
+	resp, err := h.Impl.DeleteUserAdmin(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.DeleteUserAdminRequest))
 	passMetadataContext(reqW, respW)
 	err = serverGlue(serverWrapResponse(respW, resp), resp, err)
 	return err
 }
 
-// LookUpUser is the implementation for plugin server
-func (h *HandlerPrivateRPCServer) LookUpUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
-	resp, err := h.Impl.LookUpUser(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.LookUpUserRequest))
+// LookUpUserAdmin is the implementation for plugin server
+func (h *HandlerPrivateRPCServer) LookUpUserAdmin(reqW *RequestWrapper, respW *ResponseWrapper) error {
+	resp, err := h.Impl.LookUpUserAdmin(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.LookUpUserAdminRequest))
 	passMetadataContext(reqW, respW)
 	return serverGlue(serverWrapResponse(respW, resp), resp, err)
 }
@@ -79,16 +79,16 @@ func (h *HandlerPublicRPCServer) Readiness(reqW *RequestWrapper, respW *Response
 	return serverGlue(serverWrapResponse(respW, resp), resp, err)
 }
 
-// GetAuthenticatedUser is method interface for plugin server
-func (h *HandlerPublicRPCServer) GetAuthenticatedUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
-	resp, err := h.Impl.GetAuthenticatedUser(reqW.MetadataContext, &mgmtPB.GetAuthenticatedUserRequest{})
+// QueryAuthenticatedUser is method interface for plugin server
+func (h *HandlerPublicRPCServer) QueryAuthenticatedUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
+	resp, err := h.Impl.QueryAuthenticatedUser(reqW.MetadataContext, &mgmtPB.QueryAuthenticatedUserRequest{})
 	passMetadataContext(reqW, respW)
 	return serverGlue(serverWrapResponse(respW, resp), resp, err)
 }
 
-// UpdateAuthenticatedUser is method interface for plugin server
-func (h *HandlerPublicRPCServer) UpdateAuthenticatedUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
-	resp, err := h.Impl.UpdateAuthenticatedUser(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.UpdateAuthenticatedUserRequest))
+// PatchAuthenticatedUser is method interface for plugin server
+func (h *HandlerPublicRPCServer) PatchAuthenticatedUser(reqW *RequestWrapper, respW *ResponseWrapper) error {
+	resp, err := h.Impl.PatchAuthenticatedUser(reqW.MetadataContext, reqW.RequestMessage.(*mgmtPB.PatchAuthenticatedUserRequest))
 	passMetadataContext(reqW, respW)
 	return serverGlue(serverWrapResponse(respW, resp), resp, err)
 }

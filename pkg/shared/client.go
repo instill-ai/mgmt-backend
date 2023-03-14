@@ -14,68 +14,68 @@ type HandlerPrivateRPC struct {
 	client *rpc.Client
 }
 
-// ListUser is method interface for plugin client
-func (h *HandlerPrivateRPC) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (resp *mgmtPB.ListUserResponse, err error) {
+// ListUsersAdmin is method interface for plugin client
+func (h *HandlerPrivateRPC) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUsersAdminRequest) (resp *mgmtPB.ListUsersAdminResponse, err error) {
 	respW := &ResponseWrapper{}
-	if err := h.client.Call("Plugin.ListUser", clientWrapRequest(ctx, req), respW); err != nil {
-		return &mgmtPB.ListUserResponse{}, err
+	if err := h.client.Call("Plugin.ListUsersAdmin", clientWrapRequest(ctx, req), respW); err != nil {
+		return &mgmtPB.ListUsersAdminResponse{}, err
 	}
-	resp = &mgmtPB.ListUserResponse{}
+	resp = &mgmtPB.ListUsersAdminResponse{}
 	err = clientGlue(ctx, respW, resp)
 	return resp, err
 }
 
-// CreateUser is method interface for plugin client
-func (h *HandlerPrivateRPC) CreateUser(ctx context.Context, req *mgmtPB.CreateUserRequest) (resp *mgmtPB.CreateUserResponse, err error) {
+// CreateUserAdmin is method interface for plugin client
+func (h *HandlerPrivateRPC) CreateUserAdmin(ctx context.Context, req *mgmtPB.CreateUserAdminRequest) (resp *mgmtPB.CreateUserAdminResponse, err error) {
 	respW := &ResponseWrapper{}
-	if err := h.client.Call("Plugin.CreateUser", clientWrapRequest(ctx, req), respW); err != nil {
-		return &mgmtPB.CreateUserResponse{}, err
+	if err := h.client.Call("Plugin.CreateUserAdmin", clientWrapRequest(ctx, req), respW); err != nil {
+		return &mgmtPB.CreateUserAdminResponse{}, err
 	}
-	resp = &mgmtPB.CreateUserResponse{}
+	resp = &mgmtPB.CreateUserAdminResponse{}
 	err = clientGlue(ctx, respW, resp)
 	return resp, err
 }
 
-// GetUser is method interface for plugin client
-func (h *HandlerPrivateRPC) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (resp *mgmtPB.GetUserResponse, err error) {
+// GetUserAdmin is method interface for plugin client
+func (h *HandlerPrivateRPC) GetUserAdmin(ctx context.Context, req *mgmtPB.GetUserAdminRequest) (resp *mgmtPB.GetUserAdminResponse, err error) {
 	respW := &ResponseWrapper{}
-	if err := h.client.Call("Plugin.GetUser", clientWrapRequest(ctx, req), respW); err != nil {
-		return &mgmtPB.GetUserResponse{}, err
+	if err := h.client.Call("Plugin.GetUserAdmin", clientWrapRequest(ctx, req), respW); err != nil {
+		return &mgmtPB.GetUserAdminResponse{}, err
 	}
-	resp = &mgmtPB.GetUserResponse{}
+	resp = &mgmtPB.GetUserAdminResponse{}
 	err = clientGlue(ctx, respW, resp)
 	return resp, err
 }
 
-// UpdateUser is method interface for plugin client
-func (h *HandlerPrivateRPC) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest) (resp *mgmtPB.UpdateUserResponse, err error) {
+// UpdateUserAdmin is method interface for plugin client
+func (h *HandlerPrivateRPC) UpdateUserAdmin(ctx context.Context, req *mgmtPB.UpdateUserAdminRequest) (resp *mgmtPB.UpdateUserAdminResponse, err error) {
 	respW := &ResponseWrapper{}
-	if err := h.client.Call("Plugin.UpdateUser", clientWrapRequest(ctx, req), respW); err != nil {
-		return &mgmtPB.UpdateUserResponse{}, err
+	if err := h.client.Call("Plugin.UpdateUserAdmin", clientWrapRequest(ctx, req), respW); err != nil {
+		return &mgmtPB.UpdateUserAdminResponse{}, err
 	}
-	resp = &mgmtPB.UpdateUserResponse{}
+	resp = &mgmtPB.UpdateUserAdminResponse{}
 	err = clientGlue(ctx, respW, resp)
 	return resp, err
 }
 
-// DeleteUser is method interface for plugin client
-func (h *HandlerPrivateRPC) DeleteUser(ctx context.Context, req *mgmtPB.DeleteUserRequest) (resp *mgmtPB.DeleteUserResponse, err error) {
+// DeleteUserAdmin is method interface for plugin client
+func (h *HandlerPrivateRPC) DeleteUserAdmin(ctx context.Context, req *mgmtPB.DeleteUserAdminRequest) (resp *mgmtPB.DeleteUserAdminResponse, err error) {
 	respW := &ResponseWrapper{}
-	if err := h.client.Call("Plugin.DeleteUser", clientWrapRequest(ctx, req), respW); err != nil {
-		return &mgmtPB.DeleteUserResponse{}, err
+	if err := h.client.Call("Plugin.DeleteUserAdmin", clientWrapRequest(ctx, req), respW); err != nil {
+		return &mgmtPB.DeleteUserAdminResponse{}, err
 	}
-	resp = &mgmtPB.DeleteUserResponse{}
+	resp = &mgmtPB.DeleteUserAdminResponse{}
 	err = clientGlue(ctx, respW, resp)
 	return resp, err
 }
 
-// LookUpUser is method interface for plugin client
-func (h *HandlerPrivateRPC) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserRequest) (resp *mgmtPB.LookUpUserResponse, err error) {
+// LookUpUserAdmin is method interface for plugin client
+func (h *HandlerPrivateRPC) LookUpUserAdmin(ctx context.Context, req *mgmtPB.LookUpUserAdminRequest) (resp *mgmtPB.LookUpUserAdminResponse, err error) {
 	respW := &ResponseWrapper{}
-	if err := h.client.Call("Plugin.LookUpUser", clientWrapRequest(ctx, req), respW); err != nil {
-		return &mgmtPB.LookUpUserResponse{}, err
+	if err := h.client.Call("Plugin.LookUpUserAdmin", clientWrapRequest(ctx, req), respW); err != nil {
+		return &mgmtPB.LookUpUserAdminResponse{}, err
 	}
-	resp = &mgmtPB.LookUpUserResponse{}
+	resp = &mgmtPB.LookUpUserAdminResponse{}
 	err = clientGlue(ctx, respW, resp)
 	return resp, err
 }
@@ -109,24 +109,24 @@ func (h *HandlerPublicRPC) Readiness(ctx context.Context, req *mgmtPB.ReadinessR
 	return resp, err
 }
 
-// GetAuthenticatedUser is method interface for plugin client
-func (h *HandlerPublicRPC) GetAuthenticatedUser(ctx context.Context, req *mgmtPB.GetAuthenticatedUserRequest) (resp *mgmtPB.GetAuthenticatedUserResponse, err error) {
+// QueryAuthenticatedUser is method interface for plugin client
+func (h *HandlerPublicRPC) QueryAuthenticatedUser(ctx context.Context, req *mgmtPB.QueryAuthenticatedUserRequest) (resp *mgmtPB.QueryAuthenticatedUserResponse, err error) {
 	respW := &ResponseWrapper{}
-	if err := h.client.Call("Plugin.GetAuthenticatedUser", clientWrapRequest(ctx, req), respW); err != nil {
-		return &mgmtPB.GetAuthenticatedUserResponse{}, err
+	if err := h.client.Call("Plugin.QueryAuthenticatedUser", clientWrapRequest(ctx, req), respW); err != nil {
+		return &mgmtPB.QueryAuthenticatedUserResponse{}, err
 	}
-	resp = &mgmtPB.GetAuthenticatedUserResponse{}
+	resp = &mgmtPB.QueryAuthenticatedUserResponse{}
 	err = clientGlue(ctx, respW, resp)
 	return resp, err
 }
 
-// UpdateAuthenticatedUser is method interface for plugin client
-func (h *HandlerPublicRPC) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB.UpdateAuthenticatedUserRequest) (resp *mgmtPB.UpdateAuthenticatedUserResponse, err error) {
+// PatchAuthenticatedUser is method interface for plugin client
+func (h *HandlerPublicRPC) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.PatchAuthenticatedUserRequest) (resp *mgmtPB.PatchAuthenticatedUserResponse, err error) {
 	respW := &ResponseWrapper{}
-	if err = h.client.Call("Plugin.UpdateAuthenticatedUser", clientWrapRequest(ctx, req), respW); err != nil {
-		return &mgmtPB.UpdateAuthenticatedUserResponse{}, err
+	if err = h.client.Call("Plugin.PatchAuthenticatedUser", clientWrapRequest(ctx, req), respW); err != nil {
+		return &mgmtPB.PatchAuthenticatedUserResponse{}, err
 	}
-	resp = &mgmtPB.UpdateAuthenticatedUserResponse{}
+	resp = &mgmtPB.PatchAuthenticatedUserResponse{}
 	err = clientGlue(ctx, respW, resp)
 	return resp, err
 }

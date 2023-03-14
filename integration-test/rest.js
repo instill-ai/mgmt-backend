@@ -28,7 +28,6 @@ export default function (data) {
     privateAPI.CheckAdminLookUp();
     privateAPI.CheckAdminUpdate();
     privateAPI.CheckAdminDelete();
-
   }
 
   // ======== Public API

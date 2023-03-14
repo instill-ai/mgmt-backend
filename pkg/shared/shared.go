@@ -42,46 +42,46 @@ func init() {
 	gob.Register(&errdetails.Help_Link{})
 
 	// private api
-	gob.Register(&mgmtPB.ListUserRequest{})
-	gob.Register(&mgmtPB.ListUserResponse{})
+	gob.Register(&mgmtPB.ListUsersAdminRequest{})
+	gob.Register(&mgmtPB.ListUsersAdminResponse{})
 
-	gob.Register(&mgmtPB.CreateUserRequest{})
-	gob.Register(&mgmtPB.CreateUserResponse{})
+	gob.Register(&mgmtPB.CreateUserAdminRequest{})
+	gob.Register(&mgmtPB.CreateUserAdminResponse{})
 
-	gob.Register(&mgmtPB.GetUserRequest{})
-	gob.Register(&mgmtPB.GetUserResponse{})
+	gob.Register(&mgmtPB.GetUserAdminRequest{})
+	gob.Register(&mgmtPB.GetUserAdminResponse{})
 
-	gob.Register(&mgmtPB.UpdateUserRequest{})
-	gob.Register(&mgmtPB.UpdateUserResponse{})
+	gob.Register(&mgmtPB.UpdateUserAdminRequest{})
+	gob.Register(&mgmtPB.UpdateUserAdminResponse{})
 
-	gob.Register(&mgmtPB.DeleteUserRequest{})
-	gob.Register(&mgmtPB.DeleteUserResponse{})
+	gob.Register(&mgmtPB.DeleteUserAdminRequest{})
+	gob.Register(&mgmtPB.DeleteUserAdminResponse{})
 
-	gob.Register(&mgmtPB.LookUpUserRequest{})
-	gob.Register(&mgmtPB.LookUpUserResponse{})
+	gob.Register(&mgmtPB.LookUpUserAdminRequest{})
+	gob.Register(&mgmtPB.LookUpUserAdminResponse{})
 
 	// public api
-	gob.Register(&mgmtPB.LivenessResponse{})
 	gob.Register(&mgmtPB.LivenessRequest{})
+	gob.Register(&mgmtPB.LivenessResponse{})
 
-	gob.Register(&mgmtPB.ReadinessResponse{})
 	gob.Register(&mgmtPB.ReadinessRequest{})
+	gob.Register(&mgmtPB.ReadinessResponse{})
 
-	gob.Register(&mgmtPB.GetAuthenticatedUserResponse{})
-	gob.Register(&mgmtPB.GetAuthenticatedUserRequest{})
+	gob.Register(&mgmtPB.QueryAuthenticatedUserRequest{})
+	gob.Register(&mgmtPB.QueryAuthenticatedUserResponse{})
 
-	gob.Register(&mgmtPB.UpdateAuthenticatedUserResponse{})
-	gob.Register(&mgmtPB.UpdateAuthenticatedUserRequest{})
+	gob.Register(&mgmtPB.PatchAuthenticatedUserRequest{})
+	gob.Register(&mgmtPB.PatchAuthenticatedUserResponse{})
 
-	gob.Register(&mgmtPB.ExistUsernameResponse{})
 	gob.Register(&mgmtPB.ExistUsernameRequest{})
+	gob.Register(&mgmtPB.ExistUsernameResponse{})
 
 }
 
 // HandlerPrivatePlugin is the implementation of plugin.Plugin so we can serve/consume this
 type HandlerPrivatePlugin struct {
 	// Impl Injection
-	Impl mgmtPB.MgmtAdminServiceServer
+	Impl mgmtPB.MgmtPrivateServiceServer
 }
 
 // Server is to implement the plugin.Plugin interface method
