@@ -33,13 +33,32 @@ $ make dev
 
 Now, you have the Go project set up in the container, in which you can compile and run the binaries together with the integration test in each container shell.
 
-### Run the server
+### Run the server in the container
 
+Enter the container
 ```bash
-$ docker exec -it mgmt-backend /bin/bash
+$ docker exec -it mgmt-backend-cloud /bin/bash
+```
+
+Create the database
+```bash
 $ go run ./cmd/migration
+```
+
+Initialise the database
+```bash
 $ go run ./cmd/init
-$ go run ./cmd/main
+```
+
+Build binaries
+```bash
+$ go build -o /mgmt-backend/exec/mgmt-backend ./cmd/main
+$ go build -o /mgmt-backend/exec/plugin ./cmd/plugin
+```
+
+Run the server
+```bash
+$ /mgmt-backend/exec/mgmt-backend
 ```
 
 ### Run the integration test
