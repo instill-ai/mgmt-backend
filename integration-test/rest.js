@@ -1,5 +1,5 @@
 import * as constant from "./const.js";
-import * as adminAPI from "./rest-admin-user.js";
+import * as privateAPI from "./rest-private-user.js";
 import * as publicAPI from "./rest-public-user.js"
 
 export let options = {
@@ -21,14 +21,13 @@ export default function (data) {
 
   if (__ENV.MODE != "api-gateway" && __ENV.MODE != "localhost") {
 
-    // ======== Admin API
-    adminAPI.CheckAdminList();
-    adminAPI.CheckAdminCreate();
-    adminAPI.CheckAdminGet();
-    adminAPI.CheckAdminLookUp();
-    adminAPI.CheckAdminUpdate();
-    adminAPI.CheckAdminDelete();
-
+    // ======== Private API
+    privateAPI.CheckAdminList();
+    privateAPI.CheckAdminCreate();
+    privateAPI.CheckAdminGet();
+    privateAPI.CheckAdminLookUp();
+    privateAPI.CheckAdminUpdate();
+    privateAPI.CheckAdminDelete();
   }
 
   // ======== Public API

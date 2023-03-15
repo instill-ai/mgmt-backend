@@ -27,40 +27,40 @@ export function CheckPublicGet() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/user`
+        `${constant.mgmtPublicHost}/users/me`
       ),
       {
-        [`GET /${constant.mgmtVersion}/user response name`]:
+        [`GET /${constant.mgmtVersion}/users/me response name`]:
           (r) => r.json().user.name !== undefined,
-        [`GET /${constant.mgmtVersion}/user response uid is UUID`]:
+        [`GET /${constant.mgmtVersion}/users/me response uid is UUID`]:
           (r) => helper.isUUID(r.json().user.uid),
-        [`GET /${constant.mgmtVersion}/user response id`]:
+        [`GET /${constant.mgmtVersion}/users/me response id`]:
           (r) => r.json().user.id !== undefined,
-        [`GET /${constant.mgmtVersion}/user response id`]:
+        [`GET /${constant.mgmtVersion}/users/me response id`]:
           (r) => r.json().user.id === constant.defaultUser.id,
-        [`GET /${constant.mgmtVersion}/user response type`]:
+        [`GET /${constant.mgmtVersion}/users/me response type`]:
           (r) => r.json().user.type === "OWNER_TYPE_USER",
-        [`GET /${constant.mgmtVersion}/user response email`]:
+        [`GET /${constant.mgmtVersion}/users/me response email`]:
           (r) => r.json().user.email !== undefined,
-        [`GET /${constant.mgmtVersion}/user response plan`]:
+        [`GET /${constant.mgmtVersion}/users/me response plan`]:
           (r) => r.json().user.plan !== undefined,
-        [`GET /${constant.mgmtVersion}/user response billing_id`]:
+        [`GET /${constant.mgmtVersion}/users/me response billing_id`]:
           (r) => r.json().user.billing_id !== undefined,
-        [`GET /${constant.mgmtVersion}/user response first_name`]:
+        [`GET /${constant.mgmtVersion}/users/me response first_name`]:
           (r) => r.json().user.first_name !== undefined,
-        [`GET /${constant.mgmtVersion}/user response last_name`]:
+        [`GET /${constant.mgmtVersion}/users/me response last_name`]:
           (r) => r.json().user.last_name !== undefined,
-        [`GET /${constant.mgmtVersion}/user response org_name`]:
+        [`GET /${constant.mgmtVersion}/users/me response org_name`]:
           (r) => r.json().user.org_name !== undefined,
-        [`GET /${constant.mgmtVersion}/user response role`]:
+        [`GET /${constant.mgmtVersion}/users/me response role`]:
           (r) => r.json().user.role !== undefined,
-        [`GET /${constant.mgmtVersion}/user response newsletter_subscription`]:
+        [`GET /${constant.mgmtVersion}/users/me response newsletter_subscription`]:
           (r) => r.json().user.newsletter_subscription !== undefined,
-        [`GET /${constant.mgmtVersion}/user response cookie_token`]:
+        [`GET /${constant.mgmtVersion}/users/me response cookie_token`]:
           (r) => r.json().user.cookie_token !== undefined,
-        [`GET /${constant.mgmtVersion}/user response create_time`]:
+        [`GET /${constant.mgmtVersion}/users/me response create_time`]:
           (r) => r.json().user.create_time !== undefined,
-        [`GET /${constant.mgmtVersion}/user response update_time`]:
+        [`GET /${constant.mgmtVersion}/users/me response update_time`]:
           (r) => r.json().user.update_time !== undefined,
       }
     )
@@ -86,50 +86,50 @@ export function CheckPublicUpdate() {
 
     var res = http.request(
       "GET",
-      `${constant.mgmtPublicHost}/user`
+      `${constant.mgmtPublicHost}/users/me`
     );
 
     check(
       http.request(
         "PATCH",
-        `${constant.mgmtPublicHost}/user`,
+        `${constant.mgmtPublicHost}/users/me`,
         JSON.stringify(userUpdate),
         { headers: { "Content-Type": "application/json" } }
       ),
       {
-        [`PATCH /${constant.mgmtVersion}/user response 200`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response 200`]:
           (r) => r.status === 200,
-        [`PATCH /${constant.mgmtVersion}/user response name unchanged`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response name unchanged`]:
           (r) => r.json().user.name === res.json().user.name,
-        [`PATCH /${constant.mgmtVersion}/user response uid unchanged`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response uid unchanged`]:
           (r) => r.json().user.uid === res.json().user.uid,
-        [`PATCH /${constant.mgmtVersion}/user response id unchanged`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response id unchanged`]:
           (r) => r.json().user.id === res.json().user.id,
-        [`PATCH /${constant.mgmtVersion}/user response type unchanged`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response type unchanged`]:
           (r) => r.json().user.type === res.json().user.type,
-        [`PATCH /${constant.mgmtVersion}/user response email updated`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response email updated`]:
           (r) => r.json().user.email === userUpdate.email,
-        [`PATCH /${constant.mgmtVersion}/user response plan updated`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response plan updated`]:
           (r) => r.json().user.plan === userUpdate.plan,
-        [`PATCH /${constant.mgmtVersion}/user response billing_id updated`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response billing_id updated`]:
           (r) => r.json().user.billing_id === userUpdate.billing_id,
-        [`PATCH /${constant.mgmtVersion}/user response first_name updated`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response first_name updated`]:
           (r) => r.json().user.first_name === userUpdate.first_name,
-        [`PATCH /${constant.mgmtVersion}/user response last_name updated`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response last_name updated`]:
           (r) => r.json().user.last_name === userUpdate.last_name,
-        [`PATCH /${constant.mgmtVersion}/user response org_name updated`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response org_name updated`]:
           (r) => r.json().user.org_name === userUpdate.org_name,
-        [`PATCH /${constant.mgmtVersion}/user response role updated`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response role updated`]:
           (r) => r.json().user.role === userUpdate.role,
-        [`PATCH /${constant.mgmtVersion}/user response newsletter_subscription updated`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response newsletter_subscription updated`]:
           (r) => r.json().user.newsletter_subscription === userUpdate.newsletter_subscription,
-        [`PATCH /${constant.mgmtVersion}/user response cookie_token updated`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response cookie_token updated`]:
           (r) => r.json().user.cookie_token === userUpdate.cookie_token,
-        [`PATCH /${constant.mgmtVersion}/user response create_time unchanged`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response create_time unchanged`]:
           (r) => r.json().user.create_time === res.json().user.create_time,
-        [`PATCH /${constant.mgmtVersion}/user response update_time updated`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response update_time updated`]:
           (r) => r.json().user.update_time !== res.json().user.update_time,
-        [`PATCH /${constant.mgmtVersion}/user response update_time not updated with request value`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response update_time not updated with request value`]:
           (r) => r.json().user.update_time !== userUpdate.update_time,
       }
     );
@@ -138,22 +138,22 @@ export function CheckPublicUpdate() {
     check(
       http.request(
         "PATCH",
-        `${constant.mgmtPublicHost}/user`,
+        `${constant.mgmtPublicHost}/users/me`,
         JSON.stringify(constant.defaultUser),
         { headers: { "Content-Type": "application/json" } }
       ),
       {
-        [`PATCH /${constant.mgmtVersion}/user response status 200`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response status 200`]:
           (r) => r.status === 200,
       }
     );
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/user`
+        `${constant.mgmtPublicHost}/users/me`
       ),
       {
-        [`GET /${constant.mgmtVersion}/user response status 200`]:
+        [`GET /${constant.mgmtVersion}/users/me response status 200`]:
           (r) => r.status === 200,
       }
     );
@@ -167,12 +167,12 @@ export function CheckPublicUpdate() {
     check(
       http.request(
         "PATCH",
-        `${constant.mgmtPublicHost}/user`,
+        `${constant.mgmtPublicHost}/users/me`,
         JSON.stringify(userUpdate),
         { headers: { "Content-Type": "application/json" } }
       ),
       {
-        [`PATCH /${constant.mgmtVersion}/user response status 400`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response status 400`]:
           (r) => r.status === 400,
       }
     );
@@ -185,12 +185,12 @@ export function CheckPublicUpdate() {
     check(
       http.request(
         "PATCH",
-        `${constant.mgmtPublicHost}/user`,
+        `${constant.mgmtPublicHost}/users/me`,
         JSON.stringify(userUpdate),
         { headers: { "Content-Type": "application/json" } }
       ),
       {
-        [`PATCH /${constant.mgmtVersion}/user response status 400`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response status 400`]:
           (r) => r.status === 400,
       }
     );
@@ -204,12 +204,12 @@ export function CheckPublicUpdate() {
     check(
       http.request(
         "PATCH",
-        `${constant.mgmtPublicHost}/user`,
+        `${constant.mgmtPublicHost}/users/me`,
         JSON.stringify(userUpdate),
         { headers: { "Content-Type": "application/json" } }
       ),
       {
-        [`PATCH /${constant.mgmtVersion}/user response status 400`]:
+        [`PATCH /${constant.mgmtVersion}/users/me response status 400`]:
           (r) => r.status === 400,
       }
     );

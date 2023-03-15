@@ -30,10 +30,10 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 
 	"github.com/instill-ai/mgmt-backend/config"
-	"github.com/instill-ai/mgmt-backend/internal/shared"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
+	"github.com/instill-ai/mgmt-backend/pkg/shared"
 
-	database "github.com/instill-ai/mgmt-backend/internal/db"
+	database "github.com/instill-ai/mgmt-backend/pkg/db"
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 )
 
@@ -85,7 +85,7 @@ func main() {
 		grpc_zap.WithDecider(func(fullMethodName string, err error) bool {
 			// will not log gRPC calls if it was a call to liveness or readiness and no error was raised
 			if err == nil {
-				if match, _ := regexp.MatchString("vdp.mgmt.v1alpha.MgmtAdminService/.*ness$", fullMethodName); match {
+				if match, _ := regexp.MatchString("vdp.mgmt.v1alpha.MgmtPrivateService/.*ness$", fullMethodName); match {
 					return false
 				}
 				if match, _ := regexp.MatchString("vdp.mgmt.v1alpha.MgmtPublicService/.*ness$", fullMethodName); match {
@@ -120,10 +120,10 @@ func main() {
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: shared.Handshake,
 		Plugins: map[string]plugin.Plugin{
-			"admin handler":  &shared.HandlerAdminPlugin{},
-			"public handler": &shared.HandlerPublicPlugin{},
+			"private handler": &shared.HandlerPrivatePlugin{},
+			"public handler":  &shared.HandlerPublicPlugin{},
 		},
-		Cmd: exec.Command(fmt.Sprintf("%s/%s", path.Dir(ex), config.Config.Server.Plugin)),
+		Cmd: exec.Command(fmt.Sprintf("%s/%s", path.Dir(ex), "plugin")),
 		Logger: hclog.New(&hclog.LoggerOptions{
 			Name:   "plugin",
 			Output: os.Stdout,
@@ -144,7 +144,7 @@ func main() {
 	}
 
 	// Request the plugin
-	rawAdminHandler, err := rpcClient.Dispense("admin handler")
+	rawPrivateHandler, err := rpcClient.Dispense("private handler")
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -157,21 +157,22 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	adminGrpcS := grpc.NewServer(grpcServerOpts...)
-	reflection.Register(adminGrpcS)
+	privateGrpcS := grpc.NewServer(grpcServerOpts...)
+	reflection.Register(privateGrpcS)
 
 	publicGrpcS := grpc.NewServer(grpcServerOpts...)
 	reflection.Register(publicGrpcS)
 
-	adminHandler := rawAdminHandler.(mgmtPB.MgmtAdminServiceServer)
-	mgmtPB.RegisterMgmtAdminServiceServer(adminGrpcS, adminHandler)
+	privateHandler := rawPrivateHandler.(mgmtPB.MgmtPrivateServiceServer)
+	mgmtPB.RegisterMgmtPrivateServiceServer(privateGrpcS, privateHandler)
 
 	publicHandler := rawPublicHandler.(mgmtPB.MgmtPublicServiceServer)
 	mgmtPB.RegisterMgmtPublicServiceServer(publicGrpcS, publicHandler)
 
-	adminServeMux := runtime.NewServeMux(
-		runtime.WithForwardResponseOption(HttpResponseModifier),
-		runtime.WithErrorHandler(ErrorHandler),
+	privateServeMux := runtime.NewServeMux(
+		runtime.WithForwardResponseOption(httpResponseModifier),
+		runtime.WithIncomingHeaderMatcher(customMatcher),
+		runtime.WithErrorHandler(errorHandler),
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
 			MarshalOptions: protojson.MarshalOptions{
 				UseProtoNames:   true,
@@ -185,8 +186,9 @@ func main() {
 	)
 
 	publicServeMux := runtime.NewServeMux(
-		runtime.WithForwardResponseOption(HttpResponseModifier),
-		runtime.WithErrorHandler(ErrorHandler),
+		runtime.WithIncomingHeaderMatcher(customMatcher),
+		runtime.WithForwardResponseOption(httpResponseModifier),
+		runtime.WithErrorHandler(errorHandler),
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
 			MarshalOptions: protojson.MarshalOptions{
 				UseProtoNames:   true,
@@ -207,7 +209,7 @@ func main() {
 		dialOpts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	}
 
-	if err := mgmtPB.RegisterMgmtAdminServiceHandlerFromEndpoint(ctx, adminServeMux, fmt.Sprintf(":%v", config.Config.Server.AdminPort), dialOpts); err != nil {
+	if err := mgmtPB.RegisterMgmtPrivateServiceHandlerFromEndpoint(ctx, privateServeMux, fmt.Sprintf(":%v", config.Config.Server.PrivatePort), dialOpts); err != nil {
 		logger.Fatal(err.Error())
 	}
 
@@ -215,9 +217,9 @@ func main() {
 		logger.Fatal(err.Error())
 	}
 
-	adminHTTPServer := &http.Server{
-		Addr:    fmt.Sprintf(":%v", config.Config.Server.AdminPort),
-		Handler: grpcHandlerFunc(adminGrpcS, adminServeMux, config.Config.Server.CORSOrigins),
+	privateHTTPServer := &http.Server{
+		Addr:    fmt.Sprintf(":%v", config.Config.Server.PrivatePort),
+		Handler: grpcHandlerFunc(privateGrpcS, privateServeMux, config.Config.Server.CORSOrigins),
 	}
 
 	publicHTTPServer := &http.Server{
@@ -230,7 +232,7 @@ func main() {
 	errSig := make(chan error)
 	if config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "" {
 		go func() {
-			if err := adminHTTPServer.ListenAndServeTLS(config.Config.Server.HTTPS.Cert, config.Config.Server.HTTPS.Key); err != nil {
+			if err := privateHTTPServer.ListenAndServeTLS(config.Config.Server.HTTPS.Cert, config.Config.Server.HTTPS.Key); err != nil {
 				errSig <- err
 			}
 		}()
@@ -241,7 +243,7 @@ func main() {
 		}()
 	} else {
 		go func() {
-			if err := adminHTTPServer.ListenAndServe(); err != nil {
+			if err := privateHTTPServer.ListenAndServe(); err != nil {
 				errSig <- err
 			}
 		}()
@@ -263,7 +265,7 @@ func main() {
 		logger.Error(fmt.Sprintf("Fatal error: %v\n", err))
 	case <-quitSig:
 		logger.Info("Shutting down server...")
-		adminGrpcS.GracefulStop()
+		privateGrpcS.GracefulStop()
 		publicGrpcS.GracefulStop()
 	}
 }

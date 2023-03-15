@@ -25,22 +25,22 @@ import (
 const defaultPageSize = int64(10)
 const maxPageSize = int64(100)
 
-type AdminHandler struct {
-	mgmtPB.UnimplementedMgmtAdminServiceServer
+type PrivateHandler struct {
+	mgmtPB.UnimplementedMgmtPrivateServiceServer
 	service service.Service
 }
 
-// NewAdminHandler initiates an admin handler instance
-func NewAdminHandler(s service.Service) mgmtPB.MgmtAdminServiceServer {
-	return &AdminHandler{
+// NewPrivateHandler initiates an private handler instance
+func NewPrivateHandler(s service.Service) mgmtPB.MgmtPrivateServiceServer {
+	return &PrivateHandler{
 		service: s,
 	}
 }
 
-// ========== Admin API
+// ========== Private API
 
-// ListUser lists all users
-func (h *AdminHandler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest) (*mgmtPB.ListUserResponse, error) {
+// ListUsersAdmin lists all users
+func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUsersAdminRequest) (*mgmtPB.ListUsersAdminResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
 	pageSize := req.GetPageSize()
@@ -58,14 +58,14 @@ func (h *AdminHandler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest
 			st, e := sterr.CreateErrorBadRequest(
 				"list user error", []*errdetails.BadRequest_FieldViolation{
 					{
-						Field:       "ListUserRequest.page_token",
+						Field:       "ListUsersAdminRequest.page_token",
 						Description: sta.Message(),
 					},
 				})
 			if e != nil {
 				logger.Error(e.Error())
 			}
-			return &mgmtPB.ListUserResponse{}, st.Err()
+			return &mgmtPB.ListUsersAdminResponse{}, st.Err()
 		default:
 			st, e := sterr.CreateErrorResourceInfo(
 				sta.Code(),
@@ -78,7 +78,7 @@ func (h *AdminHandler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest
 			if e != nil {
 				logger.Error(e.Error())
 			}
-			return &mgmtPB.ListUserResponse{}, st.Err()
+			return &mgmtPB.ListUsersAdminResponse{}, st.Err()
 		}
 	}
 
@@ -98,12 +98,12 @@ func (h *AdminHandler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest
 			if e != nil {
 				logger.Error(e.Error())
 			}
-			return &mgmtPB.ListUserResponse{}, st.Err()
+			return &mgmtPB.ListUsersAdminResponse{}, st.Err()
 		}
 		pbUsers = append(pbUsers, pbUser)
 	}
 
-	resp := mgmtPB.ListUserResponse{
+	resp := mgmtPB.ListUsersAdminResponse{
 		Users:         pbUsers,
 		NextPageToken: nextPageToken,
 		TotalSize:     totalSize,
@@ -111,10 +111,10 @@ func (h *AdminHandler) ListUser(ctx context.Context, req *mgmtPB.ListUserRequest
 	return &resp, nil
 }
 
-// CreateUser creates a user. This endpoint is not supported.
-func (h *AdminHandler) CreateUser(ctx context.Context, req *mgmtPB.CreateUserRequest) (*mgmtPB.CreateUserResponse, error) {
+// CreateUserAdmin creates a user. This endpoint is not supported.
+func (h *PrivateHandler) CreateUserAdmin(ctx context.Context, req *mgmtPB.CreateUserAdminRequest) (*mgmtPB.CreateUserAdminResponse, error) {
 	logger, _ := logger.GetZapLogger()
-	resp := &mgmtPB.CreateUserResponse{}
+	resp := &mgmtPB.CreateUserAdminResponse{}
 
 	// Return error if REQUIRED fields are not provided in the requested payload resource
 	if err := checkfield.CheckRequiredFields(req.GetUser(), createRequiredFields); err != nil {
@@ -166,8 +166,8 @@ func (h *AdminHandler) CreateUser(ctx context.Context, req *mgmtPB.CreateUserReq
 	return resp, st.Err()
 }
 
-// GetUser gets a user
-func (h *AdminHandler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (*mgmtPB.GetUserResponse, error) {
+// GetUserAdmin gets a user
+func (h *PrivateHandler) GetUserAdmin(ctx context.Context, req *mgmtPB.GetUserAdminRequest) (*mgmtPB.GetUserAdminResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
 	id := strings.TrimPrefix(req.GetName(), "users/")
@@ -180,14 +180,14 @@ func (h *AdminHandler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) 
 			st, e := sterr.CreateErrorBadRequest(
 				"get user error", []*errdetails.BadRequest_FieldViolation{
 					{
-						Field:       "GetUserRequest.name",
+						Field:       "GetUserAdminRequest.name",
 						Description: sta.Message(),
 					},
 				})
 			if e != nil {
 				logger.Error(e.Error())
 			}
-			return &mgmtPB.GetUserResponse{}, st.Err()
+			return &mgmtPB.GetUserAdminResponse{}, st.Err()
 		default:
 			st, e := sterr.CreateErrorResourceInfo(
 				sta.Code(),
@@ -200,7 +200,7 @@ func (h *AdminHandler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) 
 			if e != nil {
 				logger.Error(e.Error())
 			}
-			return &mgmtPB.GetUserResponse{}, st.Err()
+			return &mgmtPB.GetUserAdminResponse{}, st.Err()
 		}
 	}
 
@@ -218,17 +218,17 @@ func (h *AdminHandler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) 
 		if e != nil {
 			logger.Error(e.Error())
 		}
-		return &mgmtPB.GetUserResponse{}, st.Err()
+		return &mgmtPB.GetUserAdminResponse{}, st.Err()
 	}
 
-	resp := mgmtPB.GetUserResponse{
+	resp := mgmtPB.GetUserAdminResponse{
 		User: pbUser,
 	}
 	return &resp, nil
 }
 
-// LookUpUser gets a user by permalink
-func (h *AdminHandler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserRequest) (*mgmtPB.LookUpUserResponse, error) {
+// LookUpUserAdmin gets a user by permalink
+func (h *PrivateHandler) LookUpUserAdmin(ctx context.Context, req *mgmtPB.LookUpUserAdminRequest) (*mgmtPB.LookUpUserAdminResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
 	uidStr := strings.TrimPrefix(req.GetPermalink(), "users/")
@@ -238,7 +238,7 @@ func (h *AdminHandler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserReq
 		st, e := sterr.CreateErrorBadRequest(
 			"look up user invalid uuid error", []*errdetails.BadRequest_FieldViolation{
 				{
-					Field:       "LookUpUserRequest.permalink",
+					Field:       "LookUpUserAdminRequest.permalink",
 					Description: err.Error(),
 				},
 			},
@@ -246,7 +246,7 @@ func (h *AdminHandler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserReq
 		if e != nil {
 			logger.Error(e.Error())
 		}
-		return &mgmtPB.LookUpUserResponse{}, st.Err()
+		return &mgmtPB.LookUpUserAdminResponse{}, st.Err()
 	}
 
 	dbUser, err := h.service.GetUser(uid)
@@ -257,14 +257,14 @@ func (h *AdminHandler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserReq
 			st, e := sterr.CreateErrorBadRequest(
 				"look up user error", []*errdetails.BadRequest_FieldViolation{
 					{
-						Field:       "LookUpUserRequest.permalink",
+						Field:       "LookUpUserAdminRequest.permalink",
 						Description: sta.Message(),
 					},
 				})
 			if e != nil {
 				logger.Error(e.Error())
 			}
-			return &mgmtPB.LookUpUserResponse{}, st.Err()
+			return &mgmtPB.LookUpUserAdminResponse{}, st.Err()
 		default:
 			st, e := sterr.CreateErrorResourceInfo(
 				sta.Code(),
@@ -277,7 +277,7 @@ func (h *AdminHandler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserReq
 			if e != nil {
 				logger.Error(e.Error())
 			}
-			return &mgmtPB.LookUpUserResponse{}, st.Err()
+			return &mgmtPB.LookUpUserAdminResponse{}, st.Err()
 		}
 	}
 
@@ -295,16 +295,16 @@ func (h *AdminHandler) LookUpUser(ctx context.Context, req *mgmtPB.LookUpUserReq
 		if e != nil {
 			logger.Error(e.Error())
 		}
-		return &mgmtPB.LookUpUserResponse{}, st.Err()
+		return &mgmtPB.LookUpUserAdminResponse{}, st.Err()
 	}
-	resp := mgmtPB.LookUpUserResponse{
+	resp := mgmtPB.LookUpUserAdminResponse{
 		User: pbUser,
 	}
 	return &resp, nil
 }
 
-// UpdateUser updates an existing user
-func (h *AdminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserRequest) (*mgmtPB.UpdateUserResponse, error) {
+// UpdateUserAdmin updates an existing user
+func (h *PrivateHandler) UpdateUserAdmin(ctx context.Context, req *mgmtPB.UpdateUserAdminRequest) (*mgmtPB.UpdateUserAdminResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
 	reqUser := req.GetUser()
@@ -314,7 +314,7 @@ func (h *AdminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 		st, e := sterr.CreateErrorBadRequest(
 			"update user invalid fieldmask error", []*errdetails.BadRequest_FieldViolation{
 				{
-					Field:       "UpdateUserRequest.update_mask",
+					Field:       "UpdateUserAdminRequest.update_mask",
 					Description: "invalid",
 				},
 			},
@@ -322,7 +322,7 @@ func (h *AdminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 		if e != nil {
 			logger.Error(e.Error())
 		}
-		return &mgmtPB.UpdateUserResponse{}, st.Err()
+		return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
 	}
 
 	reqFieldMask, err := checkfield.CheckUpdateOutputOnlyFields(req.GetUpdateMask(), outputOnlyFields)
@@ -330,7 +330,7 @@ func (h *AdminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 		st, e := sterr.CreateErrorBadRequest(
 			"update user update OUTPUT_ONLY fields error", []*errdetails.BadRequest_FieldViolation{
 				{
-					Field:       "UpdateUserRequest OUTPUT_ONLY fields",
+					Field:       "UpdateUserAdminRequest OUTPUT_ONLY fields",
 					Description: err.Error(),
 				},
 			},
@@ -338,7 +338,7 @@ func (h *AdminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 		if e != nil {
 			logger.Error(e.Error())
 		}
-		return &mgmtPB.UpdateUserResponse{}, st.Err()
+		return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
 	}
 
 	mask, err := fieldmask_utils.MaskFromProtoFieldMask(reqFieldMask, strcase.ToCamel)
@@ -347,7 +347,7 @@ func (h *AdminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 		st, e := sterr.CreateErrorBadRequest(
 			"update user update mask error", []*errdetails.BadRequest_FieldViolation{
 				{
-					Field:       "UpdateUserRequest.update_mask",
+					Field:       "UpdateUserAdminRequest.update_mask",
 					Description: err.Error(),
 				},
 			},
@@ -356,19 +356,19 @@ func (h *AdminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 			logger.Error(e.Error())
 		}
 
-		return &mgmtPB.UpdateUserResponse{}, st.Err()
+		return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
 	}
 
 	// Get current user
-	GResp, err := h.GetUser(ctx, &mgmtPB.GetUserRequest{Name: reqUser.GetName()})
+	GResp, err := h.GetUserAdmin(ctx, &mgmtPB.GetUserAdminRequest{Name: reqUser.GetName()})
 	if err != nil {
-		return &mgmtPB.UpdateUserResponse{}, err
+		return &mgmtPB.UpdateUserAdminResponse{}, err
 	}
 	pbUserToUpdate := GResp.GetUser()
 
 	if mask.IsEmpty() {
 		// return the un-changed user `pbUserToUpdate`
-		resp := mgmtPB.UpdateUserResponse{
+		resp := mgmtPB.UpdateUserAdminResponse{
 			User: pbUserToUpdate,
 		}
 		return &resp, nil
@@ -389,7 +389,7 @@ func (h *AdminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 		if e != nil {
 			logger.Error(e.Error())
 		}
-		return &mgmtPB.UpdateUserResponse{}, st.Err()
+		return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
 	}
 
 	// Handle immutable fields from the update mask
@@ -398,7 +398,7 @@ func (h *AdminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 		st, e := sterr.CreateErrorBadRequest(
 			"update user update IMMUTABLE fields error", []*errdetails.BadRequest_FieldViolation{
 				{
-					Field:       "UpdateUserRequest IMMUTABLE fields",
+					Field:       "UpdateUserAdminRequest IMMUTABLE fields",
 					Description: err.Error(),
 				},
 			},
@@ -406,7 +406,7 @@ func (h *AdminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 		if e != nil {
 			logger.Error(e.Error())
 		}
-		return &mgmtPB.UpdateUserResponse{}, st.Err()
+		return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
 	}
 
 	// Only the fields mentioned in the field mask will be copied to `pbUserToUpdate`, other fields are left intact
@@ -422,7 +422,7 @@ func (h *AdminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 		if e != nil {
 			logger.Error(e.Error())
 		}
-		return &mgmtPB.UpdateUserResponse{}, st.Err()
+		return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
 	}
 
 	dbUserToUpd, err := datamodel.PBUser2DBUser(pbUserToUpdate)
@@ -439,7 +439,7 @@ func (h *AdminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 		if e != nil {
 			logger.Error(e.Error())
 		}
-		return &mgmtPB.UpdateUserResponse{}, st.Err()
+		return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
 	}
 
 	dbUserUpdated, err := h.service.UpdateUser(uid, dbUserToUpd)
@@ -450,14 +450,14 @@ func (h *AdminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 			st, e := sterr.CreateErrorBadRequest(
 				"update user error", []*errdetails.BadRequest_FieldViolation{
 					{
-						Field:       "UpdateUserRequest",
+						Field:       "UpdateUserAdminRequest",
 						Description: sta.Message(),
 					},
 				})
 			if e != nil {
 				logger.Error(e.Error())
 			}
-			return &mgmtPB.UpdateUserResponse{}, st.Err()
+			return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
 		default:
 			st, e := sterr.CreateErrorResourceInfo(
 				sta.Code(),
@@ -470,7 +470,7 @@ func (h *AdminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 			if e != nil {
 				logger.Error(e.Error())
 			}
-			return &mgmtPB.UpdateUserResponse{}, st.Err()
+			return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
 		}
 	}
 
@@ -488,17 +488,17 @@ func (h *AdminHandler) UpdateUser(ctx context.Context, req *mgmtPB.UpdateUserReq
 		if e != nil {
 			logger.Error(e.Error())
 		}
-		return &mgmtPB.UpdateUserResponse{}, st.Err()
+		return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
 	}
-	resp := mgmtPB.UpdateUserResponse{
+	resp := mgmtPB.UpdateUserAdminResponse{
 		User: pbUserUpdated,
 	}
 
 	return &resp, nil
 }
 
-// DeleteUser deletes a user. This endpoint is not supported.
-func (h *AdminHandler) DeleteUser(ctx context.Context, req *mgmtPB.DeleteUserRequest) (*mgmtPB.DeleteUserResponse, error) {
+// DeleteUserAdmin deletes a user. This endpoint is not supported.
+func (h *PrivateHandler) DeleteUserAdmin(ctx context.Context, req *mgmtPB.DeleteUserAdminRequest) (*mgmtPB.DeleteUserAdminResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
 	st, err := sterr.CreateErrorResourceInfo(
@@ -512,5 +512,5 @@ func (h *AdminHandler) DeleteUser(ctx context.Context, req *mgmtPB.DeleteUserReq
 	if err != nil {
 		logger.Error(err.Error())
 	}
-	return &mgmtPB.DeleteUserResponse{}, st.Err()
+	return &mgmtPB.DeleteUserAdminResponse{}, st.Err()
 }

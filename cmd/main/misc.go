@@ -10,14 +10,30 @@ import (
 	"strings"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"golang.org/x/exp/slices"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 )
 
-func HttpResponseModifier(ctx context.Context, w http.ResponseWriter, p proto.Message) error {
+var customHeaders = []string{constant.HeaderUserUIDKey, "Jwt-Aud", "Jwt-Iss", "Jwt-Scope", "Jwt-Client-Id"}
+
+func customMatcher(key string) (string, bool) {
+	// e.g., $ curl --header "jwt-sub: 100d9f38-2777-4ee2-ac3b-b3a108f81a30" ...
+	if slices.Contains(customHeaders, key) {
+		return key, true
+	}
+	// DefaultHeaderMatcher is used to pass http request headers to/from gRPC context.
+	// This adds permanent HTTP header keys (as specified by the IANA) to gRPC context with grpcgateway- prefix.
+	// HTTP headers that start with 'Grpc-Metadata-' are mapped to gRPC metadata after removing prefix 'Grpc-Metadata-'.
+	return runtime.DefaultHeaderMatcher(key)
+}
+
+func httpResponseModifier(ctx context.Context, w http.ResponseWriter, p proto.Message) error {
 	md, ok := runtime.ServerMetadataFromContext(ctx)
 	if !ok {
 		return nil
@@ -32,16 +48,13 @@ func HttpResponseModifier(ctx context.Context, w http.ResponseWriter, p proto.Me
 		// delete the headers to not expose any grpc-metadata in http response
 		delete(md.HeaderMD, "x-http-code")
 		delete(w.Header(), "Grpc-Metadata-X-Http-Code")
-		delete(w.Header(), "Grpc-Metadata-Content-Type")
-		delete(w.Header(), "Grpc-Metadata-Trailer")
-
 		w.WriteHeader(code)
 	}
 
 	return nil
 }
 
-func ErrorHandler(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.Marshaler, w http.ResponseWriter, r *http.Request, err error) {
+func errorHandler(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.Marshaler, w http.ResponseWriter, r *http.Request, err error) {
 	logger, _ := logger.GetZapLogger()
 
 	// return Internal when Marshal failed

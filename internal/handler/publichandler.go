@@ -63,9 +63,9 @@ func (h *PublicHandler) Readiness(ctx context.Context, in *mgmtPB.ReadinessReque
 	}, nil
 }
 
-// GetAuthenticatedUser gets the authenticated user.
+// QueryAuthenticatedUser gets the authenticated user.
 // Note: this endpoint is hard-coded, assuming the ID of the authenticated user is the default user.
-func (h *PublicHandler) GetAuthenticatedUser(ctx context.Context, req *mgmtPB.GetAuthenticatedUserRequest) (*mgmtPB.GetAuthenticatedUserResponse, error) {
+func (h *PublicHandler) QueryAuthenticatedUser(ctx context.Context, req *mgmtPB.QueryAuthenticatedUserRequest) (*mgmtPB.QueryAuthenticatedUserResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
 	id := config.DefaultUserID
@@ -85,7 +85,7 @@ func (h *PublicHandler) GetAuthenticatedUser(ctx context.Context, req *mgmtPB.Ge
 			if e != nil {
 				logger.Error(e.Error())
 			}
-			return &mgmtPB.GetAuthenticatedUserResponse{}, st.Err()
+			return &mgmtPB.QueryAuthenticatedUserResponse{}, st.Err()
 		default:
 			st, e := sterr.CreateErrorResourceInfo(
 				sta.Code(),
@@ -98,7 +98,7 @@ func (h *PublicHandler) GetAuthenticatedUser(ctx context.Context, req *mgmtPB.Ge
 			if e != nil {
 				logger.Error(e.Error())
 			}
-			return &mgmtPB.GetAuthenticatedUserResponse{}, st.Err()
+			return &mgmtPB.QueryAuthenticatedUserResponse{}, st.Err()
 		}
 	}
 
@@ -116,19 +116,19 @@ func (h *PublicHandler) GetAuthenticatedUser(ctx context.Context, req *mgmtPB.Ge
 		if e != nil {
 			logger.Error(e.Error())
 		}
-		return &mgmtPB.GetAuthenticatedUserResponse{}, st.Err()
+		return &mgmtPB.QueryAuthenticatedUserResponse{}, st.Err()
 	}
 
-	resp := mgmtPB.GetAuthenticatedUserResponse{
+	resp := mgmtPB.QueryAuthenticatedUserResponse{
 		User: pbUser,
 	}
 	return &resp, nil
 
 }
 
-// UpdateAuthenticatedUser updates the authenticated user.
+// PatchAuthenticatedUser updates the authenticated user.
 // Note: this endpoint is hard-coded, assuming the ID of the authenticated user is the default user.
-func (h *PublicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB.UpdateAuthenticatedUserRequest) (*mgmtPB.UpdateAuthenticatedUserResponse, error) {
+func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.PatchAuthenticatedUserRequest) (*mgmtPB.PatchAuthenticatedUserResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
 	reqUser := req.GetUser()
@@ -138,7 +138,7 @@ func (h *PublicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 		st, e := sterr.CreateErrorBadRequest(
 			"update user invalid fieldmask error", []*errdetails.BadRequest_FieldViolation{
 				{
-					Field:       "UpdateAuthenticatedUserRequest.update_mask",
+					Field:       "PatchAuthenticatedUserRequest.update_mask",
 					Description: "invalid",
 				},
 			},
@@ -146,7 +146,7 @@ func (h *PublicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 		if e != nil {
 			logger.Error(e.Error())
 		}
-		return &mgmtPB.UpdateAuthenticatedUserResponse{}, st.Err()
+		return &mgmtPB.PatchAuthenticatedUserResponse{}, st.Err()
 	}
 
 	reqFieldMask, err := checkfield.CheckUpdateOutputOnlyFields(req.GetUpdateMask(), outputOnlyFields)
@@ -154,7 +154,7 @@ func (h *PublicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 		st, e := sterr.CreateErrorBadRequest(
 			"update user update OUTPUT_ONLY fields error", []*errdetails.BadRequest_FieldViolation{
 				{
-					Field:       "UpdateAuthenticatedUserRequest OUTPUT_ONLY fields",
+					Field:       "PatchAuthenticatedUserRequest OUTPUT_ONLY fields",
 					Description: err.Error(),
 				},
 			},
@@ -162,7 +162,7 @@ func (h *PublicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 		if e != nil {
 			logger.Error(e.Error())
 		}
-		return &mgmtPB.UpdateAuthenticatedUserResponse{}, st.Err()
+		return &mgmtPB.PatchAuthenticatedUserResponse{}, st.Err()
 	}
 
 	mask, err := fieldmask_utils.MaskFromProtoFieldMask(reqFieldMask, strcase.ToCamel)
@@ -171,7 +171,7 @@ func (h *PublicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 		st, e := sterr.CreateErrorBadRequest(
 			"update user update mask error", []*errdetails.BadRequest_FieldViolation{
 				{
-					Field:       "UpdateAuthenticatedUserRequest.update_mask",
+					Field:       "PatchAuthenticatedUserRequest.update_mask",
 					Description: err.Error(),
 				},
 			},
@@ -180,20 +180,20 @@ func (h *PublicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 			logger.Error(e.Error())
 		}
 
-		return &mgmtPB.UpdateAuthenticatedUserResponse{}, st.Err()
+		return &mgmtPB.PatchAuthenticatedUserResponse{}, st.Err()
 	}
 
 	// Get current authenticated user
-	GResp, err := h.GetAuthenticatedUser(ctx, &mgmtPB.GetAuthenticatedUserRequest{})
+	GResp, err := h.QueryAuthenticatedUser(ctx, &mgmtPB.QueryAuthenticatedUserRequest{})
 
 	if err != nil {
-		return &mgmtPB.UpdateAuthenticatedUserResponse{}, err
+		return &mgmtPB.PatchAuthenticatedUserResponse{}, err
 	}
 	pbUserToUpdate := GResp.GetUser()
 
 	if mask.IsEmpty() {
 		// return the un-changed user `pbUserToUpdate`
-		resp := mgmtPB.UpdateAuthenticatedUserResponse{
+		resp := mgmtPB.PatchAuthenticatedUserResponse{
 			User: pbUserToUpdate,
 		}
 		return &resp, nil
@@ -214,7 +214,7 @@ func (h *PublicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 		if e != nil {
 			logger.Error(e.Error())
 		}
-		return &mgmtPB.UpdateAuthenticatedUserResponse{}, st.Err()
+		return &mgmtPB.PatchAuthenticatedUserResponse{}, st.Err()
 	}
 
 	// Handle immutable fields from the update mask
@@ -223,7 +223,7 @@ func (h *PublicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 		st, e := sterr.CreateErrorBadRequest(
 			"update authenticated user update IMMUTABLE fields error", []*errdetails.BadRequest_FieldViolation{
 				{
-					Field:       "UpdateAuthenticatedUserRequest IMMUTABLE fields",
+					Field:       "PatchAuthenticatedUserRequest IMMUTABLE fields",
 					Description: err.Error(),
 				},
 			},
@@ -231,7 +231,7 @@ func (h *PublicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 		if e != nil {
 			logger.Error(e.Error())
 		}
-		return &mgmtPB.UpdateAuthenticatedUserResponse{}, st.Err()
+		return &mgmtPB.PatchAuthenticatedUserResponse{}, st.Err()
 	}
 
 	// Only the fields mentioned in the field mask will be copied to `pbUserToUpdate`, other fields are left intact
@@ -247,7 +247,7 @@ func (h *PublicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 		if e != nil {
 			logger.Error(e.Error())
 		}
-		return &mgmtPB.UpdateAuthenticatedUserResponse{}, st.Err()
+		return &mgmtPB.PatchAuthenticatedUserResponse{}, st.Err()
 	}
 
 	dbUserToUpd, err := datamodel.PBUser2DBUser(pbUserToUpdate)
@@ -264,7 +264,7 @@ func (h *PublicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 		if e != nil {
 			logger.Error(e.Error())
 		}
-		return &mgmtPB.UpdateAuthenticatedUserResponse{}, st.Err()
+		return &mgmtPB.PatchAuthenticatedUserResponse{}, st.Err()
 	}
 
 	dbUserUpdated, err := h.service.UpdateUser(uid, dbUserToUpd)
@@ -275,14 +275,14 @@ func (h *PublicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 			st, e := sterr.CreateErrorBadRequest(
 				"update authenticated user error", []*errdetails.BadRequest_FieldViolation{
 					{
-						Field:       "UpdateAuthenticatedUserRequest",
+						Field:       "PatchAuthenticatedUserRequest",
 						Description: sta.Message(),
 					},
 				})
 			if e != nil {
 				logger.Error(e.Error())
 			}
-			return &mgmtPB.UpdateAuthenticatedUserResponse{}, st.Err()
+			return &mgmtPB.PatchAuthenticatedUserResponse{}, st.Err()
 		default:
 			st, e := sterr.CreateErrorResourceInfo(
 				sta.Code(),
@@ -295,7 +295,7 @@ func (h *PublicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 			if e != nil {
 				logger.Error(e.Error())
 			}
-			return &mgmtPB.UpdateAuthenticatedUserResponse{}, st.Err()
+			return &mgmtPB.PatchAuthenticatedUserResponse{}, st.Err()
 		}
 	}
 
@@ -313,15 +313,15 @@ func (h *PublicHandler) UpdateAuthenticatedUser(ctx context.Context, req *mgmtPB
 		if e != nil {
 			logger.Error(e.Error())
 		}
-		return &mgmtPB.UpdateAuthenticatedUserResponse{}, st.Err()
+		return &mgmtPB.PatchAuthenticatedUserResponse{}, st.Err()
 	}
-	resp := mgmtPB.UpdateAuthenticatedUserResponse{
+	resp := mgmtPB.PatchAuthenticatedUserResponse{
 		User: pbUserUpdated,
 	}
 
-	// Trigger single reporter
+	// Trigger single reporter right after user updated
 	if !config.Config.Server.DisableUsage && h.usg != nil {
-		h.usg.TriggerSingleReporter(ctx)
+		h.usg.TriggerSingleReporter(context.Background())
 	}
 
 	return &resp, nil
