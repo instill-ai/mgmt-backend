@@ -10,9 +10,9 @@ import (
 	"google.golang.org/grpc/status"
 	"gorm.io/gorm"
 
-	"github.com/instill-ai/mgmt-backend/internal/paginate"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
+	"github.com/instill-ai/x/paginate"
 )
 
 // Repository interface
