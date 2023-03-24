@@ -27,6 +27,9 @@ export const mgmtVersion = "v1alpha";
 export const mgmtPrivateHost = `${proto}://${host}:${privatePort}/${mgmtVersion}/admin`
 export const mgmtPublicHost = `${proto}://${host}:${publicPort}/${mgmtVersion}`
 
+export const mgmtPrivateGRPCHost = `${host}:${privatePort}`
+export const mgmtPublicGRPCHost = `${host}:${publicPort}`
+
 export const defaultUser = {
   name: "users/local-user",
   id: "local-user",
