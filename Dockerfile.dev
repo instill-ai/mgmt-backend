@@ -17,12 +17,19 @@ ADD https://github.com/grafana/k6/releases/download/v${K6_VERSION}/k6-v${K6_VERS
 RUN tar -xf k6-v${K6_VERSION}-linux-$TARGETARCH.tar.gz --strip-components 1 -C /usr/bin
 
 # -- set up Go
+
 COPY go.mod go.sum ./
 RUN go mod download
+COPY . .
 
 RUN chown -R nobody:nogroup /go
 ENV GOCACHE /go/.cache/go-build
 ENV GOENV /go/.config/go/env
+
+# -- set up mounting points
+
+RUN mkdir /etc/vdp && chown -R nobody:nogroup /etc/vdp
+RUN mkdir /vdp && chown -R nobody:nogroup /vdp
 
 USER nobody:nogroup
 

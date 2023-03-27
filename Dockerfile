@@ -13,7 +13,9 @@ ARG TARGETOS TARGETARCH
 RUN --mount=target=. --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /${SERVICE_NAME} ./cmd/main
 RUN --mount=target=. --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /${SERVICE_NAME}-migrate ./cmd/migration
 RUN --mount=target=. --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /${SERVICE_NAME}-init ./cmd/init
-RUN --mount=target=. --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /plugin ./cmd/plugin
+
+RUN mkdir /etc/vdp
+RUN mkdir /vdp
 
 FROM gcr.io/distroless/base:nonroot
 
@@ -30,4 +32,3 @@ COPY --from=build --chown=nonroot:nonroot /src/pkg/db/migration ./pkg/db/migrati
 COPY --from=build --chown=nonroot:nonroot /${SERVICE_NAME} ./
 COPY --from=build --chown=nonroot:nonroot /${SERVICE_NAME}-migrate ./
 COPY --from=build --chown=nonroot:nonroot /${SERVICE_NAME}-init ./
-COPY --from=build --chown=nonroot:nonroot /plugin ./
