@@ -28,7 +28,7 @@ import (
 // TODO: Validate mask based on the field behavior. Currently, the fields are hard-coded.
 // We stipulate that the ID of the user is IMMUTABLE
 var createRequiredFields = []string{"id", "email", "newsletter_subscription"}
-var outputOnlyFields = []string{"name", "type", "create_time", "update_time"}
+var outputOnlyFields = []string{"name", "type", "create_time", "update_time", "customer_id"}
 var immutableFields = []string{"uid", "id"}
 
 type PublicHandler struct {

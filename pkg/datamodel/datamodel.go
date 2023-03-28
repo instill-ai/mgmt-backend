@@ -21,8 +21,7 @@ type User struct {
 	ID                     string `gorm:"unique;not null;"`
 	OwnerType              sql.NullString
 	Email                  string `gorm:"unique;not null;"`
-	Plan                   sql.NullString
-	BillingId              sql.NullString
+	CustomerId             string
 	FirstName              sql.NullString
 	LastName               sql.NullString
 	OrgName                sql.NullString

@@ -43,8 +43,7 @@ func DBUser2PBUser(dbUser *User) (*mgmtPB.User, error) {
 		CreateTime:             timestamppb.New(dbUser.Base.CreateTime),
 		UpdateTime:             timestamppb.New(dbUser.Base.UpdateTime),
 		Email:                  dbUser.Email,
-		Plan:                   &dbUser.Plan.String,
-		BillingId:              &dbUser.BillingId.String,
+		CustomerId:             dbUser.CustomerId,
 		FirstName:              &dbUser.FirstName.String,
 		LastName:               &dbUser.LastName.String,
 		OrgName:                &dbUser.OrgName.String,
@@ -67,8 +66,7 @@ func PBUser2DBUser(pbUser *mgmtPB.User) (*User, error) {
 
 	userType := PBUserType2DBUserType[pbUser.GetType()]
 	email := pbUser.GetEmail()
-	plan := pbUser.GetPlan()
-	billingId := pbUser.GetBillingId()
+	customerId := pbUser.GetCustomerId()
 	firstName := pbUser.GetFirstName()
 	lastName := pbUser.GetLastName()
 	orgName := pbUser.GetOrgName()
@@ -86,15 +84,8 @@ func PBUser2DBUser(pbUser *mgmtPB.User) (*User, error) {
 			String: userType,
 			Valid:  len(userType) > 0,
 		},
-		Email: email,
-		Plan: sql.NullString{
-			String: plan,
-			Valid:  len(plan) > 0,
-		},
-		BillingId: sql.NullString{
-			String: billingId,
-			Valid:  len(billingId) > 0,
-		},
+		Email:      email,
+		CustomerId: customerId,
 		FirstName: sql.NullString{
 			String: firstName,
 			Valid:  len(firstName) > 0,
