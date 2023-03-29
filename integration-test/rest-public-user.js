@@ -22,7 +22,7 @@ export function CheckHealth() {
   });
 }
 
-export function CheckPublicGet() {
+export function CheckPublicQueryAuthenticatedUser() {
   group(`Management Public API: Get authenticated user`, () => {
     check(
       http.request(
@@ -65,7 +65,7 @@ export function CheckPublicGet() {
   })
 }
 
-export function CheckPublicUpdate() {
+export function CheckPublicPatchAuthenticatedUser() {
   group(`Management Public API: Update authenticated user`, () => {
     var userUpdate = {
       type: "OWNER_TYPE_ORGANIZATION",

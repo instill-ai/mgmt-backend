@@ -22,18 +22,18 @@ export default function (data) {
   if (__ENV.MODE != "api-gateway" && __ENV.MODE != "localhost") {
 
     // ======== Private API
-    privateAPI.CheckAdminList();
-    privateAPI.CheckAdminCreate();
-    privateAPI.CheckAdminGet();
-    privateAPI.CheckAdminLookUp();
-    privateAPI.CheckAdminUpdate();
-    privateAPI.CheckAdminDelete();
+    privateAPI.CheckPrivateListUsersAdmin();
+    privateAPI.CheckPrivateCreateUserAdmin();
+    privateAPI.CheckPrivateGetUserAdmin();
+    privateAPI.CheckPrivateLookUpUserAdmin();
+    privateAPI.CheckPrivateUpdateUserAdmin();
+    privateAPI.CheckPrivateDeleteUserAdmin();
   }
 
   // ======== Public API
   publicAPI.CheckHealth();
-  publicAPI.CheckPublicGet();
-  publicAPI.CheckPublicUpdate();
+  publicAPI.CheckPublicQueryAuthenticatedUser();
+  publicAPI.CheckPublicPatchAuthenticatedUser();
 }
 
 export function teardown(data) {

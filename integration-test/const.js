@@ -24,7 +24,7 @@ if (__ENV.MODE == "api-gateway") {
 }
 
 export const mgmtVersion = "v1alpha";
-export const mgmtPrivateHost = `${proto}://${host}:${privatePort}/${mgmtVersion}/admin`
+export const mgmtPrivateHost = `${proto}://${host}:${privatePort}/${mgmtVersion}`
 export const mgmtPublicHost = `${proto}://${host}:${publicPort}/${mgmtVersion}`
 
 export const mgmtPrivateGRPCHost = `${host}:${privatePort}`

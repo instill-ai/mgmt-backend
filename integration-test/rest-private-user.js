@@ -4,9 +4,9 @@ import { randomString } from "https://jslib.k6.io/k6-utils/1.1.0/index.js";
 import * as constant from "./const.js";
 import * as helper from "./helper.js";
 
-export function CheckAdminList() {
+export function CheckPrivateListUsersAdmin() {
   group("Management Private API: List users", () => {
-    check(http.request("GET", `${constant.mgmtPrivateHost}/users`), {
+    check(http.request("GET", `${constant.mgmtPrivateHost}/admin/users`), {
       [`GET /${constant.mgmtVersion}/admin/users status 200`]: (r) =>
         r.status === 200,
       [`GET /${constant.mgmtVersion}/admin/users response body has user array`]: (
@@ -14,8 +14,8 @@ export function CheckAdminList() {
       ) => Array.isArray(r.json().users),
     });
 
-    var res = http.request("GET", `${constant.mgmtPrivateHost}/users`);
-    check(http.request("GET", `${constant.mgmtPrivateHost}/users?page_size=0`), {
+    var res = http.request("GET", `${constant.mgmtPrivateHost}/admin/users`);
+    check(http.request("GET", `${constant.mgmtPrivateHost}/admin/users?page_size=0`), {
       [`GET /${constant.mgmtVersion}/admin/users?page_size=0 response status 200`]: (
         r
       ) => r.status === 200,
@@ -26,7 +26,7 @@ export function CheckAdminList() {
         (r) => r.json().total_size === res.json().total_size,
     });
 
-    check(http.request("GET", `${constant.mgmtPrivateHost}/users?page_size=5`), {
+    check(http.request("GET", `${constant.mgmtPrivateHost}/admin/users?page_size=5`), {
       [`GET /${constant.mgmtVersion}/admin/users?page_size=5 response status 200`]: (
         r
       ) => r.status === 200,
@@ -42,7 +42,7 @@ export function CheckAdminList() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPrivateHost}/users?page_size=1&page_token=${invalidNextPageToken}`
+        `${constant.mgmtPrivateHost}/admin/users?page_size=1&page_token=${invalidNextPageToken}`
       ),
       {
         [`GET /${constant.mgmtVersion}/admin/users?page_size=1&page_token=${invalidNextPageToken} response status 400`]:
@@ -52,12 +52,12 @@ export function CheckAdminList() {
   });
 }
 
-export function CheckAdminGet() {
+export function CheckPrivateGetUserAdmin() {
   group(`Management Private API: Get default user`, () => {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPrivateHost}/users/${constant.defaultUser.id}`
+        `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`
       ),
       {
         [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response status 200`]:
@@ -98,24 +98,24 @@ export function CheckAdminGet() {
 
   var nonExistID = "non-exist";
   group(`Management Private API: Get non-exist user`, () => {
-    check(http.request("GET", `${constant.mgmtPrivateHost}/users/${nonExistID}`), {
+    check(http.request("GET", `${constant.mgmtPrivateHost}/admin/users/${nonExistID}`), {
       [`GET /${constant.mgmtVersion}/admin/users/${nonExistID} response status 404`]:
         (r) => r.status === 404,
     });
   });
 }
 
-export function CheckAdminLookUp() {
+export function CheckPrivateLookUpUserAdmin() {
   // Get the uid of the default user
   var res = http.request(
     "GET",
-    `${constant.mgmtPrivateHost}/users/${constant.defaultUser.id}`
+    `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`
   );
   var defaultUid = res.json().user.uid;
 
   group(`Management Private API: Look up default user by permalink`, () => {
     check(
-      http.request("GET", `${constant.mgmtPrivateHost}/users/${defaultUid}/lookUp`),
+      http.request("GET", `${constant.mgmtPrivateHost}/admin/users/${defaultUid}/lookUp`),
       {
         [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response status 200`]:
           (r) => r.status === 200,
@@ -157,7 +157,7 @@ export function CheckAdminLookUp() {
   var nonExistUID = "2a06c2f7-8da9-4046-91ea-240f88a5d000";
   group(`Management Private API: Look up non-exist user by permalink`, () => {
     check(
-      http.request("GET", `${constant.mgmtPrivateHost}/users/${nonExistUID}/lookUp`),
+      http.request("GET", `${constant.mgmtPrivateHost}/admin/users/${nonExistUID}/lookUp`),
       {
         [`GET /${constant.mgmtVersion}/admin/users/${nonExistUID} response status 404`]:
           (r) => r.status === 404,
@@ -166,7 +166,7 @@ export function CheckAdminLookUp() {
   });
 }
 
-export function CheckAdminUpdate() {
+export function CheckPrivateUpdateUserAdmin() {
   group(`Management Private API: Update default user`, () => {
     var userUpdate = {
       name: `users/${constant.defaultUser.id}`,
@@ -185,13 +185,13 @@ export function CheckAdminUpdate() {
 
     var res = http.request(
       "GET",
-      `${constant.mgmtPrivateHost}/users/${constant.defaultUser.id}`
+      `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`
     );
 
     check(
       http.request(
         "PATCH",
-        `${constant.mgmtPrivateHost}/users/${constant.defaultUser.id}`,
+        `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`,
         JSON.stringify(userUpdate),
         { headers: { "Content-Type": "application/json" } }
       ),
@@ -235,7 +235,7 @@ export function CheckAdminUpdate() {
     check(
       http.request(
         "PATCH",
-        `${constant.mgmtPrivateHost}/users/${constant.defaultUser.id}`,
+        `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`,
         JSON.stringify(constant.defaultUser),
         { headers: { "Content-Type": "application/json" } }
       ),
@@ -247,7 +247,7 @@ export function CheckAdminUpdate() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPrivateHost}/users/${constant.defaultUser.id}`
+        `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`
       ),
       {
         [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response status 200`]:
@@ -264,7 +264,7 @@ export function CheckAdminUpdate() {
     check(
       http.request(
         "PATCH",
-        `${constant.mgmtPrivateHost}/users/${constant.defaultUser.id}`,
+        `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`,
         JSON.stringify(userUpdate),
         { headers: { "Content-Type": "application/json" } }
       ),
@@ -282,7 +282,7 @@ export function CheckAdminUpdate() {
     check(
       http.request(
         "PATCH",
-        `${constant.mgmtPrivateHost}/users/${constant.defaultUser.id}`,
+        `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`,
         JSON.stringify(userUpdate),
         { headers: { "Content-Type": "application/json" } }
       ),
@@ -301,7 +301,7 @@ export function CheckAdminUpdate() {
     check(
       http.request(
         "PATCH",
-        `${constant.mgmtPrivateHost}/users/${constant.defaultUser.id}`,
+        `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`,
         JSON.stringify(userUpdate),
         { headers: { "Content-Type": "application/json" } }
       ),
@@ -314,19 +314,19 @@ export function CheckAdminUpdate() {
 
   var nonExistID = "non-exist";
   group(`Management Private API: Update non-exist user`, () => {
-    check(http.request("PATCH", `${constant.mgmtPrivateHost}/users/${nonExistID}`), {
+    check(http.request("PATCH", `${constant.mgmtPrivateHost}/admin/users/${nonExistID}`), {
       [`PATCH /${constant.mgmtVersion}/admin/users/${nonExistID} response status 404`]:
         (r) => r.status === 404,
     });
   });
 }
 
-export function CheckAdminCreate() {
+export function CheckPrivateCreateUserAdmin() {
   group("Management Private API: Create user with UUID as id", () => {
     check(
       http.request(
         "POST",
-        `${constant.mgmtPrivateHost}/users`,
+        `${constant.mgmtPrivateHost}/admin/users`,
         JSON.stringify({ id: "2a06c2f7-8da9-4046-91ea-240f88a5d000" }),
         {
           headers: { "Content-Type": "application/json" },
@@ -342,7 +342,7 @@ export function CheckAdminCreate() {
     check(
       http.request(
         "POST",
-        `${constant.mgmtPrivateHost}/users`,
+        `${constant.mgmtPrivateHost}/admin/users`,
         JSON.stringify({ id: "local user" }),
         {
           headers: { "Content-Type": "application/json" },
@@ -358,7 +358,7 @@ export function CheckAdminCreate() {
     check(
       http.request(
         "POST",
-        `${constant.mgmtPrivateHost}/users`,
+        `${constant.mgmtPrivateHost}/admin/users`,
         JSON.stringify({
           id: "local-user",
         }),
@@ -375,7 +375,7 @@ export function CheckAdminCreate() {
     check(
       http.request(
         "POST",
-        `${constant.mgmtPrivateHost}/users`,
+        `${constant.mgmtPrivateHost}/admin/users`,
         JSON.stringify({
           id: "local-user-2",
           email: "local-user-2@instill.tech"
@@ -392,12 +392,12 @@ export function CheckAdminCreate() {
   });
 }
 
-export function CheckAdminDelete() {
+export function CheckPrivateDeleteUserAdmin() {
   group(`Management Private API: Delete user`, () => {
     check(
       http.request(
         "DELETE",
-        `${constant.mgmtPrivateHost}/users/${constant.defaultUser.id}`,
+        `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`,
         JSON.stringify({}),
         {
           headers: { "Content-Type": "application/json" },
