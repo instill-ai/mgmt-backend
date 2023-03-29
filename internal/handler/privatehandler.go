@@ -111,7 +111,7 @@ func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUse
 	return &resp, nil
 }
 
-// CreateUserAdmin creates a user. This endpoint is not supported.
+// CreateUserAdmin creates a user. This endpoint is not supported yet.
 func (h *PrivateHandler) CreateUserAdmin(ctx context.Context, req *mgmtPB.CreateUserAdminRequest) (*mgmtPB.CreateUserAdminResponse, error) {
 	logger, _ := logger.GetZapLogger()
 	resp := &mgmtPB.CreateUserAdminResponse{}
@@ -497,7 +497,7 @@ func (h *PrivateHandler) UpdateUserAdmin(ctx context.Context, req *mgmtPB.Update
 	return &resp, nil
 }
 
-// DeleteUserAdmin deletes a user. This endpoint is not supported.
+// DeleteUserAdmin deletes a user. This endpoint is not supported yet.
 func (h *PrivateHandler) DeleteUserAdmin(ctx context.Context, req *mgmtPB.DeleteUserAdminRequest) (*mgmtPB.DeleteUserAdminResponse, error) {
 	logger, _ := logger.GetZapLogger()
 
@@ -513,4 +513,22 @@ func (h *PrivateHandler) DeleteUserAdmin(ctx context.Context, req *mgmtPB.Delete
 		logger.Error(err.Error())
 	}
 	return &mgmtPB.DeleteUserAdminResponse{}, st.Err()
+}
+
+// ValidateToken validate an API token. This endpoint is not supported yet.
+func (h *PrivateHandler) ValidateToken(ctx context.Context, req *mgmtPB.ValidateTokenRequest) (*mgmtPB.ValidateTokenResponse, error) {
+	logger, _ := logger.GetZapLogger()
+
+	st, err := sterr.CreateErrorResourceInfo(
+		codes.Unimplemented,
+		"validate token not implemented error",
+		"endpoint",
+		"/tokens/{token}",
+		"",
+		"not implemented",
+	)
+	if err != nil {
+		logger.Error(err.Error())
+	}
+	return &mgmtPB.ValidateTokenResponse{}, st.Err()
 }
