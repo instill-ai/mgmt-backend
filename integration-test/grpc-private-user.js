@@ -345,6 +345,18 @@ export function CheckPrivateDeleteUserAdmin() {
   client.close();
 }
 
+export function CheckPrivateValidateToken() {
+
+  client.connect(constant.mgmtPrivateGRPCHost, {
+    plaintext: true
+  });
+
+  group(`Management Private API: Validate API token`, () => {
+
+    check(client.invoke('vdp.mgmt.v1alpha.MgmtPrivateService/ValidateToken', {
+      name: `tokens/${constant.testToken.id}`,
+    }), {
+      'vdp.mgmt.v1alpha.MgmtPrivateService/ValidateToken status StatusUnimplemented': (r) => r && r.status == grpc.StatusUnimplemented,
     });
 
   });

@@ -28,12 +28,17 @@ export default function (data) {
     privateAPI.CheckPrivateLookUpUserAdmin();
     privateAPI.CheckPrivateUpdateUserAdmin();
     privateAPI.CheckPrivateDeleteUserAdmin();
+    privateAPI.CheckPrivateValidateToken();
   }
 
   // ======== Public API
   publicAPI.CheckHealth();
   publicAPI.CheckPublicQueryAuthenticatedUser();
   publicAPI.CheckPublicPatchAuthenticatedUser();
+  publicAPI.CheckPublicCreateToken();
+  publicAPI.CheckPublicListTokens();
+  publicAPI.CheckPublicGetToken();
+  publicAPI.CheckPublicDeleteToken();
 }
 
 export function teardown(data) {

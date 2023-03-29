@@ -167,7 +167,78 @@ export function CheckPublicPatchAuthenticatedUser() {
   client.close();
 }
 
+export function CheckPublicCreateToken() {
+
+  client.connect(constant.mgmtPublicGRPCHost, {
+    plaintext: true
+  });
+
+  group(`Management Public API: Create API token`, () => {
+
+    check(client.invoke('vdp.mgmt.v1alpha.MgmtPublicService/CreateToken', {
+      token: {
+        id: `${constant.testToken.id}`,
+        lifetime: 86400
+      }
+    }), {
+      'vdp.mgmt.v1alpha.MgmtPublicService/CreateToken status StatusUnimplemented': (r) => r && r.status == grpc.StatusUnimplemented,
     });
+
+  });
+
+  client.close();
+}
+
+export function CheckPublicListTokens() {
+
+  client.connect(constant.mgmtPublicGRPCHost, {
+    plaintext: true
+  });
+
+  group(`Management Public API: List API tokens`, () => {
+
+    check(client.invoke('vdp.mgmt.v1alpha.MgmtPublicService/ListTokens', {}), {
+      'vdp.mgmt.v1alpha.MgmtPublicService/ListTokens status StatusUnimplemented': (r) => r && r.status == grpc.StatusUnimplemented,
+    });
+
+  });
+
+  client.close();
+}
+
+export function CheckPublicGetToken() {
+
+  client.connect(constant.mgmtPublicGRPCHost, {
+    plaintext: true
+  });
+
+  group(`Management Public API: Get API token`, () => {
+
+    check(client.invoke('vdp.mgmt.v1alpha.MgmtPublicService/GetToken', {
+      name: `tokens/${constant.testToken.id}`,
+    }), {
+      'vdp.mgmt.v1alpha.MgmtPublicService/GetToken status StatusUnimplemented': (r) => r && r.status == grpc.StatusUnimplemented,
+    });
+
+  });
+
+  client.close();
+}
+
+export function CheckPublicDeleteToken() {
+
+  client.connect(constant.mgmtPublicGRPCHost, {
+    plaintext: true
+  });
+
+  group(`Management Public API: Delete API token`, () => {
+
+    check(client.invoke('vdp.mgmt.v1alpha.MgmtPublicService/DeleteToken', {
+      name: `tokens/${constant.testToken.id}`,
+    }), {
+      'vdp.mgmt.v1alpha.MgmtPublicService/DeleteToken status StatusUnimplemented': (r) => r && r.status == grpc.StatusUnimplemented,
+    });
+
   });
 
   client.close();
