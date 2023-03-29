@@ -50,8 +50,7 @@ export function CheckPublicGet() {
       'vdp.model.v1alpha.MgmtPublicService/QueryAuthenticatedUser response id': (r) => r && r.message.user.id === constant.defaultUser.id,
       'vdp.model.v1alpha.MgmtPublicService/QueryAuthenticatedUser response type': (r) => r && r.message.user.type === "OWNER_TYPE_USER",
       'vdp.model.v1alpha.MgmtPublicService/QueryAuthenticatedUser response email': (r) => r && r.message.user.email !== undefined,
-      'vdp.model.v1alpha.MgmtPublicService/QueryAuthenticatedUser response plan': (r) => r && r.message.user.plan !== undefined,
-      'vdp.model.v1alpha.MgmtPublicService/QueryAuthenticatedUser response billingId': (r) => r && r.message.user.billingId !== undefined,
+      'vdp.model.v1alpha.MgmtPublicService/QueryAuthenticatedUser response customerId': (r) => r && r.message.user.customerId !== undefined,
       'vdp.model.v1alpha.MgmtPublicService/QueryAuthenticatedUser response firstName': (r) => r && r.message.user.firstName !== undefined,
       'vdp.model.v1alpha.MgmtPublicService/QueryAuthenticatedUser response lastName': (r) => r && r.message.user.lastName !== undefined,
       'vdp.model.v1alpha.MgmtPublicService/QueryAuthenticatedUser response orgName': (r) => r && r.message.user.orgName !== undefined,
@@ -73,27 +72,24 @@ export function CheckPublicUpdate() {
   });
 
   group(`Management Public API: Update authenticated user`, () => {
-
     var userUpdate = {
+      name: `users/${constant.defaultUser.id}`,
       type: "OWNER_TYPE_ORGANIZATION",
       email: "test@foo.bar",
-      plan: "plans/new_plan",
-      billing_id: "0",
+      customer_id: "new_customer_id",
       first_name: "test",
       last_name: "foo",
       org_name: "company",
       role: "ai-engineer",
       newsletter_subscription: true,
       cookie_token: "f5730f62-7026-4e11-917a-d890da315d3b",
-      create_time: "2000-01-01T00:00:00.000000Z",
-      update_time: "2000-01-01T00:00:00.000000Z",
     };
 
     var res = client.invoke('vdp.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser', {})
 
     check(client.invoke('vdp.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser', {
       user: userUpdate,
-      update_mask: "email,plan,billingId,firstName,lastName,orgName,role,newsletterSubscription,cookieToken,updateTime"
+      update_mask: "email,firstName,lastName,orgName,role,newsletterSubscription,cookieToken"
     }), {
       'vdp.model.v1alpha.MgmtPublicService/PatchAuthenticatedUser status': (r) => r && r.status == grpc.StatusOK,
       'vdp.model.v1alpha.MgmtPublicService/PatchAuthenticatedUser response name unchanged': (r) => r && r.message.user.name === res.message.user.name,
@@ -101,8 +97,7 @@ export function CheckPublicUpdate() {
       'vdp.model.v1alpha.MgmtPublicService/PatchAuthenticatedUser response id unchanged': (r) => r && r.message.user.id === res.message.user.id,
       'vdp.model.v1alpha.MgmtPublicService/PatchAuthenticatedUser response type unchanged': (r) => r && r.message.user.type === res.message.user.type,
       'vdp.model.v1alpha.MgmtPublicService/PatchAuthenticatedUser response email updated': (r) => r && r.message.user.email === userUpdate.email,
-      'vdp.model.v1alpha.MgmtPublicService/PatchAuthenticatedUser response plan updated': (r) => r && r.message.user.plan === userUpdate.plan,
-      'vdp.model.v1alpha.MgmtPublicService/PatchAuthenticatedUser response billingId updated': (r) => r && r.message.user.billingId === userUpdate.billing_id,
+      'vdp.model.v1alpha.MgmtPublicService/PatchAuthenticatedUser response customerId unchanged': (r) => r && r.message.user.customerId === res.message.user.customerId,
       'vdp.model.v1alpha.MgmtPublicService/PatchAuthenticatedUser response firstName updated': (r) => r && r.message.user.firstName === userUpdate.first_name,
       'vdp.model.v1alpha.MgmtPublicService/PatchAuthenticatedUser response lastName updated': (r) => r && r.message.user.lastName === userUpdate.last_name,
       'vdp.model.v1alpha.MgmtPublicService/PatchAuthenticatedUser response orgName updated': (r) => r && r.message.user.orgName === userUpdate.org_name,
@@ -116,7 +111,7 @@ export function CheckPublicUpdate() {
     // Restore to default user
     check(client.invoke('vdp.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser', {
       user: constant.defaultUser,
-      update_mask: "email,plan,billingId,firstName,lastName,orgName,role,newsletterSubscription,cookieToken,updateTime"
+      update_mask: "email,firstName,lastName,orgName,role,newsletterSubscription,cookieToken"
     }), {
       'vdp.model.v1alpha.MgmtPublicService/PatchAuthenticatedUser status': (r) => r && r.status == grpc.StatusOK,
     });

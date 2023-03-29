@@ -42,10 +42,8 @@ export function CheckPublicGet() {
           (r) => r.json().user.type === "OWNER_TYPE_USER",
         [`GET /${constant.mgmtVersion}/users/me response email`]:
           (r) => r.json().user.email !== undefined,
-        [`GET /${constant.mgmtVersion}/users/me response plan`]:
-          (r) => r.json().user.plan !== undefined,
-        [`GET /${constant.mgmtVersion}/users/me response billing_id`]:
-          (r) => r.json().user.billing_id !== undefined,
+        [`GET /${constant.mgmtVersion}/users/me response customer_id`]:
+          (r) => r.json().user.customer_id !== undefined,
         [`GET /${constant.mgmtVersion}/users/me response first_name`]:
           (r) => r.json().user.first_name !== undefined,
         [`GET /${constant.mgmtVersion}/users/me response last_name`]:
@@ -72,8 +70,7 @@ export function CheckPublicUpdate() {
     var userUpdate = {
       type: "OWNER_TYPE_ORGANIZATION",
       email: "test@foo.bar",
-      plan: "plans/new_plan",
-      billing_id: "0",
+      customer_id: "new_customer_id",
       first_name: "test",
       last_name: "foo",
       org_name: "company",
@@ -109,10 +106,8 @@ export function CheckPublicUpdate() {
           (r) => r.json().user.type === res.json().user.type,
         [`PATCH /${constant.mgmtVersion}/users/me response email updated`]:
           (r) => r.json().user.email === userUpdate.email,
-        [`PATCH /${constant.mgmtVersion}/users/me response plan updated`]:
-          (r) => r.json().user.plan === userUpdate.plan,
-        [`PATCH /${constant.mgmtVersion}/users/me response billing_id updated`]:
-          (r) => r.json().user.billing_id === userUpdate.billing_id,
+        [`PATCH /${constant.mgmtVersion}/users/me response customer_id unchanged`]:
+          (r) => r.json().user.customer_id === res.json().user.customer_id,
         [`PATCH /${constant.mgmtVersion}/users/me response first_name updated`]:
           (r) => r.json().user.first_name === userUpdate.first_name,
         [`PATCH /${constant.mgmtVersion}/users/me response last_name updated`]:

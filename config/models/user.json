@@ -92,19 +92,10 @@
       "ui_component": "text_email",
       "ui_placeholder": "bruce@wayne.inc"
     },
-    "plan": {
+    "customer_id": {
       "type": "string",
-      "title": "Your plan",
-      "description": "Your plan",
-      "ui_order": 7,
-      "ui_hidden": true,
-      "ui_disabled": true,
-      "ui_component": "text"
-    },
-    "billing_id": {
-      "type": "string",
-      "title": "Your billing ID",
-      "description": "Your billing ID",
+      "title": "Stripe customer ID",
+      "description": "Stripe customer ID",
       "ui_order": 8,
       "ui_hidden": true,
       "ui_disabled": true,

@@ -74,10 +74,8 @@ export function CheckAdminGet() {
           (r) => r.json().user.type === "OWNER_TYPE_USER",
         [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response email`]:
           (r) => r.json().user.email !== undefined,
-        [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response plan`]:
-          (r) => r.json().user.plan !== undefined,
-        [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response billing_id`]:
-          (r) => r.json().user.billing_id !== undefined,
+        [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response customer_id`]:
+          (r) => r.json().user.customer_id !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response first_name`]:
           (r) => r.json().user.first_name !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response last_name`]:
@@ -134,10 +132,8 @@ export function CheckAdminLookUp() {
           (r) => r.json().user.type === "OWNER_TYPE_USER",
         [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response email`]:
           (r) => r.json().user.email !== undefined,
-        [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response plan`]:
-          (r) => r.json().user.plan !== undefined,
-        [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response billing_id`]:
-          (r) => r.json().user.billing_id !== undefined,
+        [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response customer_id`]:
+          (r) => r.json().user.customer_id !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response first_name`]:
           (r) => r.json().user.first_name !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response last_name`]:
@@ -173,10 +169,10 @@ export function CheckAdminLookUp() {
 export function CheckAdminUpdate() {
   group(`Management Private API: Update default user`, () => {
     var userUpdate = {
+      name: `users/${constant.defaultUser.id}`,
       type: "OWNER_TYPE_ORGANIZATION",
       email: "test@foo.bar",
-      plan: "plans/new_plan",
-      billing_id: "0",
+      customer_id: "new_customer_id",
       first_name: "test",
       last_name: "foo",
       org_name: "company",
@@ -212,10 +208,8 @@ export function CheckAdminUpdate() {
           (r) => r.json().user.type === res.json().user.type,
         [`PATCH /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response email updated`]:
           (r) => r.json().user.email === userUpdate.email,
-        [`PATCH /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response plan updated`]:
-          (r) => r.json().user.plan === userUpdate.plan,
-        [`PATCH /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response billing_id updated`]:
-          (r) => r.json().user.billing_id === userUpdate.billing_id,
+        [`PATCH /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response customer_id unchanged`]:
+          (r) => r.json().user.customer_id === res.json().user.customer_id,
         [`PATCH /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response first_name updated`]:
           (r) => r.json().user.first_name === userUpdate.first_name,
         [`PATCH /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response last_name updated`]:

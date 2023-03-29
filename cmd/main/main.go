@@ -2,19 +2,17 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
-	"path"
 	"regexp"
 	"strings"
 	"syscall"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/hashicorp/go-plugin"
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -27,11 +25,14 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
-	hclog "github.com/hashicorp/go-hclog"
 
 	"github.com/instill-ai/mgmt-backend/config"
+	"github.com/instill-ai/mgmt-backend/internal/handler"
+	"github.com/instill-ai/mgmt-backend/pkg/external"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
-	"github.com/instill-ai/mgmt-backend/pkg/shared"
+	"github.com/instill-ai/mgmt-backend/pkg/repository"
+	"github.com/instill-ai/mgmt-backend/pkg/service"
+	"github.com/instill-ai/mgmt-backend/pkg/usage"
 
 	database "github.com/instill-ai/mgmt-backend/pkg/db"
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
@@ -70,16 +71,6 @@ func main() {
 	db := database.GetConnection()
 	defer database.Close(db)
 
-	// Create tls based credential
-	var creds credentials.TransportCredentials
-	var err error
-	if config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "" {
-		creds, err = credentials.NewServerTLSFromFile(config.Config.Server.HTTPS.Cert, config.Config.Server.HTTPS.Key)
-		if err != nil {
-			logger.Fatal(fmt.Sprintf("failed to create credentials: %v", err))
-		}
-	}
-
 	// Shared options for the logger, with a custom gRPC code to log level functions.
 	opts := []grpc_zap.Option{
 		grpc_zap.WithDecider(func(fullMethodName string, err error) bool {
@@ -107,55 +98,40 @@ func main() {
 			grpc_recovery.UnaryServerInterceptor(RecoveryInterceptorOpt()),
 		)),
 	}
+
+	// Create tls based credential
+	var creds credentials.TransportCredentials
+	var tlsConfig *tls.Config
+	var err error
 	if config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "" {
+		tlsConfig = &tls.Config{
+			ClientAuth: tls.RequireAndVerifyClientCert,
+		}
+		creds, err = credentials.NewServerTLSFromFile(config.Config.Server.HTTPS.Cert, config.Config.Server.HTTPS.Key)
+		if err != nil {
+			logger.Fatal(fmt.Sprintf("failed to create credentials: %v", err))
+		}
 		grpcServerOpts = append(grpcServerOpts, grpc.Creds(creds))
-	}
-
-	ex, err := os.Executable()
-	if err != nil {
-		logger.Fatal(err.Error())
-	}
-
-	// host and launch the plugin process.
-	client := plugin.NewClient(&plugin.ClientConfig{
-		HandshakeConfig: shared.Handshake,
-		Plugins: map[string]plugin.Plugin{
-			"private handler": &shared.HandlerPrivatePlugin{},
-			"public handler":  &shared.HandlerPublicPlugin{},
-		},
-		Cmd: exec.Command(fmt.Sprintf("%s/%s", path.Dir(ex), "plugin")),
-		Logger: hclog.New(&hclog.LoggerOptions{
-			Name:   "plugin",
-			Output: os.Stdout,
-			Level: func() hclog.Level {
-				if config.Config.Server.Debug {
-					return hclog.Debug
-				}
-				return hclog.Info
-			}(),
-		}),
-	})
-	defer client.Kill()
-
-	// Connect via RPC
-	rpcClient, err := client.Client()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Request the plugin
-	rawPrivateHandler, err := rpcClient.Dispense("private handler")
-	if err != nil {
-		logger.Fatal(err.Error())
-	}
-
-	rawPublicHandler, err := rpcClient.Dispense("public handler")
-	if err != nil {
-		logger.Fatal(err.Error())
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	repository := repository.NewRepository(db)
+	service := service.NewService(repository)
+
+	// Start usage reporter
+	var usg usage.Usage
+	if !config.Config.Server.DisableUsage {
+		usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient()
+		if usageServiceClientConn != nil {
+			defer usageServiceClientConn.Close()
+			usg = usage.NewUsage(ctx, repository, usageServiceClient)
+			if usg != nil {
+				usg.StartReporter(ctx)
+			}
+		}
+	}
 
 	privateGrpcS := grpc.NewServer(grpcServerOpts...)
 	reflection.Register(privateGrpcS)
@@ -163,11 +139,14 @@ func main() {
 	publicGrpcS := grpc.NewServer(grpcServerOpts...)
 	reflection.Register(publicGrpcS)
 
-	privateHandler := rawPrivateHandler.(mgmtPB.MgmtPrivateServiceServer)
-	mgmtPB.RegisterMgmtPrivateServiceServer(privateGrpcS, privateHandler)
-
-	publicHandler := rawPublicHandler.(mgmtPB.MgmtPublicServiceServer)
-	mgmtPB.RegisterMgmtPublicServiceServer(publicGrpcS, publicHandler)
+	mgmtPB.RegisterMgmtPrivateServiceServer(
+		privateGrpcS,
+		handler.NewPrivateHandler(service),
+	)
+	mgmtPB.RegisterMgmtPublicServiceServer(
+		publicGrpcS,
+		handler.NewPublicHandler(service, usg),
+	)
 
 	privateServeMux := runtime.NewServeMux(
 		runtime.WithForwardResponseOption(httpResponseModifier),
@@ -218,13 +197,15 @@ func main() {
 	}
 
 	privateHTTPServer := &http.Server{
-		Addr:    fmt.Sprintf(":%v", config.Config.Server.PrivatePort),
-		Handler: grpcHandlerFunc(privateGrpcS, privateServeMux, config.Config.Server.CORSOrigins),
+		Addr:      fmt.Sprintf(":%v", config.Config.Server.PrivatePort),
+		Handler:   grpcHandlerFunc(privateGrpcS, privateServeMux, config.Config.Server.CORSOrigins),
+		TLSConfig: tlsConfig,
 	}
 
 	publicHTTPServer := &http.Server{
-		Addr:    fmt.Sprintf(":%v", config.Config.Server.PublicPort),
-		Handler: grpcHandlerFunc(publicGrpcS, publicServeMux, config.Config.Server.CORSOrigins),
+		Addr:      fmt.Sprintf(":%v", config.Config.Server.PublicPort),
+		Handler:   grpcHandlerFunc(publicGrpcS, publicServeMux, config.Config.Server.CORSOrigins),
+		TLSConfig: tlsConfig,
 	}
 
 	// Wait for interrupt signal to gracefully shutdown the server with a timeout of 5 seconds.
@@ -264,6 +245,10 @@ func main() {
 	case err := <-errSig:
 		logger.Error(fmt.Sprintf("Fatal error: %v\n", err))
 	case <-quitSig:
+		// send out the usage report at exit
+		if !config.Config.Server.DisableUsage && usg != nil {
+			usg.TriggerSingleReporter(ctx)
+		}
 		logger.Info("Shutting down server...")
 		privateGrpcS.GracefulStop()
 		publicGrpcS.GracefulStop()
