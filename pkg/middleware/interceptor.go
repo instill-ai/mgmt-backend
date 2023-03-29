@@ -1,4 +1,4 @@
-package main
+package middleware
 
 import (
 	"google.golang.org/grpc/codes"

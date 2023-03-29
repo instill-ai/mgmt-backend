@@ -27,9 +27,10 @@ import (
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 
 	"github.com/instill-ai/mgmt-backend/config"
-	"github.com/instill-ai/mgmt-backend/internal/handler"
 	"github.com/instill-ai/mgmt-backend/pkg/external"
+	"github.com/instill-ai/mgmt-backend/pkg/handler"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
+	"github.com/instill-ai/mgmt-backend/pkg/middleware"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 	"github.com/instill-ai/mgmt-backend/pkg/usage"
@@ -91,11 +92,11 @@ func main() {
 	grpcServerOpts := []grpc.ServerOption{
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
 			grpc_zap.StreamServerInterceptor(logger, opts...),
-			grpc_recovery.StreamServerInterceptor(RecoveryInterceptorOpt()),
+			grpc_recovery.StreamServerInterceptor(middleware.RecoveryInterceptorOpt()),
 		)),
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			grpc_zap.UnaryServerInterceptor(logger, opts...),
-			grpc_recovery.UnaryServerInterceptor(RecoveryInterceptorOpt()),
+			grpc_recovery.UnaryServerInterceptor(middleware.RecoveryInterceptorOpt()),
 		)),
 	}
 
@@ -149,9 +150,9 @@ func main() {
 	)
 
 	privateServeMux := runtime.NewServeMux(
-		runtime.WithForwardResponseOption(httpResponseModifier),
-		runtime.WithIncomingHeaderMatcher(customMatcher),
-		runtime.WithErrorHandler(errorHandler),
+		runtime.WithForwardResponseOption(middleware.HttpResponseModifier),
+		runtime.WithIncomingHeaderMatcher(middleware.CustomMatcher),
+		runtime.WithErrorHandler(middleware.ErrorHandler),
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
 			MarshalOptions: protojson.MarshalOptions{
 				UseProtoNames:   true,
@@ -165,9 +166,9 @@ func main() {
 	)
 
 	publicServeMux := runtime.NewServeMux(
-		runtime.WithIncomingHeaderMatcher(customMatcher),
-		runtime.WithForwardResponseOption(httpResponseModifier),
-		runtime.WithErrorHandler(errorHandler),
+		runtime.WithIncomingHeaderMatcher(middleware.CustomMatcher),
+		runtime.WithForwardResponseOption(middleware.HttpResponseModifier),
+		runtime.WithErrorHandler(middleware.ErrorHandler),
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
 			MarshalOptions: protojson.MarshalOptions{
 				UseProtoNames:   true,

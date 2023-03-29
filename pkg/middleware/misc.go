@@ -1,4 +1,4 @@
-package main
+package middleware
 
 import (
 	"context"
@@ -20,11 +20,12 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 )
 
-var customHeaders = []string{constant.HeaderUserUIDKey, "Jwt-Aud", "Jwt-Iss", "Jwt-Scope", "Jwt-Client-Id"}
+var CustomHeaders = []string{constant.HeaderUserUIDKey, "Jwt-Aud", "Jwt-Iss", "Jwt-Scope", "Jwt-Client-Id"}
 
-func customMatcher(key string) (string, bool) {
+// CustomMatcher is a callback function for gRPC-Gateway runtime.WithIncomingHeaderMatcher
+func CustomMatcher(key string) (string, bool) {
 	// e.g., $ curl --header "jwt-sub: 100d9f38-2777-4ee2-ac3b-b3a108f81a30" ...
-	if slices.Contains(customHeaders, key) {
+	if slices.Contains(CustomHeaders, key) {
 		return key, true
 	}
 	// DefaultHeaderMatcher is used to pass http request headers to/from gRPC context.
@@ -33,7 +34,8 @@ func customMatcher(key string) (string, bool) {
 	return runtime.DefaultHeaderMatcher(key)
 }
 
-func httpResponseModifier(ctx context.Context, w http.ResponseWriter, p proto.Message) error {
+// HTTPResponseModifier is a callback function for gRPC-Gateway runtime.WithForwardResponseOption
+func HttpResponseModifier(ctx context.Context, w http.ResponseWriter, p proto.Message) error {
 	md, ok := runtime.ServerMetadataFromContext(ctx)
 	if !ok {
 		return nil
@@ -54,7 +56,8 @@ func httpResponseModifier(ctx context.Context, w http.ResponseWriter, p proto.Me
 	return nil
 }
 
-func errorHandler(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.Marshaler, w http.ResponseWriter, r *http.Request, err error) {
+// ErrorHandler is a callback function for gRPC-Gateway runtime.WithErrorHandler
+func ErrorHandler(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.Marshaler, w http.ResponseWriter, r *http.Request, err error) {
 	logger, _ := logger.GetZapLogger()
 
 	// return Internal when Marshal failed
