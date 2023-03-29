@@ -22,7 +22,7 @@ export function CheckHealth() {
   });
 }
 
-export function CheckPublicGet() {
+export function CheckPublicQueryAuthenticatedUser() {
   group(`Management Public API: Get authenticated user`, () => {
     check(
       http.request(
@@ -65,7 +65,7 @@ export function CheckPublicGet() {
   })
 }
 
-export function CheckPublicUpdate() {
+export function CheckPublicPatchAuthenticatedUser() {
   group(`Management Public API: Update authenticated user`, () => {
     var userUpdate = {
       type: "OWNER_TYPE_ORGANIZATION",
@@ -206,6 +206,82 @@ export function CheckPublicUpdate() {
       {
         [`PATCH /${constant.mgmtVersion}/users/me response status 400`]:
           (r) => r.status === 400,
+      }
+    );
+  });
+}
+
+export function CheckPublicCreateToken() {
+  group(`Management Public API: Create API token`, () => {
+    check(
+      http.request(
+        "POST",
+        `${constant.mgmtPublicHost}/tokens`,
+        JSON.stringify(constant.testToken),
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      ),
+      {
+        [`POST /${constant.mgmtVersion}/tokens response status 501 [not implemented]`]:
+          (r) => r.status === 501,
+      }
+    );
+  });
+}
+
+export function CheckPublicListTokens() {
+  group(`Management Public API: List API tokens`, () => {
+    check(
+      http.request(
+        "GET",
+        `${constant.mgmtPublicHost}/tokens`,
+        JSON.stringify({}),
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      ),
+      {
+        [`GET /${constant.mgmtVersion}/tokens response status 501 [not implemented]`]:
+          (r) => r.status === 501,
+      }
+    );
+  });
+}
+
+export function CheckPublicGetToken() {
+  group(`Management Public API: Get API token`, () => {
+    check(
+      http.request(
+        "GET",
+        `${constant.mgmtPublicHost}/tokens/${constant.testToken.id}`,
+        JSON.stringify({}),
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      ),
+      {
+        [`GET /${constant.mgmtVersion}/tokens/${constant.testToken.id} response status 501 [not implemented]`]:
+          (r) => r.status === 501,
+      }
+    );
+  });
+}
+
+export function CheckPublicDeleteToken() {
+  group(`Management Public API: Delete API token`, () => {
+    check(
+      http.request(
+        "DELETE",
+        `${constant.mgmtPublicHost}/tokens/${constant.testToken.id}`,
+        JSON.stringify({}),
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      ),
+      {
+        [`DELETE /${constant.mgmtVersion}/tokens/${constant.testToken.id} response status 501 [not implemented]`]:
+          (r) => r.status === 501,
       }
     );
   });

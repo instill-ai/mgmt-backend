@@ -396,3 +396,75 @@ func (h *PublicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUser
 	}
 	return &resp, nil
 }
+
+// CreateToken creates an API token for triggering pipelines. This endpoint is not supported yet.
+func (h *PublicHandler) CreateToken(ctx context.Context, req *mgmtPB.CreateTokenRequest) (*mgmtPB.CreateTokenResponse, error) {
+	logger, _ := logger.GetZapLogger()
+
+	st, err := sterr.CreateErrorResourceInfo(
+		codes.Unimplemented,
+		"create token not implemented error",
+		"endpoint",
+		"/tokens",
+		"",
+		"not implemented",
+	)
+	if err != nil {
+		logger.Error(err.Error())
+	}
+	return &mgmtPB.CreateTokenResponse{}, st.Err()
+}
+
+// ListTokens lists all the API tokens of the authenticated user. This endpoint is not supported yet.
+func (h *PublicHandler) ListTokens(ctx context.Context, req *mgmtPB.ListTokensRequest) (*mgmtPB.ListTokensResponse, error) {
+	logger, _ := logger.GetZapLogger()
+
+	st, err := sterr.CreateErrorResourceInfo(
+		codes.Unimplemented,
+		"list tokens not implemented error",
+		"endpoint",
+		"/tokens",
+		"",
+		"not implemented",
+	)
+	if err != nil {
+		logger.Error(err.Error())
+	}
+	return &mgmtPB.ListTokensResponse{}, st.Err()
+}
+
+// GetToken gets an API token of the authenticated user. This endpoint is not supported yet.
+func (h *PublicHandler) GetToken(ctx context.Context, req *mgmtPB.GetTokenRequest) (*mgmtPB.GetTokenResponse, error) {
+	logger, _ := logger.GetZapLogger()
+
+	st, err := sterr.CreateErrorResourceInfo(
+		codes.Unimplemented,
+		"get token not implemented error",
+		"endpoint",
+		"/tokens/{token}",
+		"",
+		"not implemented",
+	)
+	if err != nil {
+		logger.Error(err.Error())
+	}
+	return &mgmtPB.GetTokenResponse{}, st.Err()
+}
+
+// DeleteToken deletes an API token of the authenticated user. This endpoint is not supported yet.
+func (h *PublicHandler) DeleteToken(ctx context.Context, req *mgmtPB.DeleteTokenRequest) (*mgmtPB.DeleteTokenResponse, error) {
+	logger, _ := logger.GetZapLogger()
+
+	st, err := sterr.CreateErrorResourceInfo(
+		codes.Unimplemented,
+		"delete token not implemented error",
+		"endpoint",
+		"/tokens/{token}",
+		"",
+		"not implemented",
+	)
+	if err != nil {
+		logger.Error(err.Error())
+	}
+	return &mgmtPB.DeleteTokenResponse{}, st.Err()
+}

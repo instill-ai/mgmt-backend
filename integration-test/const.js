@@ -24,7 +24,7 @@ if (__ENV.MODE == "api-gateway") {
 }
 
 export const mgmtVersion = "v1alpha";
-export const mgmtPrivateHost = `${proto}://${host}:${privatePort}/${mgmtVersion}/admin`
+export const mgmtPrivateHost = `${proto}://${host}:${privatePort}/${mgmtVersion}`
 export const mgmtPublicHost = `${proto}://${host}:${publicPort}/${mgmtVersion}`
 
 export const mgmtPrivateGRPCHost = `${host}:${privatePort}`
@@ -42,4 +42,13 @@ export const defaultUser = {
   role: "",
   newsletter_subscription: false,
   cookie_token: ""
+};
+
+export const testToken = {
+  name: "tokens/test-token",
+  id: "test-token",
+  access_token: "at_123456",
+  state: "STATE_ACTIVE",
+  token_type: "Bearer",
+  lifetime: 86400
 };
