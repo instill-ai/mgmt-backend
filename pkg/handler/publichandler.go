@@ -50,6 +50,11 @@ func (h *PublicHandler) GetService() service.Service {
 	return h.service
 }
 
+// SetService sets the service
+func (h *PublicHandler) SetService(s service.Service) {
+	h.service = s
+}
+
 // Liveness checks the liveness of the server
 func (h *PublicHandler) Liveness(ctx context.Context, in *mgmtPB.LivenessRequest) (*mgmtPB.LivenessResponse, error) {
 	return &mgmtPB.LivenessResponse{

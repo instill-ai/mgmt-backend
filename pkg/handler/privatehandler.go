@@ -42,6 +42,11 @@ func (h *PrivateHandler) GetService() service.Service {
 	return h.service
 }
 
+// SetService sets the service
+func (h *PrivateHandler) SetService(s service.Service) {
+	h.service = s
+}
+
 // ListUsersAdmin lists all users
 func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUsersAdminRequest) (*mgmtPB.ListUsersAdminResponse, error) {
 	logger, _ := logger.GetZapLogger()
