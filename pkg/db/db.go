@@ -15,9 +15,8 @@ var db *gorm.DB
 var once sync.Once
 
 // GetConnection returns a database instance
-func GetConnection() *gorm.DB {
+func GetConnection(databaseConfig *config.DatabaseConfig) *gorm.DB {
 	once.Do(func() {
-		databaseConfig := config.Config.Database
 		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable TimeZone=%s",
 			databaseConfig.Host,
 			databaseConfig.Username,

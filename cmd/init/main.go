@@ -72,7 +72,7 @@ func main() {
 	}()
 	grpc_zap.ReplaceGrpcLoggerV2(logger)
 
-	db := database.GetConnection()
+	db := database.GetConnection(&config.Config.Database)
 	defer database.Close(db)
 
 	// Create a default user

@@ -69,7 +69,7 @@ func main() {
 	}()
 	grpc_zap.ReplaceGrpcLoggerV2(logger)
 
-	db := database.GetConnection()
+	db := database.GetConnection(&config.Config.Database)
 	defer database.Close(db)
 
 	// Shared options for the logger, with a custom gRPC code to log level functions.
