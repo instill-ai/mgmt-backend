@@ -37,7 +37,10 @@ func NewPrivateHandler(s service.Service) mgmtPB.MgmtPrivateServiceServer {
 	}
 }
 
-// ========== Private API
+// GetService returns the service
+func (h *PrivateHandler) GetService() service.Service {
+	return h.service
+}
 
 // ListUsersAdmin lists all users
 func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUsersAdminRequest) (*mgmtPB.ListUsersAdminResponse, error) {
