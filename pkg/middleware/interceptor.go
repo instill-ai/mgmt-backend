@@ -28,7 +28,7 @@ func UnaryAppendMetadataInterceptor(ctx context.Context, req interface{}, info *
 		return nil, status.Error(codes.Internal, "can not extract metadata")
 	}
 
-	// Add "owner-id" header, with default value "local-user"
+	// Add "user-id" header, with default value "local-user"
 	md.Append(constant.HeaderUserIDKey, constant.DefaultUserID)
 
 	newCtx := metadata.NewIncomingContext(ctx, md)
@@ -44,7 +44,7 @@ func StreamAppendMetadataInterceptor(srv interface{}, stream grpc.ServerStream, 
 		return status.Error(codes.Internal, "can not extract metadata")
 	}
 
-	// Add "owner-id" header, with default value "local-user"
+	// Add "user-id" header, with default value "local-user"
 	md.Append(constant.HeaderUserIDKey, constant.DefaultUserID)
 
 	newCtx := metadata.NewIncomingContext(stream.Context(), md)

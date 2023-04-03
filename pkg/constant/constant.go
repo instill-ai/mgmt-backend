@@ -1,7 +1,7 @@
 package constant
 
 // default user
-const HeaderUserIDKey = "owner-id"
+const HeaderUserIDKey = "user-id"
 const DefaultUserID = "local-user"
 const DefaultUserEmail = "local-user@instill.tech"
 

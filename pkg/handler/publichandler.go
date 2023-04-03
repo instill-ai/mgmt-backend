@@ -121,12 +121,12 @@ func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
 			}
 		}
 	} else {
-		// Verify "owner-id" in the header if there is no "jwt-sub"
-		headerOwnerId := middleware.GetRequestSingleHeader(ctx, constant.HeaderUserIDKey)
-		if headerOwnerId != constant.DefaultUserID {
+		// Verify "user-id" in the header if there is no "jwt-sub"
+		headerUserId := middleware.GetRequestSingleHeader(ctx, constant.HeaderUserIDKey)
+		if headerUserId != constant.DefaultUserID {
 			return nil, status.Error(codes.Unauthenticated, "Unauthenticated request")
 		} else {
-			dbUser, err = h.service.GetUserByID(headerOwnerId)
+			dbUser, err = h.service.GetUserByID(headerUserId)
 			if err != nil {
 				sta := status.Convert(err)
 				switch sta.Code() {
@@ -147,7 +147,7 @@ func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
 						sta.Code(),
 						"get user error",
 						"user",
-						fmt.Sprintf("id %s", headerOwnerId),
+						fmt.Sprintf("id %s", headerUserId),
 						"",
 						sta.Message(),
 					)
