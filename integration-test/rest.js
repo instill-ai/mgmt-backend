@@ -1,6 +1,7 @@
 import * as constant from "./const.js";
-import * as privateAPI from "./rest-private-user.js";
-import * as publicAPI from "./rest-public-user.js"
+import * as mgmtPrivate from "./rest-private-user.js";
+import * as mgmtPublic from "./rest-public-user.js"
+import * as mgmtPublicWithJwt from "./rest-public-user-with-jwt.js"
 
 export let options = {
   setupTimeout: "300s",
@@ -22,23 +23,27 @@ export default function (data) {
   if (__ENV.MODE != "api-gateway" && __ENV.MODE != "localhost") {
 
     // ======== Private API
-    privateAPI.CheckPrivateListUsersAdmin();
-    privateAPI.CheckPrivateCreateUserAdmin();
-    privateAPI.CheckPrivateGetUserAdmin();
-    privateAPI.CheckPrivateLookUpUserAdmin();
-    privateAPI.CheckPrivateUpdateUserAdmin();
-    privateAPI.CheckPrivateDeleteUserAdmin();
-    privateAPI.CheckPrivateValidateToken();
+    mgmtPrivate.CheckPrivateListUsersAdmin();
+    mgmtPrivate.CheckPrivateCreateUserAdmin();
+    mgmtPrivate.CheckPrivateGetUserAdmin();
+    mgmtPrivate.CheckPrivateLookUpUserAdmin();
+    mgmtPrivate.CheckPrivateUpdateUserAdmin();
+    mgmtPrivate.CheckPrivateDeleteUserAdmin();
+    mgmtPrivate.CheckPrivateValidateToken();
+
+    // // ======== Public API with jwt-sub
+    mgmtPublicWithJwt.CheckPublicQueryAuthenticatedUser();
+    mgmtPublicWithJwt.CheckPublicPatchAuthenticatedUser();
   }
 
   // ======== Public API
-  publicAPI.CheckHealth();
-  publicAPI.CheckPublicQueryAuthenticatedUser();
-  publicAPI.CheckPublicPatchAuthenticatedUser();
-  publicAPI.CheckPublicCreateToken();
-  publicAPI.CheckPublicListTokens();
-  publicAPI.CheckPublicGetToken();
-  publicAPI.CheckPublicDeleteToken();
+  mgmtPublic.CheckHealth();
+  mgmtPublic.CheckPublicQueryAuthenticatedUser();
+  mgmtPublic.CheckPublicPatchAuthenticatedUser();
+  mgmtPublic.CheckPublicCreateToken();
+  mgmtPublic.CheckPublicListTokens();
+  mgmtPublic.CheckPublicGetToken();
+  mgmtPublic.CheckPublicDeleteToken();
 }
 
 export function teardown(data) {

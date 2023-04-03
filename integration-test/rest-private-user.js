@@ -192,9 +192,7 @@ export function CheckPrivateUpdateUserAdmin() {
       http.request(
         "PATCH",
         `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`,
-        JSON.stringify(userUpdate),
-        { headers: { "Content-Type": "application/json" } }
-      ),
+        JSON.stringify(userUpdate), constant.params),
       {
         [`PATCH /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response 200`]:
           (r) => r.status === 200,
@@ -236,9 +234,7 @@ export function CheckPrivateUpdateUserAdmin() {
       http.request(
         "PATCH",
         `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`,
-        JSON.stringify(constant.defaultUser),
-        { headers: { "Content-Type": "application/json" } }
-      ),
+        JSON.stringify(constant.defaultUser), constant.params),
       {
         [`PATCH /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response status 200`]:
           (r) => r.status === 200,
@@ -265,9 +261,7 @@ export function CheckPrivateUpdateUserAdmin() {
       http.request(
         "PATCH",
         `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`,
-        JSON.stringify(userUpdate),
-        { headers: { "Content-Type": "application/json" } }
-      ),
+        JSON.stringify(userUpdate), constant.params),
       {
         [`PATCH /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response status 400`]:
           (r) => r.status === 400,
@@ -283,9 +277,7 @@ export function CheckPrivateUpdateUserAdmin() {
       http.request(
         "PATCH",
         `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`,
-        JSON.stringify(userUpdate),
-        { headers: { "Content-Type": "application/json" } }
-      ),
+        JSON.stringify(userUpdate), constant.params),
       {
         [`PATCH /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response status 400`]:
           (r) => r.status === 400,
@@ -302,9 +294,7 @@ export function CheckPrivateUpdateUserAdmin() {
       http.request(
         "PATCH",
         `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`,
-        JSON.stringify(userUpdate),
-        { headers: { "Content-Type": "application/json" } }
-      ),
+        JSON.stringify(userUpdate), constant.params),
       {
         [`PATCH /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response status 400`]:
           (r) => r.status === 400,

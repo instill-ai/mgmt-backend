@@ -91,10 +91,12 @@ func main() {
 
 	grpcServerOpts := []grpc.ServerOption{
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+			middleware.StreamAppendMetadataInterceptor,
 			grpc_zap.StreamServerInterceptor(logger, opts...),
 			grpc_recovery.StreamServerInterceptor(middleware.RecoveryInterceptorOpt()),
 		)),
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			middleware.UnaryAppendMetadataInterceptor,
 			grpc_zap.UnaryServerInterceptor(logger, opts...),
 			grpc_recovery.UnaryServerInterceptor(middleware.RecoveryInterceptorOpt()),
 		)),
