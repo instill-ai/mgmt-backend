@@ -30,6 +30,8 @@ export function CheckPublicQueryAuthenticatedUser() {
         `${constant.mgmtPublicHost}/users/me`
       ),
       {
+        [`GET /${constant.mgmtVersion}/users/me response status is 200`]:
+          (r) => r.status === 200,
         [`GET /${constant.mgmtVersion}/users/me response name`]:
           (r) => r.json().user.name !== undefined,
         [`GET /${constant.mgmtVersion}/users/me response uid is UUID`]:
@@ -90,9 +92,7 @@ export function CheckPublicPatchAuthenticatedUser() {
       http.request(
         "PATCH",
         `${constant.mgmtPublicHost}/users/me`,
-        JSON.stringify(userUpdate),
-        { headers: { "Content-Type": "application/json" } }
-      ),
+        JSON.stringify(userUpdate), constant.params),
       {
         [`PATCH /${constant.mgmtVersion}/users/me response 200`]:
           (r) => r.status === 200,
@@ -134,9 +134,7 @@ export function CheckPublicPatchAuthenticatedUser() {
       http.request(
         "PATCH",
         `${constant.mgmtPublicHost}/users/me`,
-        JSON.stringify(constant.defaultUser),
-        { headers: { "Content-Type": "application/json" } }
-      ),
+        JSON.stringify(constant.defaultUser), constant.params),
       {
         [`PATCH /${constant.mgmtVersion}/users/me response status 200`]:
           (r) => r.status === 200,
@@ -163,9 +161,7 @@ export function CheckPublicPatchAuthenticatedUser() {
       http.request(
         "PATCH",
         `${constant.mgmtPublicHost}/users/me`,
-        JSON.stringify(userUpdate),
-        { headers: { "Content-Type": "application/json" } }
-      ),
+        JSON.stringify(userUpdate), constant.params),
       {
         [`PATCH /${constant.mgmtVersion}/users/me response status 400`]:
           (r) => r.status === 400,
@@ -181,9 +177,7 @@ export function CheckPublicPatchAuthenticatedUser() {
       http.request(
         "PATCH",
         `${constant.mgmtPublicHost}/users/me`,
-        JSON.stringify(userUpdate),
-        { headers: { "Content-Type": "application/json" } }
-      ),
+        JSON.stringify(userUpdate), constant.params),
       {
         [`PATCH /${constant.mgmtVersion}/users/me response status 400`]:
           (r) => r.status === 400,
@@ -200,9 +194,7 @@ export function CheckPublicPatchAuthenticatedUser() {
       http.request(
         "PATCH",
         `${constant.mgmtPublicHost}/users/me`,
-        JSON.stringify(userUpdate),
-        { headers: { "Content-Type": "application/json" } }
-      ),
+        JSON.stringify(userUpdate), constant.params),
       {
         [`PATCH /${constant.mgmtVersion}/users/me response status 400`]:
           (r) => r.status === 400,
