@@ -14,8 +14,10 @@ import (
 	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 
 	"github.com/instill-ai/mgmt-backend/config"
+	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
+	"github.com/instill-ai/mgmt-backend/pkg/middleware"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 	"github.com/instill-ai/mgmt-backend/pkg/usage"
 	"github.com/instill-ai/x/sterr"
@@ -73,42 +75,88 @@ func (h *PublicHandler) Readiness(ctx context.Context, in *mgmtPB.ReadinessReque
 	}, nil
 }
 
-// QueryAuthenticatedUser gets the authenticated user.
-// Note: this endpoint is hard-coded, assuming the ID of the authenticated user is the default user.
-func (h *PublicHandler) QueryAuthenticatedUser(ctx context.Context, req *mgmtPB.QueryAuthenticatedUserRequest) (*mgmtPB.QueryAuthenticatedUserResponse, error) {
+// GetUser returns the authenticated user
+func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
 	logger, _ := logger.GetZapLogger()
 
-	id := config.DefaultUserID
+	var dbUser *datamodel.User
+	var err error
 
-	dbUser, err := h.service.GetUserByID(id)
-	if err != nil {
-		sta := status.Convert(err)
-		switch sta.Code() {
-		case codes.InvalidArgument:
-			st, e := sterr.CreateErrorBadRequest(
-				"get user error", []*errdetails.BadRequest_FieldViolation{
-					{
-						Field:       "GetAuthenticatedUser",
-						Description: sta.Message(),
-					},
-				})
-			if e != nil {
-				logger.Error(e.Error())
+	// Verify if "jwt-sub" is in the header
+	headerUserUId := middleware.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)
+	if headerUserUId != "" {
+		uid, err := uuid.FromString(headerUserUId)
+		if err != nil {
+			return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+		}
+		dbUser, err = h.service.GetUser(uid)
+		if err != nil {
+			sta := status.Convert(err)
+			switch sta.Code() {
+			case codes.InvalidArgument:
+				st, e := sterr.CreateErrorBadRequest(
+					"get user error", []*errdetails.BadRequest_FieldViolation{
+						{
+							Field:       "GetAuthenticatedUser",
+							Description: sta.Message(),
+						},
+					})
+				if e != nil {
+					logger.Error(e.Error())
+				}
+				return nil, st.Err()
+			default:
+				st, e := sterr.CreateErrorResourceInfo(
+					sta.Code(),
+					"get user error",
+					"user",
+					fmt.Sprintf("uid %s", headerUserUId),
+					"",
+					sta.Message(),
+				)
+				if e != nil {
+					logger.Error(e.Error())
+				}
+				return nil, st.Err()
 			}
-			return &mgmtPB.QueryAuthenticatedUserResponse{}, st.Err()
-		default:
-			st, e := sterr.CreateErrorResourceInfo(
-				sta.Code(),
-				"get user error",
-				"user",
-				fmt.Sprintf("id %s", id),
-				"",
-				sta.Message(),
-			)
-			if e != nil {
-				logger.Error(e.Error())
+		}
+	} else {
+		// Verify "owner-id" in the header if there is no "jwt-sub"
+		headerOwnerId := middleware.GetRequestSingleHeader(ctx, constant.HeaderUserIDKey)
+		if headerOwnerId != constant.DefaultUserID {
+			return nil, status.Error(codes.Unauthenticated, "Unauthenticated request")
+		} else {
+			dbUser, err = h.service.GetUserByID(headerOwnerId)
+			if err != nil {
+				sta := status.Convert(err)
+				switch sta.Code() {
+				case codes.InvalidArgument:
+					st, e := sterr.CreateErrorBadRequest(
+						"get user error", []*errdetails.BadRequest_FieldViolation{
+							{
+								Field:       "GetAuthenticatedUser",
+								Description: sta.Message(),
+							},
+						})
+					if e != nil {
+						logger.Error(e.Error())
+					}
+					return nil, st.Err()
+				default:
+					st, e := sterr.CreateErrorResourceInfo(
+						sta.Code(),
+						"get user error",
+						"user",
+						fmt.Sprintf("id %s", headerOwnerId),
+						"",
+						sta.Message(),
+					)
+					if e != nil {
+						logger.Error(e.Error())
+					}
+					return nil, st.Err()
+				}
 			}
-			return &mgmtPB.QueryAuthenticatedUserResponse{}, st.Err()
 		}
 	}
 
@@ -126,18 +174,26 @@ func (h *PublicHandler) QueryAuthenticatedUser(ctx context.Context, req *mgmtPB.
 		if e != nil {
 			logger.Error(e.Error())
 		}
-		return &mgmtPB.QueryAuthenticatedUserResponse{}, st.Err()
+		return nil, st.Err()
 	}
+	return pbUser, nil
+}
 
+// QueryAuthenticatedUser gets the authenticated user.
+// Note: this endpoint assumes the ID of the authenticated user is the default user.
+func (h *PublicHandler) QueryAuthenticatedUser(ctx context.Context, req *mgmtPB.QueryAuthenticatedUserRequest) (*mgmtPB.QueryAuthenticatedUserResponse, error) {
+	pbUser, err := h.GetUser(ctx)
+	if err != nil {
+		return &mgmtPB.QueryAuthenticatedUserResponse{}, err
+	}
 	resp := mgmtPB.QueryAuthenticatedUserResponse{
 		User: pbUser,
 	}
 	return &resp, nil
-
 }
 
 // PatchAuthenticatedUser updates the authenticated user.
-// Note: this endpoint is hard-coded, assuming the ID of the authenticated user is the default user.
+// Note: this endpoint assumes the ID of the authenticated user is the default user.
 func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.PatchAuthenticatedUserRequest) (*mgmtPB.PatchAuthenticatedUserResponse, error) {
 	logger, _ := logger.GetZapLogger()
 

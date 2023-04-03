@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"golang.org/x/exp/slices"
 
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
@@ -20,18 +20,30 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 )
 
-var CustomHeaders = []string{constant.HeaderUserUIDKey, "Jwt-Aud", "Jwt-Iss", "Jwt-Scope", "Jwt-Client-Id"}
+// GetRequestSingleHeader get a request header, the header has to be single-value HTTP header
+func GetRequestSingleHeader(ctx context.Context, header string) string {
+	metaHeader := metadata.ValueFromIncomingContext(ctx, strings.ToLower(header))
+	if len(metaHeader) != 1 {
+		return ""
+	}
+	return metaHeader[0]
+}
 
 // CustomMatcher is a callback function for gRPC-Gateway runtime.WithIncomingHeaderMatcher
 func CustomMatcher(key string) (string, bool) {
-	// e.g., $ curl --header "jwt-sub: 100d9f38-2777-4ee2-ac3b-b3a108f81a30" ...
-	if slices.Contains(CustomHeaders, key) {
+	if strings.HasPrefix(strings.ToLower(key), "jwt-") {
 		return key, true
 	}
-	// DefaultHeaderMatcher is used to pass http request headers to/from gRPC context.
-	// This adds permanent HTTP header keys (as specified by the IANA) to gRPC context with grpcgateway- prefix.
-	// HTTP headers that start with 'Grpc-Metadata-' are mapped to gRPC metadata after removing prefix 'Grpc-Metadata-'.
-	return runtime.DefaultHeaderMatcher(key)
+
+	switch key {
+	case constant.HeaderUserIDKey:
+		return key, true
+	default:
+		// DefaultHeaderMatcher is used to pass http request headers to/from gRPC context.
+		// This adds permanent HTTP header keys (as specified by the IANA) to gRPC context with grpcgateway- prefix.
+		// HTTP headers that start with 'Grpc-Metadata-' are mapped to gRPC metadata after removing prefix 'Grpc-Metadata-'.
+		return runtime.DefaultHeaderMatcher(key)
+	}
 }
 
 // HTTPResponseModifier is a callback function for gRPC-Gateway runtime.WithForwardResponseOption
@@ -141,5 +153,4 @@ func ErrorHandler(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.
 			}
 		}
 	}
-
 }

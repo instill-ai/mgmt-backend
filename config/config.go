@@ -13,9 +13,6 @@ import (
 	"github.com/knadh/koanf/providers/file"
 )
 
-const DefaultUserID = "local-user"
-const DefaultUserEmail = "local-user@instill.tech"
-
 // Config - Global variable to export
 var Config AppConfig
 

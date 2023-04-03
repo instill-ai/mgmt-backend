@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/instill-ai/mgmt-backend/config"
+	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
@@ -34,9 +35,9 @@ func createDefaultUser(db *gorm.DB) error {
 
 	defaultUser := datamodel.User{
 		Base:                   datamodel.Base{UID: defaultUserUID},
-		ID:                     config.DefaultUserID,
+		ID:                     constant.DefaultUserID,
 		OwnerType:              sql.NullString{String: datamodel.PBUserType2DBUserType[mgmtPB.OwnerType_OWNER_TYPE_USER], Valid: true},
-		Email:                  config.DefaultUserEmail,
+		Email:                  constant.DefaultUserEmail,
 		CustomerId:             "",
 		FirstName:              sql.NullString{String: "", Valid: false},
 		LastName:               sql.NullString{String: "", Valid: false},
