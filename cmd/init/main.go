@@ -38,12 +38,12 @@ func createDefaultUser(db *gorm.DB) error {
 		ID:                     constant.DefaultUserID,
 		OwnerType:              sql.NullString{String: datamodel.PBUserType2DBUserType[mgmtPB.OwnerType_OWNER_TYPE_USER], Valid: true},
 		Email:                  constant.DefaultUserEmail,
-		CustomerId:             "",
-		FirstName:              sql.NullString{String: "", Valid: false},
-		LastName:               sql.NullString{String: "", Valid: false},
-		OrgName:                sql.NullString{String: "", Valid: false},
-		Role:                   sql.NullString{String: "", Valid: false},
-		NewsletterSubscription: false,
+		CustomerId:             constant.DefaultUserCustomerId,
+		FirstName:              sql.NullString{String: constant.DefaultUserFirstName, Valid: true},
+		LastName:               sql.NullString{String: constant.DefaultUserLastName, Valid: true},
+		OrgName:                sql.NullString{String: constant.DefaultUserOrgName, Valid: true},
+		Role:                   sql.NullString{String: constant.DefaultUserRole, Valid: true},
+		NewsletterSubscription: constant.DefaultUserNewsletterSubscription,
 		CookieToken:            sql.NullString{String: "", Valid: false},
 	}
 

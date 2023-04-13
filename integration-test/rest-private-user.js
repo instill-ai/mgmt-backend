@@ -350,7 +350,7 @@ export function CheckPrivateCreateUserAdmin() {
         "POST",
         `${constant.mgmtPrivateHost}/admin/users`,
         JSON.stringify({
-          id: "local-user",
+          id: "instill-ai",
         }),
         {
           headers: { "Content-Type": "application/json" },
@@ -367,8 +367,8 @@ export function CheckPrivateCreateUserAdmin() {
         "POST",
         `${constant.mgmtPrivateHost}/admin/users`,
         JSON.stringify({
-          id: "local-user-2",
-          email: "local-user-2@instill.tech"
+          id: "test-user",
+          email: "test-user@instill.tech"
         }),
         {
           headers: { "Content-Type": "application/json" },
