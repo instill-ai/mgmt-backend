@@ -35,26 +35,16 @@ var immutableFields = []string{"uid", "id"}
 
 type PublicHandler struct {
 	mgmtPB.UnimplementedMgmtPublicServiceServer
-	service service.Service
-	usg     usage.Usage
+	Service service.Service
+	Usg     usage.Usage
 }
 
 // NewPublicHandler initiates a public handler instance
 func NewPublicHandler(s service.Service, u usage.Usage) mgmtPB.MgmtPublicServiceServer {
 	return &PublicHandler{
-		service: s,
-		usg:     u,
+		Service: s,
+		Usg:     u,
 	}
-}
-
-// GetService returns the service
-func (h *PublicHandler) GetService() service.Service {
-	return h.service
-}
-
-// SetService sets the service
-func (h *PublicHandler) SetService(s service.Service) {
-	h.service = s
 }
 
 // Liveness checks the liveness of the server
@@ -89,7 +79,7 @@ func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
 		if err != nil {
 			return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
 		}
-		dbUser, err = h.service.GetUser(uid)
+		dbUser, err = h.Service.GetUser(uid)
 		if err != nil {
 			sta := status.Convert(err)
 			switch sta.Code() {
@@ -126,7 +116,7 @@ func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
 		if headerUserId != constant.DefaultUserID {
 			return nil, status.Error(codes.Unauthenticated, "Unauthenticated request")
 		} else {
-			dbUser, err = h.service.GetUserByID(headerUserId)
+			dbUser, err = h.Service.GetUserByID(headerUserId)
 			if err != nil {
 				sta := status.Convert(err)
 				switch sta.Code() {
@@ -333,7 +323,7 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 		return &mgmtPB.PatchAuthenticatedUserResponse{}, st.Err()
 	}
 
-	dbUserUpdated, err := h.service.UpdateUser(uid, dbUserToUpd)
+	dbUserUpdated, err := h.Service.UpdateUser(uid, dbUserToUpd)
 	if err != nil {
 		sta := status.Convert(err)
 		switch sta.Code() {
@@ -386,8 +376,8 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 	}
 
 	// Trigger single reporter right after user updated
-	if !config.Config.Server.DisableUsage && h.usg != nil {
-		h.usg.TriggerSingleReporter(context.Background())
+	if !config.Config.Server.DisableUsage && h.Usg != nil {
+		h.Usg.TriggerSingleReporter(context.Background())
 	}
 
 	return &resp, nil
@@ -418,7 +408,7 @@ func (h *PublicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUser
 		return &mgmtPB.ExistUsernameResponse{}, st.Err()
 	}
 
-	_, err = h.service.GetUserByID(id)
+	_, err = h.Service.GetUserByID(id)
 	if err != nil {
 		sta := status.Convert(err)
 		switch sta.Code() {

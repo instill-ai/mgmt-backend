@@ -27,24 +27,14 @@ const maxPageSize = int64(100)
 
 type PrivateHandler struct {
 	mgmtPB.UnimplementedMgmtPrivateServiceServer
-	service service.Service
+	Service service.Service
 }
 
 // NewPrivateHandler initiates an private handler instance
 func NewPrivateHandler(s service.Service) mgmtPB.MgmtPrivateServiceServer {
 	return &PrivateHandler{
-		service: s,
+		Service: s,
 	}
-}
-
-// GetService returns the service
-func (h *PrivateHandler) GetService() service.Service {
-	return h.service
-}
-
-// SetService sets the service
-func (h *PrivateHandler) SetService(s service.Service) {
-	h.service = s
 }
 
 // ListUsersAdmin lists all users
@@ -58,7 +48,7 @@ func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUse
 		pageSize = maxPageSize
 	}
 
-	dbUsers, nextPageToken, totalSize, err := h.service.ListUser(int(pageSize), req.GetPageToken())
+	dbUsers, nextPageToken, totalSize, err := h.Service.ListUser(int(pageSize), req.GetPageToken())
 	if err != nil {
 		sta := status.Convert(err)
 		switch sta.Code() {
@@ -180,7 +170,7 @@ func (h *PrivateHandler) GetUserAdmin(ctx context.Context, req *mgmtPB.GetUserAd
 
 	id := strings.TrimPrefix(req.GetName(), "users/")
 
-	dbUser, err := h.service.GetUserByID(id)
+	dbUser, err := h.Service.GetUserByID(id)
 	if err != nil {
 		sta := status.Convert(err)
 		switch sta.Code() {
@@ -257,7 +247,7 @@ func (h *PrivateHandler) LookUpUserAdmin(ctx context.Context, req *mgmtPB.LookUp
 		return &mgmtPB.LookUpUserAdminResponse{}, st.Err()
 	}
 
-	dbUser, err := h.service.GetUser(uid)
+	dbUser, err := h.Service.GetUser(uid)
 	if err != nil {
 		sta := status.Convert(err)
 		switch sta.Code() {
@@ -450,7 +440,7 @@ func (h *PrivateHandler) UpdateUserAdmin(ctx context.Context, req *mgmtPB.Update
 		return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
 	}
 
-	dbUserUpdated, err := h.service.UpdateUser(uid, dbUserToUpd)
+	dbUserUpdated, err := h.Service.UpdateUser(uid, dbUserToUpd)
 	if err != nil {
 		sta := status.Convert(err)
 		switch sta.Code() {
