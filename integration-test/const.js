@@ -47,16 +47,16 @@ export const paramsWithJwt = {
 }
 
 export const defaultUser = {
-  name: "users/local-user",
-  id: "local-user",
+  name: "users/instill-ai",
+  id: "instill-ai",
   type: "OWNER_TYPE_USER",
-  email: "local-user@instill.tech",
+  email: "hello@instill.tech",
   customer_id: "",
-  first_name: "",
-  last_name: "",
-  org_name: "",
-  role: "",
-  newsletter_subscription: false,
+  first_name: "Instill",
+  last_name: "AI",
+  org_name: "Instill AI",
+  role: "hobbyist",
+  newsletter_subscription: true,
   cookie_token: ""
 };
 

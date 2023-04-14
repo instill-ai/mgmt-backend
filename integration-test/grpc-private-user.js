@@ -306,7 +306,7 @@ export function CheckPrivateCreateUserAdmin() {
 
     check(client.invoke('vdp.mgmt.v1alpha.MgmtPrivateService/CreateUserAdmin', {
       user: {
-        id: "local-user",
+        id: "instill",
       }
     }), {
       'vdp.mgmt.v1alpha.MgmtPrivateService/CreateUserAdmin status StatusInvalidArgument': (r) => r && r.status == grpc.StatusInvalidArgument,
@@ -314,8 +314,8 @@ export function CheckPrivateCreateUserAdmin() {
 
     check(client.invoke('vdp.mgmt.v1alpha.MgmtPrivateService/CreateUserAdmin', {
       user: {
-        id: "local-user-2",
-        email: "local-user-2@instill.tech"
+        id: "test-user",
+        email: "test-user@instill.tech"
       }
     }), {
       'vdp.mgmt.v1alpha.MgmtPrivateService/CreateUserAdmin status StatusUnimplemented': (r) => r && r.status == grpc.StatusUnimplemented,
