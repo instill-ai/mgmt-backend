@@ -112,7 +112,7 @@ export function CheckPublicPatchAuthenticatedUser() {
       user: constant.defaultUser,
       update_mask: "email,firstName,lastName,orgName,role,newsletterSubscription,cookieToken"
     }), {
-      'vdp.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser status': (r) => r && r.status == grpc.StatusOK,
+      [`[restore the default user] vdp.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser status`]: (r) => r && r.status == grpc.StatusOK,
     });
 
     check(client.invoke('vdp.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser', {}), {
