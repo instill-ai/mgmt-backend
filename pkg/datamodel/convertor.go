@@ -75,9 +75,7 @@ func PBUser2DBUser(pbUser *mgmtPB.User) (*User, error) {
 
 	return &User{
 		Base: Base{
-			UID:        uid,
-			CreateTime: pbUser.GetCreateTime().AsTime(),
-			UpdateTime: pbUser.GetUpdateTime().AsTime(),
+			UID: uid,
 		},
 		ID: pbUser.GetId(),
 		OwnerType: sql.NullString{
