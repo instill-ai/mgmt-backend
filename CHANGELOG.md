@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.5-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.3.4-alpha...v0.3.5-alpha) (2023-04-25)
+
+
+### Bug Fixes
+
+* ignore `create_time` and `update_time` when converting pb to db  ([#67](https://github.com/instill-ai/mgmt-backend/issues/67)) ([8d1fbcd](https://github.com/instill-ai/mgmt-backend/commit/8d1fbcdd8e03108532d3f71d1cbcce404cd00f1a))
+
 ## [0.3.4-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.3.3-alpha...v0.3.4-alpha) (2023-04-15)
 
 
