@@ -1,4 +1,3 @@
-import * as constant from "./const.js";
 import * as mgmtPrivate from "./rest-private-user.js";
 import * as mgmtPublic from "./rest-public-user.js"
 import * as mgmtPublicWithJwt from "./rest-public-user-with-jwt.js"
@@ -11,9 +10,7 @@ export let options = {
   },
 };
 
-export function setup() {
-  constant;
-}
+export function setup() {}
 
 export default function (data) {
   /*
