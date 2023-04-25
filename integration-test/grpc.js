@@ -1,4 +1,3 @@
-import * as constant from "./const.js";
 import * as mgmtPrivate from "./grpc-private-user.js";
 import * as mgmtPublic from "./grpc-public-user.js"
 import * as mgmtPublicWithJwt from "./grpc-public-user-with-jwt.js"
@@ -11,9 +10,7 @@ export let options = {
   },
 };
 
-export function setup() {
-  constant;
-}
+export function setup() {}
 
 export default function (data) {
   /*
