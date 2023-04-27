@@ -512,21 +512,3 @@ func (h *PrivateHandler) DeleteUserAdmin(ctx context.Context, req *mgmtPB.Delete
 	}
 	return &mgmtPB.DeleteUserAdminResponse{}, st.Err()
 }
-
-// ValidateToken validate an API token. This endpoint is not supported yet.
-func (h *PrivateHandler) ValidateToken(ctx context.Context, req *mgmtPB.ValidateTokenRequest) (*mgmtPB.ValidateTokenResponse, error) {
-	logger, _ := logger.GetZapLogger()
-
-	st, err := sterr.CreateErrorResourceInfo(
-		codes.Unimplemented,
-		"validate token not implemented error",
-		"endpoint",
-		"/tokens/{token}",
-		"",
-		"not implemented",
-	)
-	if err != nil {
-		logger.Error(err.Error())
-	}
-	return &mgmtPB.ValidateTokenResponse{}, st.Err()
-}
