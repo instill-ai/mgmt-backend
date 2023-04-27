@@ -8,7 +8,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.3
 	github.com/iancoleman/strcase v0.2.0
-	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20230402125221-c8f1a70b6b8b
+	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20230427065818-59043ce9cfc1
 	github.com/instill-ai/usage-client v0.2.3-alpha
 	github.com/instill-ai/x v0.2.0-alpha.0.20230308180651-fca77e54bedb
 	github.com/jackc/pgx/v5 v5.2.0
