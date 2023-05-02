@@ -6,15 +6,21 @@ let publicPort
 let privatePort
 
 if (__ENV.MODE == "api-gateway") {
-  // api-gateway mode
+  // api-gateway mode for accessing api-gateway directly
   proto = "http"
   host = "api-gateway"
   privatePort = 3084
   publicPort = 8080
 } else if (__ENV.MODE == "localhost") {
-  // localhost mode for GitHub Actions
+  // localhost mode for accessing api-gateway from localhost
   proto = "http"
   host = "localhost"
+  privatePort = 3084
+  publicPort = 8080
+} else if (__ENV.MODE == "internal") {
+  // internal mode for accessing api-gateway from container
+  proto = "http"
+  host = "host.docker.internal"
   privatePort = 3084
   publicPort = 8080
 } else {

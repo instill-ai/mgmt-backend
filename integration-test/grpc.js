@@ -10,14 +10,14 @@ export let options = {
   },
 };
 
-export function setup() {}
+export function setup() { }
 
 export default function (data) {
   /*
    * Management API - API CALLS
    */
 
-  if (__ENV.MODE != "api-gateway" && __ENV.MODE != "localhost") {
+  if (__ENV.MODE != "api-gateway" && __ENV.MODE != "localhost" && __ENV.MODE != "internal") {
 
     // ======== Private API
     mgmtPrivate.CheckPrivateListUsersAdmin();
@@ -28,7 +28,7 @@ export default function (data) {
     mgmtPrivate.CheckPrivateDeleteUserAdmin();
     mgmtPrivate.CheckPrivateValidateToken();
 
-    // // ======== Public API with jwt-sub
+    // ======== Public API with jwt-sub
     mgmtPublicWithJwt.CheckPublicQueryAuthenticatedUser();
     mgmtPublicWithJwt.CheckPublicPatchAuthenticatedUser();
 
