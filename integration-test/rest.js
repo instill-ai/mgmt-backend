@@ -1,3 +1,4 @@
+import * as constant from "./const.js"
 import * as mgmtPrivate from "./rest-private-user.js";
 import * as mgmtPublic from "./rest-public-user.js"
 import * as mgmtPublicWithJwt from "./rest-public-user-with-jwt.js"
@@ -17,7 +18,7 @@ export default function (data) {
    * Management API - API CALLS
    */
 
-  if (__ENV.MODE != "api-gateway" && __ENV.MODE != "localhost" && __ENV.MODE != "internal") {
+  if (!constant.apiGatewayMode) {
 
     // ======== Private API
     mgmtPrivate.CheckPrivateListUsersAdmin();
