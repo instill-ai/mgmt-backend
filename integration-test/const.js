@@ -5,27 +5,28 @@ let host
 let publicPort
 let privatePort
 
-if (__ENV.MODE == "api-gateway") {
-  // api-gateway mode for accessing api-gateway directly
+if (__ENV.API_GATEWAY_HOST && !__ENV.API_GATEWAY_PORT || !__ENV.API_GATEWAY_HOST && __ENV.API_GATEWAY_PORT) {
+  fail("both API_GATEWAY_HOST and API_GATEWAY_PORT should be properly configured.")
+}
+
+export const apiGatewayMode = (__ENV.API_GATEWAY_HOST && __ENV.API_GATEWAY_PORT);
+
+if (__ENV.API_GATEWAY_PROTOCOL) {
+  if (__ENV.API_GATEWAY_PROTOCOL !== "http" && __ENV.API_GATEWAY_PROTOCOL != "https") {
+    fail("only allow `http` or `https` for API_GATEWAY_PROTOCOL")
+  }
+  proto = __ENV.API_GATEWAY_PROTOCOL
+} else {
   proto = "http"
-  host = "api-gateway"
+}
+
+if (apiGatewayMode) {
+  // api gateway mode
+  host = __ENV.API_GATEWAY_HOST
   privatePort = 3084
-  publicPort = 8080
-} else if (__ENV.MODE == "localhost") {
-  // localhost mode for accessing api-gateway from localhost
-  proto = "http"
-  host = "localhost"
-  privatePort = 3084
-  publicPort = 8080
-} else if (__ENV.MODE == "internal") {
-  // internal mode for accessing api-gateway from container
-  proto = "http"
-  host = "host.docker.internal"
-  privatePort = 3084
-  publicPort = 8080
+  publicPort = __ENV.API_GATEWAY_PORT
 } else {
   // direct microservice mode
-  proto = "http"
   host = "mgmt-backend"
   privatePort = 3084
   publicPort = 8084
