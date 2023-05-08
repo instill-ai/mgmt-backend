@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
@@ -27,11 +26,12 @@ type Usage interface {
 type usage struct {
 	repository repository.Repository
 	reporter   usageReporter.Reporter
+	edition    string
 	version    string
 }
 
 // NewUsage initiates a usage instance
-func NewUsage(ctx context.Context, r repository.Repository, usc usagePB.UsageServiceClient) Usage {
+func NewUsage(ctx context.Context, r repository.Repository, usc usagePB.UsageServiceClient, edition string) Usage {
 	logger, _ := logger.GetZapLogger()
 
 	version, err := repo.ReadReleaseManifest("release-please/manifest.json")
@@ -40,7 +40,7 @@ func NewUsage(ctx context.Context, r repository.Repository, usc usagePB.UsageSer
 		return nil
 	}
 
-	reporter, err := usageClient.InitReporter(ctx, usc, usagePB.Session_SERVICE_MGMT, config.Config.Server.Edition, version)
+	reporter, err := usageClient.InitReporter(ctx, usc, usagePB.Session_SERVICE_MGMT, edition, version)
 	if err != nil {
 		logger.Error(err.Error())
 		return nil
@@ -89,7 +89,7 @@ func (u *usage) StartReporter(ctx context.Context) {
 	logger, _ := logger.GetZapLogger()
 	go func() {
 		time.Sleep(5 * time.Second)
-		err := usageClient.StartReporter(ctx, u.reporter, usagePB.Session_SERVICE_MGMT, config.Config.Server.Edition, u.version, u.RetrieveUsageData)
+		err := usageClient.StartReporter(ctx, u.reporter, usagePB.Session_SERVICE_MGMT, u.edition, u.version, u.RetrieveUsageData)
 		if err != nil {
 			logger.Error(fmt.Sprintf("unable to start reporter: %v\n", err))
 		}
@@ -101,7 +101,7 @@ func (u *usage) TriggerSingleReporter(ctx context.Context) {
 		return
 	}
 	logger, _ := logger.GetZapLogger()
-	err := usageClient.SingleReporter(ctx, u.reporter, usagePB.Session_SERVICE_MGMT, config.Config.Server.Edition, u.version, u.RetrieveUsageData())
+	err := usageClient.SingleReporter(ctx, u.reporter, usagePB.Session_SERVICE_MGMT, u.edition, u.version, u.RetrieveUsageData())
 	if err != nil {
 		logger.Error(fmt.Sprintf("unable to trigger single reporter: %v\n", err))
 	}
