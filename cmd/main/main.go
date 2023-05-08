@@ -126,10 +126,10 @@ func main() {
 	// Start usage reporter
 	var usg usage.Usage
 	if !config.Config.Server.DisableUsage {
-		usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient()
+		usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient(&config.Config.UsageServer)
 		if usageServiceClientConn != nil {
 			defer usageServiceClientConn.Close()
-			usg = usage.NewUsage(ctx, repository, usageServiceClient)
+			usg = usage.NewUsage(ctx, repository, usageServiceClient, config.Config.Server.Edition)
 			if usg != nil {
 				usg.StartReporter(ctx)
 			}
