@@ -49,6 +49,7 @@ func NewUsage(ctx context.Context, r repository.Repository, usc usagePB.UsageSer
 	return &usage{
 		repository: r,
 		reporter:   reporter,
+		edition:    edition,
 		version:    version,
 	}
 }
