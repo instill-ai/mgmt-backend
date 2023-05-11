@@ -65,8 +65,8 @@ func (u *usage) RetrieveUsageData() interface{} {
 	}
 
 	pbUsers := []*mgmtPB.User{}
-	for _, v := range dbUsers {
-		pbUser, err := datamodel.DBUser2PBUser(&v)
+	for idx, _ := range dbUsers {
+		pbUser, err := datamodel.DBUser2PBUser(&dbUsers[idx])
 		if err != nil {
 			logger.Error(fmt.Sprintf("%s", err))
 		}

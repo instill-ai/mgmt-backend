@@ -81,15 +81,15 @@ func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUse
 	}
 
 	pbUsers := []*mgmtPB.User{}
-	for _, dbUser := range dbUsers {
-		pbUser, err := datamodel.DBUser2PBUser(&dbUser)
+	for idx, _ := range dbUsers {
+		pbUser, err := datamodel.DBUser2PBUser(&dbUsers[idx])
 		if err != nil {
 			logger.Error(err.Error())
 			st, e := sterr.CreateErrorResourceInfo(
 				codes.Internal,
 				"list user error",
 				"user",
-				fmt.Sprintf("id %s", dbUser.ID),
+				fmt.Sprintf("id %s", dbUsers[idx].ID),
 				"",
 				err.Error(),
 			)
