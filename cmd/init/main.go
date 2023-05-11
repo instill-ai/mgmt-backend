@@ -31,7 +31,7 @@ func createDefaultUser(db *gorm.DB) error {
 		return status.Errorf(codes.Internal, "error %v", err)
 	}
 
-	r := repository.NewRepository(db)
+	r := repository.NewRepository(db, config.Config.Server.Debug)
 
 	defaultUser := datamodel.User{
 		Base:                   datamodel.Base{UID: defaultUserUID},

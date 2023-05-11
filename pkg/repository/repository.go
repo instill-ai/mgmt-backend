@@ -10,7 +10,6 @@ import (
 	"google.golang.org/grpc/status"
 	"gorm.io/gorm"
 
-	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/x/paginate"
@@ -29,13 +28,15 @@ type Repository interface {
 }
 
 type repository struct {
-	db *gorm.DB
+	db    *gorm.DB
+	debug bool
 }
 
 // NewRepository initiates a repository instance
-func NewRepository(db *gorm.DB) Repository {
+func NewRepository(db *gorm.DB, debug bool) Repository {
 	return &repository{
-		db: db,
+		db:    db,
+		debug: debug,
 	}
 }
 
@@ -44,7 +45,7 @@ func NewRepository(db *gorm.DB) Repository {
 //   - codes.InvalidArgument
 //   - codes.Internal
 func (r *repository) ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int64, error) {
-	logger, _ := logger.GetZapLogger(config.Config.Server.Debug)
+	logger, _ := logger.GetZapLogger(r.debug)
 	totalSize := int64(0)
 	if result := r.db.Model(&datamodel.User{}).Count(&totalSize); result.Error != nil {
 		logger.Error(result.Error.Error())
@@ -101,7 +102,7 @@ func (r *repository) ListUser(pageSize int, pageToken string) ([]datamodel.User,
 // Return error types
 //   - codes.Internal
 func (r *repository) CreateUser(user *datamodel.User) error {
-	logger, _ := logger.GetZapLogger(config.Config.Server.Debug)
+	logger, _ := logger.GetZapLogger(r.debug)
 	if result := r.db.Model(&datamodel.User{}).Create(user); result.Error != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(result.Error, &pgErr) {
@@ -130,7 +131,7 @@ func (r *repository) GetUser(uid uuid.UUID) (*datamodel.User, error) {
 // Return error types
 //   - codes.Internal
 func (r *repository) GetAllUsers() ([]datamodel.User, error) {
-	logger, _ := logger.GetZapLogger(config.Config.Server.Debug)
+	logger, _ := logger.GetZapLogger(r.debug)
 	var users []datamodel.User
 	if result := r.db.Find(&users); result.Error != nil {
 		logger.Error(result.Error.Error())
@@ -154,7 +155,7 @@ func (r *repository) GetUserByID(id string) (*datamodel.User, error) {
 // Return error types
 //   - codes.Internal
 func (r *repository) UpdateUser(uid uuid.UUID, user *datamodel.User) error {
-	logger, _ := logger.GetZapLogger(config.Config.Server.Debug)
+	logger, _ := logger.GetZapLogger(r.debug)
 	if result := r.db.Select("*").Omit("UID").Model(&datamodel.User{}).Where("uid = ?", uid.String()).Updates(user); result.Error != nil {
 		logger.Error(result.Error.Error())
 		return status.Errorf(codes.Internal, "error %v", result.Error)
@@ -167,7 +168,7 @@ func (r *repository) UpdateUser(uid uuid.UUID, user *datamodel.User) error {
 //   - codes.NotFound
 //   - codes.Internal
 func (r *repository) DeleteUser(uid uuid.UUID) error {
-	logger, _ := logger.GetZapLogger(config.Config.Server.Debug)
+	logger, _ := logger.GetZapLogger(r.debug)
 	result := r.db.Model(&datamodel.User{}).Where("uid = ?", uid.String()).Delete(&datamodel.User{})
 
 	if result.Error != nil {
@@ -187,7 +188,7 @@ func (r *repository) DeleteUser(uid uuid.UUID) error {
 //   - codes.NotFound
 //   - codes.Internal
 func (r *repository) DeleteUserByID(id string) error {
-	logger, _ := logger.GetZapLogger(config.Config.Server.Debug)
+	logger, _ := logger.GetZapLogger(r.debug)
 	result := r.db.Model(&datamodel.User{}).
 		Where("id = ?", id).
 		Delete(&datamodel.User{})

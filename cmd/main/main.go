@@ -120,16 +120,16 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	repository := repository.NewRepository(db)
+	repository := repository.NewRepository(db, config.Config.Server.Debug)
 	service := service.NewService(repository)
 
 	// Start usage reporter
 	var usg usage.Usage
 	if !config.Config.Server.DisableUsage {
-		usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient(&config.Config.UsageServer)
+		usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient(&config.Config.UsageServer, config.Config.Server.Debug)
 		if usageServiceClientConn != nil {
 			defer usageServiceClientConn.Close()
-			usg = usage.NewUsage(ctx, repository, usageServiceClient, config.Config.Server.Edition)
+			usg = usage.NewUsage(ctx, repository, usageServiceClient, config.Config.Server.Edition, config.Config.Server.Debug)
 			if usg != nil {
 				usg.StartReporter(ctx)
 			}
@@ -144,11 +144,11 @@ func main() {
 
 	mgmtPB.RegisterMgmtPrivateServiceServer(
 		privateGrpcS,
-		handler.NewPrivateHandler(service),
+		handler.NewPrivateHandler(service, config.Config.Server.Debug),
 	)
 	mgmtPB.RegisterMgmtPublicServiceServer(
 		publicGrpcS,
-		handler.NewPublicHandler(service, usg),
+		handler.NewPublicHandler(service, usg, config.Config.Server.Debug, config.Config.Server.DisableUsage),
 	)
 
 	privateServeMux := runtime.NewServeMux(

@@ -15,8 +15,8 @@ import (
 )
 
 // InitUsageServiceClient initializes a UsageServiceClient instance
-func InitUsageServiceClient(usageServerConfig *config.UsageServerConfig) (usagePB.UsageServiceClient, *grpc.ClientConn) {
-	logger, _ := logger.GetZapLogger(config.Config.Server.Debug)
+func InitUsageServiceClient(usageServerConfig *config.UsageServerConfig, debug bool) (usagePB.UsageServiceClient, *grpc.ClientConn) {
+	logger, _ := logger.GetZapLogger(debug)
 
 	var clientDialOpts grpc.DialOption
 	if usageServerConfig.TLSEnabled {
