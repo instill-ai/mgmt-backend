@@ -19,6 +19,11 @@ func InitZapLogger(debug bool) {
 			return level == zapcore.DebugLevel || level == zapcore.InfoLevel
 		})
 
+		//info level enabler
+		infoLevel := zap.LevelEnablerFunc(func(level zapcore.Level) bool {
+			return level == zapcore.InfoLevel
+		})
+
 		// warn, error and fatal level enabler
 		warnErrorFatalLevel := zap.LevelEnablerFunc(func(level zapcore.Level) bool {
 			return level == zapcore.WarnLevel || level == zapcore.ErrorLevel || level == zapcore.FatalLevel
@@ -47,7 +52,7 @@ func InitZapLogger(debug bool) {
 				zapcore.NewCore(
 					zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
 					stdoutSyncer,
-					debugInfoLevel,
+					infoLevel,
 				),
 				zapcore.NewCore(
 					zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
