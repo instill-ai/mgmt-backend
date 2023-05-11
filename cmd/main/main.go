@@ -62,7 +62,8 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	logger, _ := logger.GetZapLogger(config.Config.Server.Debug)
+	logger.InitZapLogger(config.Config.Server.Debug)
+	logger, _ := logger.GetZapLogger()
 	defer func() {
 		// can't handle the error due to https://github.com/uber-go/zap/issues/880
 		_ = logger.Sync()
@@ -148,7 +149,7 @@ func main() {
 	)
 	mgmtPB.RegisterMgmtPublicServiceServer(
 		publicGrpcS,
-		handler.NewPublicHandler(service, usg),
+		handler.NewPublicHandler(service, usg, config.Config.Server.DisableUsage),
 	)
 
 	privateServeMux := runtime.NewServeMux(

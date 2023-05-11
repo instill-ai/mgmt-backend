@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
@@ -33,7 +32,7 @@ type usage struct {
 
 // NewUsage initiates a usage instance
 func NewUsage(ctx context.Context, r repository.Repository, usc usagePB.UsageServiceClient, edition string) Usage {
-	logger, _ := logger.GetZapLogger(config.Config.Server.Debug)
+	logger, _ := logger.GetZapLogger()
 
 	version, err := repo.ReadReleaseManifest("release-please/manifest.json")
 	if err != nil {
@@ -57,8 +56,8 @@ func NewUsage(ctx context.Context, r repository.Repository, usc usagePB.UsageSer
 
 // RetrieveUsageData retrieves the server's usage data
 func (u *usage) RetrieveUsageData() interface{} {
-	logger, _ := logger.GetZapLogger(config.Config.Server.Debug)
-	logger.Debug("Retrieve usage data...")
+	logger, _ := logger.GetZapLogger()
+	logger.Debug("[mgmt-backend] retrieve usage data...")
 
 	dbUsers, err := u.repository.GetAllUsers()
 	if err != nil {
@@ -66,15 +65,17 @@ func (u *usage) RetrieveUsageData() interface{} {
 	}
 
 	pbUsers := []*mgmtPB.User{}
-	for _, v := range dbUsers {
-		pbUser, err := datamodel.DBUser2PBUser(&v)
+	for idx, _ := range dbUsers {
+		pbUser, err := datamodel.DBUser2PBUser(&dbUsers[idx])
 		if err != nil {
 			logger.Error(fmt.Sprintf("%s", err))
 		}
 		pbUsers = append(pbUsers, pbUser)
 	}
 
-	logger.Debug("Send retrieved usage data...")
+	logger.Debug(fmt.Sprintf("[mgmt-backend] usage data length: %v", len(pbUsers)))
+
+	logger.Debug("[mgmt-backend] send usage data...")
 
 	return &usagePB.SessionReport_MgmtUsageData{
 		MgmtUsageData: &usagePB.MgmtUsageData{
@@ -88,7 +89,7 @@ func (u *usage) StartReporter(ctx context.Context) {
 		return
 	}
 
-	logger, _ := logger.GetZapLogger(config.Config.Server.Debug)
+	logger, _ := logger.GetZapLogger()
 	go func() {
 		time.Sleep(5 * time.Second)
 		err := usageClient.StartReporter(ctx, u.reporter, usagePB.Session_SERVICE_MGMT, u.edition, u.version, u.RetrieveUsageData)
@@ -102,9 +103,11 @@ func (u *usage) TriggerSingleReporter(ctx context.Context) {
 	if u.reporter == nil {
 		return
 	}
-	logger, _ := logger.GetZapLogger(config.Config.Server.Debug)
+	logger, _ := logger.GetZapLogger()
 	err := usageClient.SingleReporter(ctx, u.reporter, usagePB.Session_SERVICE_MGMT, u.edition, u.version, u.RetrieveUsageData())
 	if err != nil {
 		logger.Error(fmt.Sprintf("unable to trigger single reporter: %v\n", err))
+	} else {
+		logger.Debug("[mgmt-backend] trigger single reporter...")
 	}
 }
