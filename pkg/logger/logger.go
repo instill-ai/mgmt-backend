@@ -12,9 +12,7 @@ var logger *zap.Logger
 var once sync.Once
 var core zapcore.Core
 
-// GetZapLogger returns an instance of zap logger
-func GetZapLogger(debug bool) (*zap.Logger, error) {
-	var err error
+func InitZapLogger(debug bool) {
 	once.Do(func() {
 		// debug and info level enabler
 		debugInfoLevel := zap.LevelEnablerFunc(func(level zapcore.Level) bool {
@@ -62,6 +60,9 @@ func GetZapLogger(debug bool) (*zap.Logger, error) {
 		// finally construct the logger with the tee core
 		logger = zap.New(core)
 	})
+}
 
-	return logger, err
+// GetZapLogger returns an instance of zap logger
+func GetZapLogger() (*zap.Logger, error) {
+	return logger, nil
 }

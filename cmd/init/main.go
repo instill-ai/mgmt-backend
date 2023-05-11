@@ -31,7 +31,7 @@ func createDefaultUser(db *gorm.DB) error {
 		return status.Errorf(codes.Internal, "error %v", err)
 	}
 
-	r := repository.NewRepository(db, config.Config.Server.Debug)
+	r := repository.NewRepository(db)
 
 	defaultUser := datamodel.User{
 		Base:                   datamodel.Base{UID: defaultUserUID},
@@ -66,7 +66,8 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	logger, _ := logger.GetZapLogger(config.Config.Server.Debug)
+	logger.InitZapLogger(config.Config.Server.Debug)
+	logger, _ := logger.GetZapLogger()
 	defer func() {
 		// can't handle the error due to https://github.com/uber-go/zap/issues/880
 		_ = logger.Sync()

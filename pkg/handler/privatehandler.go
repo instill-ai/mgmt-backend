@@ -28,20 +28,18 @@ const maxPageSize = int64(100)
 type PrivateHandler struct {
 	mgmtPB.UnimplementedMgmtPrivateServiceServer
 	Service service.Service
-	debug   bool
 }
 
 // NewPrivateHandler initiates an private handler instance
-func NewPrivateHandler(s service.Service, debug bool) mgmtPB.MgmtPrivateServiceServer {
+func NewPrivateHandler(s service.Service) mgmtPB.MgmtPrivateServiceServer {
 	return &PrivateHandler{
 		Service: s,
-		debug:   debug,
 	}
 }
 
 // ListUsersAdmin lists all users
 func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUsersAdminRequest) (*mgmtPB.ListUsersAdminResponse, error) {
-	logger, _ := logger.GetZapLogger(h.debug)
+	logger, _ := logger.GetZapLogger()
 
 	pageSize := req.GetPageSize()
 	if pageSize == 0 {
@@ -113,7 +111,7 @@ func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUse
 
 // CreateUserAdmin creates a user. This endpoint is not supported yet.
 func (h *PrivateHandler) CreateUserAdmin(ctx context.Context, req *mgmtPB.CreateUserAdminRequest) (*mgmtPB.CreateUserAdminResponse, error) {
-	logger, _ := logger.GetZapLogger(h.debug)
+	logger, _ := logger.GetZapLogger()
 	resp := &mgmtPB.CreateUserAdminResponse{}
 
 	// Return error if REQUIRED fields are not provided in the requested payload resource
@@ -168,7 +166,7 @@ func (h *PrivateHandler) CreateUserAdmin(ctx context.Context, req *mgmtPB.Create
 
 // GetUserAdmin gets a user
 func (h *PrivateHandler) GetUserAdmin(ctx context.Context, req *mgmtPB.GetUserAdminRequest) (*mgmtPB.GetUserAdminResponse, error) {
-	logger, _ := logger.GetZapLogger(h.debug)
+	logger, _ := logger.GetZapLogger()
 
 	id := strings.TrimPrefix(req.GetName(), "users/")
 
@@ -229,7 +227,7 @@ func (h *PrivateHandler) GetUserAdmin(ctx context.Context, req *mgmtPB.GetUserAd
 
 // LookUpUserAdmin gets a user by permalink
 func (h *PrivateHandler) LookUpUserAdmin(ctx context.Context, req *mgmtPB.LookUpUserAdminRequest) (*mgmtPB.LookUpUserAdminResponse, error) {
-	logger, _ := logger.GetZapLogger(h.debug)
+	logger, _ := logger.GetZapLogger()
 
 	uidStr := strings.TrimPrefix(req.GetPermalink(), "users/")
 	// Validation: `uid` in request is valid
@@ -305,7 +303,7 @@ func (h *PrivateHandler) LookUpUserAdmin(ctx context.Context, req *mgmtPB.LookUp
 
 // UpdateUserAdmin updates an existing user
 func (h *PrivateHandler) UpdateUserAdmin(ctx context.Context, req *mgmtPB.UpdateUserAdminRequest) (*mgmtPB.UpdateUserAdminResponse, error) {
-	logger, _ := logger.GetZapLogger(h.debug)
+	logger, _ := logger.GetZapLogger()
 
 	reqUser := req.GetUser()
 
@@ -499,7 +497,7 @@ func (h *PrivateHandler) UpdateUserAdmin(ctx context.Context, req *mgmtPB.Update
 
 // DeleteUserAdmin deletes a user. This endpoint is not supported yet.
 func (h *PrivateHandler) DeleteUserAdmin(ctx context.Context, req *mgmtPB.DeleteUserAdminRequest) (*mgmtPB.DeleteUserAdminResponse, error) {
-	logger, _ := logger.GetZapLogger(h.debug)
+	logger, _ := logger.GetZapLogger()
 
 	st, err := sterr.CreateErrorResourceInfo(
 		codes.Unimplemented,

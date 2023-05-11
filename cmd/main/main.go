@@ -62,7 +62,8 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	logger, _ := logger.GetZapLogger(config.Config.Server.Debug)
+	logger.InitZapLogger(config.Config.Server.Debug)
+	logger, _ := logger.GetZapLogger()
 	defer func() {
 		// can't handle the error due to https://github.com/uber-go/zap/issues/880
 		_ = logger.Sync()
@@ -120,16 +121,16 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	repository := repository.NewRepository(db, config.Config.Server.Debug)
+	repository := repository.NewRepository(db)
 	service := service.NewService(repository)
 
 	// Start usage reporter
 	var usg usage.Usage
 	if !config.Config.Server.DisableUsage {
-		usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient(&config.Config.UsageServer, config.Config.Server.Debug)
+		usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient(&config.Config.UsageServer)
 		if usageServiceClientConn != nil {
 			defer usageServiceClientConn.Close()
-			usg = usage.NewUsage(ctx, repository, usageServiceClient, config.Config.Server.Edition, config.Config.Server.Debug)
+			usg = usage.NewUsage(ctx, repository, usageServiceClient, config.Config.Server.Edition)
 			if usg != nil {
 				usg.StartReporter(ctx)
 			}
@@ -144,11 +145,11 @@ func main() {
 
 	mgmtPB.RegisterMgmtPrivateServiceServer(
 		privateGrpcS,
-		handler.NewPrivateHandler(service, config.Config.Server.Debug),
+		handler.NewPrivateHandler(service),
 	)
 	mgmtPB.RegisterMgmtPublicServiceServer(
 		publicGrpcS,
-		handler.NewPublicHandler(service, usg, config.Config.Server.Debug, config.Config.Server.DisableUsage),
+		handler.NewPublicHandler(service, usg, config.Config.Server.DisableUsage),
 	)
 
 	privateServeMux := runtime.NewServeMux(

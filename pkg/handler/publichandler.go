@@ -36,16 +36,14 @@ type PublicHandler struct {
 	mgmtPB.UnimplementedMgmtPublicServiceServer
 	Service      service.Service
 	Usg          usage.Usage
-	debug        bool
 	disableUsage bool
 }
 
 // NewPublicHandler initiates a public handler instance
-func NewPublicHandler(s service.Service, u usage.Usage, debug, disableUsage bool) mgmtPB.MgmtPublicServiceServer {
+func NewPublicHandler(s service.Service, u usage.Usage, disableUsage bool) mgmtPB.MgmtPublicServiceServer {
 	return &PublicHandler{
 		Service:      s,
 		Usg:          u,
-		debug:        debug,
 		disableUsage: disableUsage,
 	}
 }
@@ -70,7 +68,7 @@ func (h *PublicHandler) Readiness(ctx context.Context, in *mgmtPB.ReadinessReque
 
 // GetUser returns the authenticated user
 func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
-	logger, _ := logger.GetZapLogger(h.debug)
+	logger, _ := logger.GetZapLogger()
 
 	var dbUser *datamodel.User
 	var err error
@@ -188,7 +186,7 @@ func (h *PublicHandler) QueryAuthenticatedUser(ctx context.Context, req *mgmtPB.
 // PatchAuthenticatedUser updates the authenticated user.
 // Note: this endpoint assumes the ID of the authenticated user is the default user.
 func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.PatchAuthenticatedUserRequest) (*mgmtPB.PatchAuthenticatedUserResponse, error) {
-	logger, _ := logger.GetZapLogger(h.debug)
+	logger, _ := logger.GetZapLogger()
 
 	reqUser := req.GetUser()
 
@@ -388,7 +386,7 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 
 // ExistUsername verifies if a username (ID) has been occupied
 func (h *PublicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUsernameRequest) (*mgmtPB.ExistUsernameResponse, error) {
-	logger, _ := logger.GetZapLogger(h.debug)
+	logger, _ := logger.GetZapLogger()
 
 	id := strings.TrimPrefix(req.GetName(), "users/")
 
@@ -458,7 +456,7 @@ func (h *PublicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUser
 
 // CreateToken creates an API token for triggering pipelines. This endpoint is not supported yet.
 func (h *PublicHandler) CreateToken(ctx context.Context, req *mgmtPB.CreateTokenRequest) (*mgmtPB.CreateTokenResponse, error) {
-	logger, _ := logger.GetZapLogger(h.debug)
+	logger, _ := logger.GetZapLogger()
 
 	st, err := sterr.CreateErrorResourceInfo(
 		codes.Unimplemented,
@@ -476,7 +474,7 @@ func (h *PublicHandler) CreateToken(ctx context.Context, req *mgmtPB.CreateToken
 
 // ListTokens lists all the API tokens of the authenticated user. This endpoint is not supported yet.
 func (h *PublicHandler) ListTokens(ctx context.Context, req *mgmtPB.ListTokensRequest) (*mgmtPB.ListTokensResponse, error) {
-	logger, _ := logger.GetZapLogger(h.debug)
+	logger, _ := logger.GetZapLogger()
 
 	st, err := sterr.CreateErrorResourceInfo(
 		codes.Unimplemented,
@@ -494,7 +492,7 @@ func (h *PublicHandler) ListTokens(ctx context.Context, req *mgmtPB.ListTokensRe
 
 // GetToken gets an API token of the authenticated user. This endpoint is not supported yet.
 func (h *PublicHandler) GetToken(ctx context.Context, req *mgmtPB.GetTokenRequest) (*mgmtPB.GetTokenResponse, error) {
-	logger, _ := logger.GetZapLogger(h.debug)
+	logger, _ := logger.GetZapLogger()
 
 	st, err := sterr.CreateErrorResourceInfo(
 		codes.Unimplemented,
@@ -512,7 +510,7 @@ func (h *PublicHandler) GetToken(ctx context.Context, req *mgmtPB.GetTokenReques
 
 // DeleteToken deletes an API token of the authenticated user. This endpoint is not supported yet.
 func (h *PublicHandler) DeleteToken(ctx context.Context, req *mgmtPB.DeleteTokenRequest) (*mgmtPB.DeleteTokenResponse, error) {
-	logger, _ := logger.GetZapLogger(h.debug)
+	logger, _ := logger.GetZapLogger()
 
 	st, err := sterr.CreateErrorResourceInfo(
 		codes.Unimplemented,
