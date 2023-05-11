@@ -75,7 +75,9 @@ func (u *usage) RetrieveUsageData() interface{} {
 		pbUsers = append(pbUsers, pbUser)
 	}
 
-	logger.Debug("[mgmt-backend] send retrieved usage data...")
+	logger.Debug(fmt.Sprintf("[mgmt-backend] usage data length: %v", len(pbUsers)))
+
+	logger.Debug("[mgmt-backend] send usage data...")
 
 	return &usagePB.SessionReport_MgmtUsageData{
 		MgmtUsageData: &usagePB.MgmtUsageData{
