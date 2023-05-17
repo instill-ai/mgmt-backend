@@ -2,6 +2,8 @@ module github.com/instill-ai/mgmt-backend
 
 go 1.19
 
+retract v0.3.2 // Published accidentally.
+
 require (
 	github.com/gofrs/uuid v4.2.0+incompatible
 	github.com/golang-migrate/migrate/v4 v4.15.1
