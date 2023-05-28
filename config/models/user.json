@@ -156,7 +156,7 @@
     "newsletter_subscription": {
       "type": "boolean",
       "title": "Newsletter subscription",
-      "description": "Receive the latest news from Instill AI: open source updates, community highlights, blog posts, useful tutorials and more! You can unsubscribe anytime you want.",
+      "description": "Receive the latest news from Instill AI: product updates, community highlights, blog posts, useful tutorials and more! You can unsubscribe anytime you want.",
       "default": false,
       "ui_order": 13,
       "ui_component": "toggle"
