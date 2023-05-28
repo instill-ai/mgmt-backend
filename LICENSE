@@ -1,4 +1,4 @@
-Versatile Data Pipeline (VDP) project uses a polyrepo structure with multiple licenses.
+The Versatile Data Pipeline (VDP) project uses a polyrepo structure with multiple licenses.
 
 The license for a piece of source code is defined with the following prioritized rules:
 1. LICENSE present in the file
