@@ -36,15 +36,15 @@ type PublicHandler struct {
 	mgmtPB.UnimplementedMgmtPublicServiceServer
 	Service      service.Service
 	Usg          usage.Usage
-	disableUsage bool
+	usageEnabled bool
 }
 
 // NewPublicHandler initiates a public handler instance
-func NewPublicHandler(s service.Service, u usage.Usage, disableUsage bool) mgmtPB.MgmtPublicServiceServer {
+func NewPublicHandler(s service.Service, u usage.Usage, usageEnabled bool) mgmtPB.MgmtPublicServiceServer {
 	return &PublicHandler{
 		Service:      s,
 		Usg:          u,
-		disableUsage: disableUsage,
+		usageEnabled: usageEnabled,
 	}
 }
 
@@ -377,7 +377,7 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 	}
 
 	// Trigger single reporter right after user updated
-	if !h.disableUsage && h.Usg != nil {
+	if h.usageEnabled && h.Usg != nil {
 		h.Usg.TriggerSingleReporter(context.Background())
 	}
 
