@@ -128,7 +128,7 @@ func main() {
 	// Start usage reporter
 	var usg usage.Usage
 	if config.Config.Server.Usage.Enabled {
-		usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient(&config.Config.UsageServer)
+		usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient(&config.Config.Server)
 		if usageServiceClientConn != nil {
 			defer usageServiceClientConn.Close()
 			logger.Info("try to start usage reporter")

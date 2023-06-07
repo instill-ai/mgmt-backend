@@ -8,6 +8,9 @@ server:
   edition: local-ce:dev
   usage:
     enabled: true
+    tlsenabled: true
+    host: usage.instill.tech
+    port: 443
   debug: true
 database:
   username: postgres
@@ -21,7 +24,3 @@ database:
     idleconnections: 5
     maxconnections: 10
     connlifetime: 30m # In minutes, e.g., '60m'
-usageserver:
-  tlsenabled: true
-  host: usage.instill.tech
-  port: 443
