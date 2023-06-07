@@ -127,8 +127,8 @@ func main() {
 
 	// Start usage reporter
 	var usg usage.Usage
-	if !config.Config.Server.DisableUsage {
-		usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient(&config.Config.UsageServer)
+	if config.Config.Server.Usage.Enabled {
+		usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient(&config.Config.Server)
 		if usageServiceClientConn != nil {
 			defer usageServiceClientConn.Close()
 			logger.Info("try to start usage reporter")
@@ -159,7 +159,7 @@ func main() {
 	)
 	mgmtPB.RegisterMgmtPublicServiceServer(
 		publicGrpcS,
-		handler.NewPublicHandler(service, usg, config.Config.Server.DisableUsage),
+		handler.NewPublicHandler(service, usg, config.Config.Server.Usage.Enabled),
 	)
 
 	privateServeMux := runtime.NewServeMux(
@@ -260,7 +260,7 @@ func main() {
 		logger.Error(fmt.Sprintf("Fatal error: %v\n", err))
 	case <-quitSig:
 		// send out the usage report at exit
-		if !config.Config.Server.DisableUsage && usg != nil {
+		if config.Config.Server.Usage.Enabled && usg != nil {
 			usg.TriggerSingleReporter(ctx)
 		}
 		logger.Info("Shutting down server...")

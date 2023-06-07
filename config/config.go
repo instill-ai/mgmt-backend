@@ -20,7 +20,6 @@ var Config AppConfig
 type AppConfig struct {
 	Server      ServerConfig      `koanf:"server"`
 	Database    DatabaseConfig    `koanf:"database"`
-	UsageServer UsageServerConfig `koanf:"usageserver"`
 }
 
 // ServerConfig defines HTTP server configurations
@@ -31,10 +30,15 @@ type ServerConfig struct {
 		Cert string `koanf:"cert"`
 		Key  string `koanf:"key"`
 	}
-	CORSOrigins  []string `koanf:"corsorigins"`
-	Edition      string   `koanf:"edition"`
-	DisableUsage bool     `koanf:"disableusage"`
-	Debug        bool     `koanf:"debug"`
+	CORSOrigins []string `koanf:"corsorigins"`
+	Edition     string   `koanf:"edition"`
+	Usage       struct {
+		Enabled    bool   `koanf:"enabled"`
+		TLSEnabled bool   `koanf:"tlsenabled"`
+		Host       string `koanf:"host"`
+		Port       int    `koanf:"port"`
+	}
+	Debug bool `koanf:"debug"`
 }
 
 // DatabaseConfig related to database
@@ -51,12 +55,6 @@ type DatabaseConfig struct {
 		MaxConnections  int           `koanf:"maxconnections"`
 		ConnLifeTime    time.Duration `koanf:"connlifetime"`
 	}
-}
-
-type UsageServerConfig struct {
-	TLSEnabled bool   `koanf:"tlsenabled"`
-	Host       string `koanf:"host"`
-	Port       int    `koanf:"port"`
 }
 
 // Init - Assign global config to decoded config struct

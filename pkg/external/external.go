@@ -15,18 +15,18 @@ import (
 )
 
 // InitUsageServiceClient initializes a UsageServiceClient instance
-func InitUsageServiceClient(usageServerConfig *config.UsageServerConfig) (usagePB.UsageServiceClient, *grpc.ClientConn) {
+func InitUsageServiceClient(serverConfig *config.ServerConfig) (usagePB.UsageServiceClient, *grpc.ClientConn) {
 	logger, _ := logger.GetZapLogger()
 
 	var clientDialOpts grpc.DialOption
-	if usageServerConfig.TLSEnabled {
+	if serverConfig.Usage.TLSEnabled {
 		tlsConfig := &tls.Config{}
 		clientDialOpts = grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig))
 	} else {
 		clientDialOpts = grpc.WithTransportCredentials(insecure.NewCredentials())
 	}
 
-	clientConn, err := grpc.Dial(fmt.Sprintf("%v:%v", usageServerConfig.Host, usageServerConfig.Port), clientDialOpts)
+	clientConn, err := grpc.Dial(fmt.Sprintf("%v:%v", serverConfig.Usage.Host, serverConfig.Usage.Port), clientDialOpts)
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, nil
