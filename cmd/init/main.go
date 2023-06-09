@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
+	"go.opentelemetry.io/otel"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gorm.io/gorm"
@@ -17,13 +19,14 @@ import (
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 
 	database "github.com/instill-ai/mgmt-backend/pkg/db"
+	custom_otel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 )
 
 // CreateDefaultUser creates a default user in the database
 // Return error types
 //   - codes.Internal
-func createDefaultUser(db *gorm.DB) error {
+func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 
 	// Generate a random uid to the user
 	defaultUserUID, err := uuid.NewV4()
@@ -58,7 +61,7 @@ func createDefaultUser(db *gorm.DB) error {
 	}
 
 	// Create the default user
-	return r.CreateUser(&defaultUser)
+	return r.CreateUser(ctx, &defaultUser)
 }
 
 func main() {
@@ -66,8 +69,32 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	logger.InitZapLogger(config.Config.Server.Debug)
-	logger, _ := logger.GetZapLogger()
+	// setup tracing and metrics
+	ctx, cancel := context.WithCancel(context.Background())
+
+	if tp, err := custom_otel.SetupTracing(ctx, "mgmt-backend-init"); err != nil {
+		panic(err)
+	} else {
+		defer func() {
+			err = tp.Shutdown(ctx)
+		}()
+	}
+
+	if mp, err := custom_otel.SetupMetrics(ctx, "mgmt-backend-init"); err != nil {
+		panic(err)
+	} else {
+		defer func() {
+			err = mp.Shutdown(ctx)
+		}()
+	}
+
+	ctx, span := otel.Tracer("init-tracer").Start(ctx,
+		"main",
+	)
+	defer span.End()
+	defer cancel()
+
+	logger, _ := logger.GetZapLogger(ctx)
 	defer func() {
 		// can't handle the error due to https://github.com/uber-go/zap/issues/880
 		_ = logger.Sync()
@@ -78,7 +105,7 @@ func main() {
 	defer database.Close(db)
 
 	// Create a default user
-	if err := createDefaultUser(db); err != nil {
+	if err := createDefaultUser(ctx, db); err != nil {
 		logger.Fatal(err.Error())
 	}
 

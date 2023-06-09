@@ -24,3 +24,8 @@ database:
     idleconnections: 5
     maxconnections: 10
     connlifetime: 30m # In minutes, e.g., '60m'
+log:
+  external: true
+  otelcollector:
+    host: otel-collector
+    port: 8095

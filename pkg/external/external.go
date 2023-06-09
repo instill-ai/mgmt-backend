@@ -1,6 +1,7 @@
 package external
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 
@@ -15,8 +16,8 @@ import (
 )
 
 // InitUsageServiceClient initializes a UsageServiceClient instance
-func InitUsageServiceClient(serverConfig *config.ServerConfig) (usagePB.UsageServiceClient, *grpc.ClientConn) {
-	logger, _ := logger.GetZapLogger()
+func InitUsageServiceClient(ctx context.Context, serverConfig *config.ServerConfig) (usagePB.UsageServiceClient, *grpc.ClientConn) {
+	logger, _ := logger.GetZapLogger(ctx)
 
 	var clientDialOpts grpc.DialOption
 	if serverConfig.Usage.TLSEnabled {

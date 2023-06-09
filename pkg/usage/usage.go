@@ -32,7 +32,7 @@ type usage struct {
 
 // NewUsage initiates a usage instance
 func NewUsage(ctx context.Context, r repository.Repository, usc usagePB.UsageServiceClient, edition string) Usage {
-	logger, _ := logger.GetZapLogger()
+	logger, _ := logger.GetZapLogger(ctx)
 
 	version, err := repo.ReadReleaseManifest("release-please/manifest.json")
 	if err != nil {
@@ -56,10 +56,11 @@ func NewUsage(ctx context.Context, r repository.Repository, usc usagePB.UsageSer
 
 // RetrieveUsageData retrieves the server's usage data
 func (u *usage) RetrieveUsageData() interface{} {
-	logger, _ := logger.GetZapLogger()
+	ctx := context.Background()
+	logger, _ := logger.GetZapLogger(ctx)
 	logger.Debug("[mgmt-backend] retrieve usage data...")
 
-	dbUsers, err := u.repository.GetAllUsers()
+	dbUsers, err := u.repository.GetAllUsers(ctx)
 	if err != nil {
 		logger.Error(fmt.Sprintf("%s", err))
 	}
@@ -89,7 +90,7 @@ func (u *usage) StartReporter(ctx context.Context) {
 		return
 	}
 
-	logger, _ := logger.GetZapLogger()
+	logger, _ := logger.GetZapLogger(ctx)
 	go func() {
 		time.Sleep(5 * time.Second)
 		err := usageClient.StartReporter(ctx, u.reporter, usagePB.Session_SERVICE_MGMT, u.edition, u.version, u.RetrieveUsageData)
@@ -103,7 +104,7 @@ func (u *usage) TriggerSingleReporter(ctx context.Context) {
 	if u.reporter == nil {
 		return
 	}
-	logger, _ := logger.GetZapLogger()
+	logger, _ := logger.GetZapLogger(ctx)
 	err := usageClient.SingleReporter(ctx, u.reporter, usagePB.Session_SERVICE_MGMT, u.edition, u.version, u.RetrieveUsageData())
 	if err != nil {
 		logger.Error(fmt.Sprintf("unable to trigger single reporter: %v\n", err))

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"strings"
 
 	"github.com/gofrs/uuid"
@@ -14,13 +15,13 @@ import (
 // Service interface
 type Service interface {
 	ListRole() []string
-	ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int64, error)
-	CreateUser(user *datamodel.User) (*datamodel.User, error)
-	GetUser(uid uuid.UUID) (*datamodel.User, error)
-	GetUserByID(id string) (*datamodel.User, error)
-	UpdateUser(uid uuid.UUID, user *datamodel.User) (*datamodel.User, error)
-	DeleteUser(uid uuid.UUID) error
-	DeleteUserByID(id string) error
+	ListUser(ctx context.Context, pageSize int, pageToken string) ([]datamodel.User, string, int64, error)
+	CreateUser(ctx context.Context, user *datamodel.User) (*datamodel.User, error)
+	GetUser(ctx context.Context, uid uuid.UUID) (*datamodel.User, error)
+	GetUserByID(ctx context.Context, id string) (*datamodel.User, error)
+	UpdateUser(ctx context.Context, uid uuid.UUID, user *datamodel.User) (*datamodel.User, error)
+	DeleteUser(ctx context.Context, uid uuid.UUID) error
+	DeleteUserByID(ctx context.Context, id string) error
 }
 
 type service struct {
@@ -43,8 +44,8 @@ func (s *service) ListRole() []string {
 // Return error types
 //   - codes.InvalidArgument
 //   - codes.Internal
-func (s *service) ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int64, error) {
-	return s.repository.ListUser(pageSize, pageToken)
+func (s *service) ListUser(ctx context.Context, pageSize int, pageToken string) ([]datamodel.User, string, int64, error) {
+	return s.repository.ListUser(ctx, pageSize, pageToken)
 }
 
 // CreateUser creates an user instance
@@ -52,7 +53,7 @@ func (s *service) ListUser(pageSize int, pageToken string) ([]datamodel.User, st
 //   - codes.InvalidArgument
 //   - codes.NotFound
 //   - codes.Internal
-func (s *service) CreateUser(user *datamodel.User) (*datamodel.User, error) {
+func (s *service) CreateUser(ctx context.Context, user *datamodel.User) (*datamodel.User, error) {
 	//TODO: validate spec JSON schema
 
 	//Validation: role field
@@ -62,7 +63,7 @@ func (s *service) CreateUser(user *datamodel.User) (*datamodel.User, error) {
 		}
 	}
 
-	if err := s.repository.CreateUser(user); err != nil {
+	if err := s.repository.CreateUser(ctx, user); err != nil {
 		return nil, err
 	}
 
@@ -73,7 +74,7 @@ func (s *service) CreateUser(user *datamodel.User) (*datamodel.User, error) {
 // Return error types
 //   - codes.InvalidArgument
 //   - codes.NotFound
-func (s *service) GetUserByID(id string) (*datamodel.User, error) {
+func (s *service) GetUserByID(ctx context.Context, id string) (*datamodel.User, error) {
 	// Validation: Required field
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "the required field `id` is not specified")
@@ -86,7 +87,7 @@ func (s *service) GetUserByID(id string) (*datamodel.User, error) {
 // Return error types
 //   - codes.InvalidArgument
 //   - codes.NotFound
-func (s *service) GetUser(uid uuid.UUID) (*datamodel.User, error) {
+func (s *service) GetUser(ctx context.Context, uid uuid.UUID) (*datamodel.User, error) {
 	// Validation: Required field
 	if uid.IsNil() {
 		return nil, status.Error(codes.InvalidArgument, "the required field `uid` is not specified")
@@ -99,7 +100,7 @@ func (s *service) GetUser(uid uuid.UUID) (*datamodel.User, error) {
 //   - codes.InvalidArgument
 //   - codes.NotFound
 //   - codes.Internal
-func (s *service) UpdateUser(uid uuid.UUID, user *datamodel.User) (*datamodel.User, error) {
+func (s *service) UpdateUser(ctx context.Context, uid uuid.UUID, user *datamodel.User) (*datamodel.User, error) {
 	// Validation: Required field
 	if uid.IsNil() {
 		return nil, status.Error(codes.InvalidArgument, "the required field `uid` is not specified")
@@ -118,7 +119,7 @@ func (s *service) UpdateUser(uid uuid.UUID, user *datamodel.User) (*datamodel.Us
 	}
 
 	// Update the user
-	if err := s.repository.UpdateUser(uid, user); err != nil {
+	if err := s.repository.UpdateUser(ctx, uid, user); err != nil {
 		return nil, err
 	}
 
@@ -131,12 +132,12 @@ func (s *service) UpdateUser(uid uuid.UUID, user *datamodel.User) (*datamodel.Us
 //   - codes.InvalidArgument
 //   - codes.NotFound
 //   - codes.Internal
-func (s *service) DeleteUser(uid uuid.UUID) error {
+func (s *service) DeleteUser(ctx context.Context, uid uuid.UUID) error {
 	// Validation: Required field
 	if uid.IsNil() {
 		return status.Error(codes.InvalidArgument, "the required field `uid` is not specified")
 	}
-	return s.repository.DeleteUser(uid)
+	return s.repository.DeleteUser(ctx, uid)
 }
 
 // DeleteUserByID deletes a user by ID
@@ -144,11 +145,11 @@ func (s *service) DeleteUser(uid uuid.UUID) error {
 //   - codes.InvalidArgument
 //   - codes.NotFound
 //   - codes.Internal
-func (s *service) DeleteUserByID(id string) error {
+func (s *service) DeleteUserByID(ctx context.Context, id string) error {
 	// Validation: Required field
 	if id == "" {
 		return status.Error(codes.InvalidArgument, "the required field `id` is not specified")
 	}
 
-	return s.repository.DeleteUserByID(id)
+	return s.repository.DeleteUserByID(ctx, id)
 }

@@ -7,6 +7,8 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/iancoleman/strcase"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -21,6 +23,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/usage"
 	"github.com/instill-ai/x/sterr"
 
+	custom_otel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
 	healthcheckPB "github.com/instill-ai/protogen-go/vdp/healthcheck/v1alpha"
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 	checkfield "github.com/instill-ai/x/checkfield"
@@ -48,6 +51,8 @@ func NewPublicHandler(s service.Service, u usage.Usage, usageEnabled bool) mgmtP
 	}
 }
 
+var tracer = otel.Tracer("mgmt-backend.public-handler.tracer")
+
 // Liveness checks the liveness of the server
 func (h *PublicHandler) Liveness(ctx context.Context, in *mgmtPB.LivenessRequest) (*mgmtPB.LivenessResponse, error) {
 	return &mgmtPB.LivenessResponse{
@@ -68,7 +73,12 @@ func (h *PublicHandler) Readiness(ctx context.Context, in *mgmtPB.ReadinessReque
 
 // GetUser returns the authenticated user
 func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
-	logger, _ := logger.GetZapLogger()
+
+	ctx, span := tracer.Start(ctx, "GetUser",
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger, _ := logger.GetZapLogger(ctx)
 
 	var dbUser *datamodel.User
 	var err error
@@ -80,7 +90,7 @@ func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
 		if err != nil {
 			return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
 		}
-		dbUser, err = h.Service.GetUser(uid)
+		dbUser, err = h.Service.GetUser(ctx, uid)
 		if err != nil {
 			sta := status.Convert(err)
 			switch sta.Code() {
@@ -117,7 +127,7 @@ func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
 		if headerUserId != constant.DefaultUserID {
 			return nil, status.Error(codes.Unauthenticated, "Unauthenticated request")
 		} else {
-			dbUser, err = h.Service.GetUserByID(headerUserId)
+			dbUser, err = h.Service.GetUserByID(ctx, headerUserId)
 			if err != nil {
 				sta := status.Convert(err)
 				switch sta.Code() {
@@ -167,16 +177,47 @@ func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
 		}
 		return nil, st.Err()
 	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		pbUser,
+		false,
+		"GetUser",
+		"request",
+		"GetUser done",
+		false,
+		custom_otel.SetEventResource(dbUser),
+	)))
+
 	return pbUser, nil
 }
 
 // QueryAuthenticatedUser gets the authenticated user.
 // Note: this endpoint assumes the ID of the authenticated user is the default user.
 func (h *PublicHandler) QueryAuthenticatedUser(ctx context.Context, req *mgmtPB.QueryAuthenticatedUserRequest) (*mgmtPB.QueryAuthenticatedUserResponse, error) {
+
+	ctx, span := tracer.Start(ctx, "QueryAuthenticatedUser",
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
 	pbUser, err := h.GetUser(ctx)
 	if err != nil {
 		return &mgmtPB.QueryAuthenticatedUserResponse{}, err
 	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		pbUser,
+		false,
+		"QueryAuthenticatedUser",
+		"request",
+		"QueryAuthenticatedUser done",
+		false,
+		custom_otel.SetEventResource(pbUser),
+	)))
+
 	resp := mgmtPB.QueryAuthenticatedUserResponse{
 		User: pbUser,
 	}
@@ -186,7 +227,12 @@ func (h *PublicHandler) QueryAuthenticatedUser(ctx context.Context, req *mgmtPB.
 // PatchAuthenticatedUser updates the authenticated user.
 // Note: this endpoint assumes the ID of the authenticated user is the default user.
 func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.PatchAuthenticatedUserRequest) (*mgmtPB.PatchAuthenticatedUserResponse, error) {
-	logger, _ := logger.GetZapLogger()
+
+	ctx, span := tracer.Start(ctx, "PatchAuthenticatedUser",
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger, _ := logger.GetZapLogger(ctx)
 
 	reqUser := req.GetUser()
 
@@ -324,7 +370,7 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 		return &mgmtPB.PatchAuthenticatedUserResponse{}, st.Err()
 	}
 
-	dbUserUpdated, err := h.Service.UpdateUser(uid, dbUserToUpd)
+	dbUserUpdated, err := h.Service.UpdateUser(ctx, uid, dbUserToUpd)
 	if err != nil {
 		sta := status.Convert(err)
 		switch sta.Code() {
@@ -376,6 +422,17 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 		User: pbUserUpdated,
 	}
 
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		pbUserUpdated,
+		false,
+		"PatchAuthenticatedUser",
+		"request",
+		"PatchAuthenticatedUser done",
+		false,
+		custom_otel.SetEventResource(dbUserUpdated),
+	)))
+
 	// Trigger single reporter right after user updated
 	if h.usageEnabled && h.Usg != nil {
 		h.Usg.TriggerSingleReporter(context.Background())
@@ -386,7 +443,12 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 
 // ExistUsername verifies if a username (ID) has been occupied
 func (h *PublicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUsernameRequest) (*mgmtPB.ExistUsernameResponse, error) {
-	logger, _ := logger.GetZapLogger()
+
+	ctx, span := tracer.Start(ctx, "ExistUsername",
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger, _ := logger.GetZapLogger(ctx)
 
 	id := strings.TrimPrefix(req.GetName(), "users/")
 
@@ -409,7 +471,7 @@ func (h *PublicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUser
 		return &mgmtPB.ExistUsernameResponse{}, st.Err()
 	}
 
-	_, err = h.Service.GetUserByID(id)
+	dbUser, err := h.Service.GetUserByID(ctx, id)
 	if err != nil {
 		sta := status.Convert(err)
 		switch sta.Code() {
@@ -448,6 +510,34 @@ func (h *PublicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUser
 		}
 	}
 
+	pbUser, err := datamodel.DBUser2PBUser(dbUser)
+	if err != nil {
+		logger.Error(err.Error())
+		st, e := sterr.CreateErrorResourceInfo(
+			codes.Internal,
+			"get user error",
+			"user",
+			fmt.Sprintf("id %s", dbUser.ID),
+			"",
+			err.Error(),
+		)
+		if e != nil {
+			logger.Error(e.Error())
+		}
+		return nil, st.Err()
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		pbUser,
+		false,
+		"ExistUsername",
+		"request",
+		"ExistUsername done",
+		false,
+		custom_otel.SetEventResource(dbUser),
+	)))
+
 	resp := mgmtPB.ExistUsernameResponse{
 		Exists: true,
 	}
@@ -456,7 +546,7 @@ func (h *PublicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUser
 
 // CreateToken creates an API token for triggering pipelines. This endpoint is not supported yet.
 func (h *PublicHandler) CreateToken(ctx context.Context, req *mgmtPB.CreateTokenRequest) (*mgmtPB.CreateTokenResponse, error) {
-	logger, _ := logger.GetZapLogger()
+	logger, _ := logger.GetZapLogger(ctx)
 
 	st, err := sterr.CreateErrorResourceInfo(
 		codes.Unimplemented,
@@ -474,7 +564,7 @@ func (h *PublicHandler) CreateToken(ctx context.Context, req *mgmtPB.CreateToken
 
 // ListTokens lists all the API tokens of the authenticated user. This endpoint is not supported yet.
 func (h *PublicHandler) ListTokens(ctx context.Context, req *mgmtPB.ListTokensRequest) (*mgmtPB.ListTokensResponse, error) {
-	logger, _ := logger.GetZapLogger()
+	logger, _ := logger.GetZapLogger(ctx)
 
 	st, err := sterr.CreateErrorResourceInfo(
 		codes.Unimplemented,
@@ -492,7 +582,7 @@ func (h *PublicHandler) ListTokens(ctx context.Context, req *mgmtPB.ListTokensRe
 
 // GetToken gets an API token of the authenticated user. This endpoint is not supported yet.
 func (h *PublicHandler) GetToken(ctx context.Context, req *mgmtPB.GetTokenRequest) (*mgmtPB.GetTokenResponse, error) {
-	logger, _ := logger.GetZapLogger()
+	logger, _ := logger.GetZapLogger(ctx)
 
 	st, err := sterr.CreateErrorResourceInfo(
 		codes.Unimplemented,
@@ -510,7 +600,7 @@ func (h *PublicHandler) GetToken(ctx context.Context, req *mgmtPB.GetTokenReques
 
 // DeleteToken deletes an API token of the authenticated user. This endpoint is not supported yet.
 func (h *PublicHandler) DeleteToken(ctx context.Context, req *mgmtPB.DeleteTokenRequest) (*mgmtPB.DeleteTokenResponse, error) {
-	logger, _ := logger.GetZapLogger()
+	logger, _ := logger.GetZapLogger(ctx)
 
 	st, err := sterr.CreateErrorResourceInfo(
 		codes.Unimplemented,

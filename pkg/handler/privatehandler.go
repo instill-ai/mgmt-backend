@@ -39,7 +39,7 @@ func NewPrivateHandler(s service.Service) mgmtPB.MgmtPrivateServiceServer {
 
 // ListUsersAdmin lists all users
 func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUsersAdminRequest) (*mgmtPB.ListUsersAdminResponse, error) {
-	logger, _ := logger.GetZapLogger()
+	logger, _ := logger.GetZapLogger(ctx)
 
 	pageSize := req.GetPageSize()
 	if pageSize == 0 {
@@ -48,7 +48,7 @@ func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUse
 		pageSize = maxPageSize
 	}
 
-	dbUsers, nextPageToken, totalSize, err := h.Service.ListUser(int(pageSize), req.GetPageToken())
+	dbUsers, nextPageToken, totalSize, err := h.Service.ListUser(ctx, int(pageSize), req.GetPageToken())
 	if err != nil {
 		sta := status.Convert(err)
 		switch sta.Code() {
@@ -111,7 +111,7 @@ func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUse
 
 // CreateUserAdmin creates a user. This endpoint is not supported yet.
 func (h *PrivateHandler) CreateUserAdmin(ctx context.Context, req *mgmtPB.CreateUserAdminRequest) (*mgmtPB.CreateUserAdminResponse, error) {
-	logger, _ := logger.GetZapLogger()
+	logger, _ := logger.GetZapLogger(ctx)
 	resp := &mgmtPB.CreateUserAdminResponse{}
 
 	// Return error if REQUIRED fields are not provided in the requested payload resource
@@ -166,11 +166,11 @@ func (h *PrivateHandler) CreateUserAdmin(ctx context.Context, req *mgmtPB.Create
 
 // GetUserAdmin gets a user
 func (h *PrivateHandler) GetUserAdmin(ctx context.Context, req *mgmtPB.GetUserAdminRequest) (*mgmtPB.GetUserAdminResponse, error) {
-	logger, _ := logger.GetZapLogger()
+	logger, _ := logger.GetZapLogger(ctx)
 
 	id := strings.TrimPrefix(req.GetName(), "users/")
 
-	dbUser, err := h.Service.GetUserByID(id)
+	dbUser, err := h.Service.GetUserByID(ctx, id)
 	if err != nil {
 		sta := status.Convert(err)
 		switch sta.Code() {
@@ -227,7 +227,7 @@ func (h *PrivateHandler) GetUserAdmin(ctx context.Context, req *mgmtPB.GetUserAd
 
 // LookUpUserAdmin gets a user by permalink
 func (h *PrivateHandler) LookUpUserAdmin(ctx context.Context, req *mgmtPB.LookUpUserAdminRequest) (*mgmtPB.LookUpUserAdminResponse, error) {
-	logger, _ := logger.GetZapLogger()
+	logger, _ := logger.GetZapLogger(ctx)
 
 	uidStr := strings.TrimPrefix(req.GetPermalink(), "users/")
 	// Validation: `uid` in request is valid
@@ -247,7 +247,7 @@ func (h *PrivateHandler) LookUpUserAdmin(ctx context.Context, req *mgmtPB.LookUp
 		return &mgmtPB.LookUpUserAdminResponse{}, st.Err()
 	}
 
-	dbUser, err := h.Service.GetUser(uid)
+	dbUser, err := h.Service.GetUser(ctx, uid)
 	if err != nil {
 		sta := status.Convert(err)
 		switch sta.Code() {
@@ -303,7 +303,7 @@ func (h *PrivateHandler) LookUpUserAdmin(ctx context.Context, req *mgmtPB.LookUp
 
 // UpdateUserAdmin updates an existing user
 func (h *PrivateHandler) UpdateUserAdmin(ctx context.Context, req *mgmtPB.UpdateUserAdminRequest) (*mgmtPB.UpdateUserAdminResponse, error) {
-	logger, _ := logger.GetZapLogger()
+	logger, _ := logger.GetZapLogger(ctx)
 
 	reqUser := req.GetUser()
 
@@ -440,7 +440,7 @@ func (h *PrivateHandler) UpdateUserAdmin(ctx context.Context, req *mgmtPB.Update
 		return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
 	}
 
-	dbUserUpdated, err := h.Service.UpdateUser(uid, dbUserToUpd)
+	dbUserUpdated, err := h.Service.UpdateUser(ctx, uid, dbUserToUpd)
 	if err != nil {
 		sta := status.Convert(err)
 		switch sta.Code() {
@@ -497,7 +497,7 @@ func (h *PrivateHandler) UpdateUserAdmin(ctx context.Context, req *mgmtPB.Update
 
 // DeleteUserAdmin deletes a user. This endpoint is not supported yet.
 func (h *PrivateHandler) DeleteUserAdmin(ctx context.Context, req *mgmtPB.DeleteUserAdminRequest) (*mgmtPB.DeleteUserAdminResponse, error) {
-	logger, _ := logger.GetZapLogger()
+	logger, _ := logger.GetZapLogger(ctx)
 
 	st, err := sterr.CreateErrorResourceInfo(
 		codes.Unimplemented,
