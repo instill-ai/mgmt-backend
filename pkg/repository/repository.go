@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -17,14 +18,14 @@ import (
 
 // Repository interface
 type Repository interface {
-	ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int64, error)
-	CreateUser(user *datamodel.User) error
+	ListUser(ctx context.Context, pageSize int, pageToken string) ([]datamodel.User, string, int64, error)
+	CreateUser(ctx context.Context, user *datamodel.User) error
 	GetUser(uid uuid.UUID) (*datamodel.User, error)
 	GetUserByID(id string) (*datamodel.User, error)
-	UpdateUser(uid uuid.UUID, user *datamodel.User) error
-	DeleteUser(uid uuid.UUID) error
-	DeleteUserByID(id string) error
-	GetAllUsers() ([]datamodel.User, error)
+	UpdateUser(ctx context.Context, uid uuid.UUID, user *datamodel.User) error
+	DeleteUser(ctx context.Context, uid uuid.UUID) error
+	DeleteUserByID(ctx context.Context, id string) error
+	GetAllUsers(ctx context.Context, ) ([]datamodel.User, error)
 }
 
 type repository struct {
@@ -42,8 +43,8 @@ func NewRepository(db *gorm.DB) Repository {
 // Return error types
 //   - codes.InvalidArgument
 //   - codes.Internal
-func (r *repository) ListUser(pageSize int, pageToken string) ([]datamodel.User, string, int64, error) {
-	logger, _ := logger.GetZapLogger()
+func (r *repository) ListUser(ctx context.Context, pageSize int, pageToken string) ([]datamodel.User, string, int64, error) {
+	logger, _ := logger.GetZapLogger(ctx)
 	totalSize := int64(0)
 	if result := r.db.Model(&datamodel.User{}).Count(&totalSize); result.Error != nil {
 		logger.Error(result.Error.Error())
@@ -99,8 +100,8 @@ func (r *repository) ListUser(pageSize int, pageToken string) ([]datamodel.User,
 // CreateUser creates a new user
 // Return error types
 //   - codes.Internal
-func (r *repository) CreateUser(user *datamodel.User) error {
-	logger, _ := logger.GetZapLogger()
+func (r *repository) CreateUser(ctx context.Context, user *datamodel.User) error {
+	logger, _ := logger.GetZapLogger(ctx)
 	if result := r.db.Model(&datamodel.User{}).Create(user); result.Error != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(result.Error, &pgErr) {
@@ -128,8 +129,8 @@ func (r *repository) GetUser(uid uuid.UUID) (*datamodel.User, error) {
 // GetAllUsers gets all users in the database
 // Return error types
 //   - codes.Internal
-func (r *repository) GetAllUsers() ([]datamodel.User, error) {
-	logger, _ := logger.GetZapLogger()
+func (r *repository) GetAllUsers(ctx context.Context, ) ([]datamodel.User, error) {
+	logger, _ := logger.GetZapLogger(ctx)
 	var users []datamodel.User
 	if result := r.db.Find(&users); result.Error != nil {
 		logger.Error(result.Error.Error())
@@ -152,8 +153,8 @@ func (r *repository) GetUserByID(id string) (*datamodel.User, error) {
 // UpdateUser updates a user by UUID
 // Return error types
 //   - codes.Internal
-func (r *repository) UpdateUser(uid uuid.UUID, user *datamodel.User) error {
-	logger, _ := logger.GetZapLogger()
+func (r *repository) UpdateUser(ctx context.Context, uid uuid.UUID, user *datamodel.User) error {
+	logger, _ := logger.GetZapLogger(ctx)
 	if result := r.db.Select("*").Omit("UID").Model(&datamodel.User{}).Where("uid = ?", uid.String()).Updates(user); result.Error != nil {
 		logger.Error(result.Error.Error())
 		return status.Errorf(codes.Internal, "error %v", result.Error)
@@ -165,8 +166,8 @@ func (r *repository) UpdateUser(uid uuid.UUID, user *datamodel.User) error {
 // Return error types
 //   - codes.NotFound
 //   - codes.Internal
-func (r *repository) DeleteUser(uid uuid.UUID) error {
-	logger, _ := logger.GetZapLogger()
+func (r *repository) DeleteUser(ctx context.Context, uid uuid.UUID) error {
+	logger, _ := logger.GetZapLogger(ctx)
 	result := r.db.Model(&datamodel.User{}).Where("uid = ?", uid.String()).Delete(&datamodel.User{})
 
 	if result.Error != nil {
@@ -185,8 +186,8 @@ func (r *repository) DeleteUser(uid uuid.UUID) error {
 // Return error types
 //   - codes.NotFound
 //   - codes.Internal
-func (r *repository) DeleteUserByID(id string) error {
-	logger, _ := logger.GetZapLogger()
+func (r *repository) DeleteUserByID(ctx context.Context, id string) error {
+	logger, _ := logger.GetZapLogger(ctx)
 	result := r.db.Model(&datamodel.User{}).
 		Where("id = ?", id).
 		Delete(&datamodel.User{})

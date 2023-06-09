@@ -36,7 +36,11 @@ func CustomMatcher(key string) (string, bool) {
 	}
 
 	switch key {
+	case "request-id":
+		return key, true
 	case constant.HeaderUserIDKey:
+		return key, true
+	case "X-B3-Traceid", "X-B3-Spanid", "X-B3-Sampled":
 		return key, true
 	default:
 		// DefaultHeaderMatcher is used to pass http request headers to/from gRPC context.
@@ -70,7 +74,7 @@ func HttpResponseModifier(ctx context.Context, w http.ResponseWriter, p proto.Me
 
 // ErrorHandler is a callback function for gRPC-Gateway runtime.WithErrorHandler
 func ErrorHandler(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.Marshaler, w http.ResponseWriter, r *http.Request, err error) {
-	logger, _ := logger.GetZapLogger()
+	logger, _ := logger.GetZapLogger(ctx)
 
 	// return Internal when Marshal failed
 	const fallback = `{"code": 13, "message": "failed to marshal error message"}`

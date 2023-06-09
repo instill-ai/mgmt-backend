@@ -15,6 +15,9 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/rs/cors"
+	"go.opentelemetry.io/contrib/propagators/b3"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
@@ -37,8 +40,11 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/usage"
 
 	database "github.com/instill-ai/mgmt-backend/pkg/db"
+	custom_otel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
 	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
 )
+
+var propagator propagation.TextMapPropagator
 
 func grpcHandlerFunc(grpcServer *grpc.Server, gwHandler http.Handler, CORSOrigins []string) http.Handler {
 	return h2c.NewHandler(
@@ -49,6 +55,11 @@ func grpcHandlerFunc(grpcServer *grpc.Server, gwHandler http.Handler, CORSOrigin
 			Debug:            false,
 		}).Handler(
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+				propagator = b3.New(b3.WithInjectEncoding(b3.B3MultipleHeader))
+				ctx := propagator.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+				r = r.WithContext(ctx)
+
 				if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
 					grpcServer.ServeHTTP(w, r)
 				} else {
@@ -63,8 +74,30 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	logger.InitZapLogger(config.Config.Server.Debug)
-	logger, _ := logger.GetZapLogger()
+	ctx, cancel := context.WithCancel(context.Background())
+
+	if tp, err := custom_otel.SetupTracing(ctx, "mgmt-backend"); err != nil {
+		panic(err)
+	} else {
+		defer func() {
+			err = tp.Shutdown(ctx)
+		}()
+	}
+
+	if mp, err := custom_otel.SetupMetrics(ctx, "mgmt-backend"); err != nil {
+		panic(err)
+	} else {
+		defer func() {
+			err = mp.Shutdown(ctx)
+		}()
+	}
+
+	ctx, span := otel.Tracer("main-tracer").Start(ctx,
+		"main",
+	)
+	defer cancel()
+
+	logger, _ := logger.GetZapLogger(ctx)
 	defer func() {
 		// can't handle the error due to https://github.com/uber-go/zap/issues/880
 		_ = logger.Sync()
@@ -119,16 +152,13 @@ func main() {
 		grpcServerOpts = append(grpcServerOpts, grpc.Creds(creds))
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	repository := repository.NewRepository(db)
 	service := service.NewService(repository)
 
 	// Start usage reporter
 	var usg usage.Usage
 	if config.Config.Server.Usage.Enabled {
-		usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient(&config.Config.Server)
+		usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient(ctx, &config.Config.Server)
 		if usageServiceClientConn != nil {
 			defer usageServiceClientConn.Close()
 			logger.Info("try to start usage reporter")
@@ -248,6 +278,7 @@ func main() {
 			}
 		}()
 	}
+	span.End()
 	logger.Info("gRPC servers are running.")
 
 	// kill (no param) default send syscall.SIGTERM

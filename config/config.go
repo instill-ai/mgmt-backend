@@ -18,8 +18,9 @@ var Config AppConfig
 
 // AppConfig defines
 type AppConfig struct {
-	Server      ServerConfig      `koanf:"server"`
-	Database    DatabaseConfig    `koanf:"database"`
+	Server   ServerConfig   `koanf:"server"`
+	Database DatabaseConfig `koanf:"database"`
+	Log      LogConfig      `koanf:"log"`
 }
 
 // ServerConfig defines HTTP server configurations
@@ -54,6 +55,15 @@ type DatabaseConfig struct {
 		IdleConnections int           `koanf:"idleconnections"`
 		MaxConnections  int           `koanf:"maxconnections"`
 		ConnLifeTime    time.Duration `koanf:"connlifetime"`
+	}
+}
+
+// LogConfig related to logging
+type LogConfig struct {
+	External      bool `koanf:"external"`
+	OtelCollector struct {
+		Host string `koanf:"host"`
+		Port string `koanf:"port"`
 	}
 }
 
