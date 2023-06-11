@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.9-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.3.8-alpha...v0.3.9-alpha) (2023-06-11)
+
+
+### Miscellaneous Chores
+
+* **release:** release v0.3.9-alpha ([77f7138](https://github.com/instill-ai/mgmt-backend/commit/77f7138ccdf0f793b178c26dd1c44d6272999675))
+
 ## [0.3.8-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.3.7-alpha...v0.3.8-alpha) (2023-06-02)
 
 
