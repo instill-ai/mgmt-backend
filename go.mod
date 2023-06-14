@@ -16,7 +16,6 @@ require (
 	github.com/jackc/pgx/v5 v5.2.0
 	github.com/knadh/koanf v1.4.4
 	github.com/mennanov/fieldmask-utils v0.5.0
-	github.com/rs/cors v1.8.2
 	go.opentelemetry.io/contrib/propagators/b3 v1.17.0
 	go.opentelemetry.io/otel v1.16.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.39.0
