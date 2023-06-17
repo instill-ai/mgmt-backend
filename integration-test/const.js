@@ -53,6 +53,12 @@ export const restParamsWithJwtSub = {
   },
 }
 
+export const grpcParamsWithJwtSub = {
+  metadata: {
+    "Jwt-Sub": randomUUID,
+  },
+}
+
 export const defaultUser = {
   name: "users/instill-ai",
   id: "instill-ai",

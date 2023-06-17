@@ -21,7 +21,7 @@ export function CheckPublicQueryAuthenticatedUser() {
       plaintext: true
     });
 
-    check(client.invoke('vdp.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser', {}, constant.paramsWithJwt), {
+    check(client.invoke('vdp.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser', {}, constant.grpcParamsWithJwtSub), {
       '[with random "jwt-sub" header] vdp.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser status StatusNotFound': (r) => r && r.status == grpc.StatusNotFound,
     });
 
@@ -52,7 +52,7 @@ export function CheckPublicPatchAuthenticatedUser() {
     check(client.invoke('vdp.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser', {
       user: userUpdate,
       update_mask: "email,firstName,lastName,orgName,role,newsletterSubscription,cookieToken"
-    }, constant.paramsWithJwt), {
+    }, constant.grpcParamsWithJwtSub), {
       '[with random "jwt-sub" header] vdp.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser status StatusNotFound': (r) => r && r.status == grpc.StatusNotFound,
     });
   });
