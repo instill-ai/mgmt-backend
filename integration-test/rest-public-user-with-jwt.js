@@ -8,7 +8,7 @@ import * as helper from "./helper.js";
 export function CheckPublicQueryAuthenticatedUser() {
   group(`Management Public API: Get authenticated user [with random "jwt-sub" header]`, () => {
 
-    check(http.request("GET", `${constant.mgmtPublicHost}/users/me`, {}, constant.paramsWithJwt),
+    check(http.request("GET", `${constant.mgmtPublicHost}/users/me`, {}, constant.restParamsWithJwtSub),
       {
         [`[with random "jwt-sub" header] GET /${constant.mgmtVersion}/users/me response status 404`]:
           (r) => r.status === 404,
@@ -33,7 +33,7 @@ export function CheckPublicPatchAuthenticatedUser() {
       update_time: "2000-01-01T00:00:00.000000Z",
     };
 
-    check(http.request("PATCH", `${constant.mgmtPublicHost}/users/me`, JSON.stringify(userUpdate), constant.paramsWithJwt),
+    check(http.request("PATCH", `${constant.mgmtPublicHost}/users/me`, JSON.stringify(userUpdate), constant.restParamsWithJwtSub),
       {
         [`[with random "jwt-sub" header] PATCH /${constant.mgmtVersion}/users/me response status 404`]: (r) => r.status === 404,
       }

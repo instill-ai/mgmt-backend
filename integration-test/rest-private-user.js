@@ -192,7 +192,7 @@ export function CheckPrivateUpdateUserAdmin() {
       http.request(
         "PATCH",
         `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`,
-        JSON.stringify(userUpdate), constant.params),
+        JSON.stringify(userUpdate), constant.restParams),
       {
         [`PATCH /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response 200`]:
           (r) => r.status === 200,
@@ -234,7 +234,7 @@ export function CheckPrivateUpdateUserAdmin() {
       http.request(
         "PATCH",
         `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`,
-        JSON.stringify(constant.defaultUser), constant.params),
+        JSON.stringify(constant.defaultUser), constant.restParams),
       {
         [`PATCH /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response status 200`]:
           (r) => r.status === 200,
@@ -261,7 +261,7 @@ export function CheckPrivateUpdateUserAdmin() {
       http.request(
         "PATCH",
         `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`,
-        JSON.stringify(userUpdate), constant.params),
+        JSON.stringify(userUpdate), constant.restParams),
       {
         [`PATCH /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response status 400`]:
           (r) => r.status === 400,
@@ -277,7 +277,7 @@ export function CheckPrivateUpdateUserAdmin() {
       http.request(
         "PATCH",
         `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`,
-        JSON.stringify(userUpdate), constant.params),
+        JSON.stringify(userUpdate), constant.restParams),
       {
         [`PATCH /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response status 400`]:
           (r) => r.status === 400,
@@ -294,7 +294,7 @@ export function CheckPrivateUpdateUserAdmin() {
       http.request(
         "PATCH",
         `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`,
-        JSON.stringify(userUpdate), constant.params),
+        JSON.stringify(userUpdate), constant.restParams),
       {
         [`PATCH /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response status 400`]:
           (r) => r.status === 400,
@@ -318,9 +318,7 @@ export function CheckPrivateCreateUserAdmin() {
         "POST",
         `${constant.mgmtPrivateHost}/admin/users`,
         JSON.stringify({ id: "2a06c2f7-8da9-4046-91ea-240f88a5d000" }),
-        {
-          headers: { "Content-Type": "application/json" },
-        }
+        constant.restParams
       ),
       {
         [`POST /${constant.mgmtVersion}/admin/users response status 400`]: (r) =>
@@ -334,9 +332,7 @@ export function CheckPrivateCreateUserAdmin() {
         "POST",
         `${constant.mgmtPrivateHost}/admin/users`,
         JSON.stringify({ id: "local user" }),
-        {
-          headers: { "Content-Type": "application/json" },
-        }
+        constant.restParams
       ),
       {
         [`POST /${constant.mgmtVersion}/admin/users response status 400`]: (r) =>
@@ -352,9 +348,7 @@ export function CheckPrivateCreateUserAdmin() {
         JSON.stringify({
           id: "instill-ai",
         }),
-        {
-          headers: { "Content-Type": "application/json" },
-        }
+        constant.restParams
       ),
       {
         [`POST /${constant.mgmtVersion}/admin/users response status 400`]:
@@ -370,9 +364,7 @@ export function CheckPrivateCreateUserAdmin() {
           id: "test-user",
           email: "test-user@instill.tech"
         }),
-        {
-          headers: { "Content-Type": "application/json" },
-        }
+        constant.restParams
       ),
       {
         [`POST /${constant.mgmtVersion}/admin/users response status 501 [not implemented]`]:
@@ -389,9 +381,7 @@ export function CheckPrivateDeleteUserAdmin() {
         "DELETE",
         `${constant.mgmtPrivateHost}/admin/users/${constant.defaultUser.id}`,
         JSON.stringify({}),
-        {
-          headers: { "Content-Type": "application/json" },
-        }
+        constant.restParams
       ),
       {
         [`DELETE /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response status 501 [not implemented]`]:

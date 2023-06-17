@@ -92,7 +92,7 @@ export function CheckPublicPatchAuthenticatedUser() {
       http.request(
         "PATCH",
         `${constant.mgmtPublicHost}/users/me`,
-        JSON.stringify(userUpdate), constant.params),
+        JSON.stringify(userUpdate), constant.restParams),
       {
         [`PATCH /${constant.mgmtVersion}/users/me response 200`]:
           (r) => r.status === 200,
@@ -134,7 +134,7 @@ export function CheckPublicPatchAuthenticatedUser() {
       http.request(
         "PATCH",
         `${constant.mgmtPublicHost}/users/me`,
-        JSON.stringify(constant.defaultUser), constant.params),
+        JSON.stringify(constant.defaultUser), constant.restParams),
       {
         [`PATCH /${constant.mgmtVersion}/users/me response status 200`]:
           (r) => r.status === 200,
@@ -161,7 +161,7 @@ export function CheckPublicPatchAuthenticatedUser() {
       http.request(
         "PATCH",
         `${constant.mgmtPublicHost}/users/me`,
-        JSON.stringify(userUpdate), constant.params),
+        JSON.stringify(userUpdate), constant.restParams),
       {
         [`PATCH /${constant.mgmtVersion}/users/me response status 400`]:
           (r) => r.status === 400,
@@ -177,7 +177,7 @@ export function CheckPublicPatchAuthenticatedUser() {
       http.request(
         "PATCH",
         `${constant.mgmtPublicHost}/users/me`,
-        JSON.stringify(userUpdate), constant.params),
+        JSON.stringify(userUpdate), constant.restParams),
       {
         [`PATCH /${constant.mgmtVersion}/users/me response status 400`]:
           (r) => r.status === 400,
@@ -194,7 +194,7 @@ export function CheckPublicPatchAuthenticatedUser() {
       http.request(
         "PATCH",
         `${constant.mgmtPublicHost}/users/me`,
-        JSON.stringify(userUpdate), constant.params),
+        JSON.stringify(userUpdate), constant.restParams),
       {
         [`PATCH /${constant.mgmtVersion}/users/me response status 400`]:
           (r) => r.status === 400,
@@ -210,9 +210,7 @@ export function CheckPublicCreateToken() {
         "POST",
         `${constant.mgmtPublicHost}/tokens`,
         JSON.stringify(constant.testToken),
-        {
-          headers: { "Content-Type": "application/json" },
-        }
+        constant.restParams
       ),
       {
         [`POST /${constant.mgmtVersion}/tokens response status 501 [not implemented]`]:
@@ -229,9 +227,7 @@ export function CheckPublicListTokens() {
         "GET",
         `${constant.mgmtPublicHost}/tokens`,
         JSON.stringify({}),
-        {
-          headers: { "Content-Type": "application/json" },
-        }
+        constant.restParams
       ),
       {
         [`GET /${constant.mgmtVersion}/tokens response status 501 [not implemented]`]:
@@ -248,9 +244,7 @@ export function CheckPublicGetToken() {
         "GET",
         `${constant.mgmtPublicHost}/tokens/${constant.testToken.id}`,
         JSON.stringify({}),
-        {
-          headers: { "Content-Type": "application/json" },
-        }
+        constant.restParams
       ),
       {
         [`GET /${constant.mgmtVersion}/tokens/${constant.testToken.id} response status 501 [not implemented]`]:
@@ -267,9 +261,7 @@ export function CheckPublicDeleteToken() {
         "DELETE",
         `${constant.mgmtPublicHost}/tokens/${constant.testToken.id}`,
         JSON.stringify({}),
-        {
-          headers: { "Content-Type": "application/json" },
-        }
+        constant.restParams
       ),
       {
         [`DELETE /${constant.mgmtVersion}/tokens/${constant.testToken.id} response status 501 [not implemented]`]:
