@@ -177,7 +177,7 @@ export function CheckPublicCreateToken() {
     check(client.invoke('vdp.mgmt.v1alpha.MgmtPublicService/CreateToken', {
       token: {
         id: `${constant.testToken.id}`,
-        lifetime: 86400
+        ttl: 86400
       }
     }), {
       'vdp.mgmt.v1alpha.MgmtPublicService/CreateToken status StatusUnimplemented': (r) => r && r.status == grpc.StatusUnimplemented,

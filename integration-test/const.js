@@ -39,16 +39,22 @@ export const mgmtPublicHost = `${proto}://${host}:${publicPort}/${mgmtVersion}`
 export const mgmtPrivateGRPCHost = `${host}:${privatePort}`
 export const mgmtPublicGRPCHost = `${host}:${publicPort}`
 
-export const params = {
+export const restParams = {
   headers: {
     "Content-Type": "application/json",
   },
 };
 
 const randomUUID = uuidv4();
-export const paramsWithJwt = {
+export const restParamsWithJwtSub = {
   headers: {
     "Content-Type": "application/json",
+    "Jwt-Sub": randomUUID,
+  },
+}
+
+export const grpcParamsWithJwtSub = {
+  metadata: {
     "Jwt-Sub": randomUUID,
   },
 }
