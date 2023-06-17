@@ -400,22 +400,3 @@ export function CheckPrivateDeleteUserAdmin() {
     );
   });
 }
-
-export function CheckPrivateValidateToken() {
-  group(`Management Private API: Validate API token`, () => {
-    check(
-      http.request(
-        "POST",
-        `${constant.mgmtPrivateHost}/tokens/${constant.testToken.id}/validate`,
-        JSON.stringify({}),
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      ),
-      {
-        [`POST /${constant.mgmtVersion}/tokens/${constant.testToken.id} response status 501 [not implemented]`]:
-          (r) => r.status === 501,
-      }
-    );
-  });
-}

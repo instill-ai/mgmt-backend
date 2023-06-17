@@ -27,7 +27,6 @@ export default function (data) {
     mgmtPrivate.CheckPrivateLookUpUserAdmin();
     mgmtPrivate.CheckPrivateUpdateUserAdmin();
     mgmtPrivate.CheckPrivateDeleteUserAdmin();
-    mgmtPrivate.CheckPrivateValidateToken();
 
     // ======== Public API with jwt-sub
     mgmtPublicWithJwt.CheckPublicQueryAuthenticatedUser();
