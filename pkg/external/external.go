@@ -12,7 +12,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 
-	usagePB "github.com/instill-ai/protogen-go/vdp/usage/v1alpha"
+	usagePB "github.com/instill-ai/protogen-go/base/usage/v1alpha"
 )
 
 // InitUsageServiceClient initializes a UsageServiceClient instance

@@ -18,7 +18,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 	"github.com/instill-ai/x/sterr"
 
-	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/base/mgmt/v1alpha"
 	checkfield "github.com/instill-ai/x/checkfield"
 )
 
@@ -81,7 +81,7 @@ func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUse
 	}
 
 	pbUsers := []*mgmtPB.User{}
-	for idx, _ := range dbUsers {
+	for idx := range dbUsers {
 		pbUser, err := datamodel.DBUser2PBUser(&dbUsers[idx])
 		if err != nil {
 			logger.Error(err.Error())

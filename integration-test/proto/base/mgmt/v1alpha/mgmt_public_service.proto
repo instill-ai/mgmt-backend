@@ -1,13 +1,13 @@
 syntax = "proto3";
 
-package vdp.mgmt.v1alpha;
+package base.mgmt.v1alpha;
 
 // Google API
 import "google/api/annotations.proto";
 import "google/api/client.proto";
 
-import "../../../vdp/mgmt/v1alpha/healthcheck.proto";
-import "../../../vdp/mgmt/v1alpha/mgmt.proto";
+import "../../../common/healthcheck.proto";
+import "../../../base/mgmt/v1alpha/mgmt.proto";
 
 // Mgmt service responds to external access
 service MgmtPublicService {
@@ -16,7 +16,7 @@ service MgmtPublicService {
   // Liveness method receives a LivenessRequest message and returns a
   // LivenessResponse message.
   // See https://github.com/grpc/grpc/blob/master/doc/health-checking.md
-  rpc Liveness(LivenessRequest) returns (LivenessResponse) {
+  rpc Liveness(common.LivenessRequest) returns (common.LivenessResponse) {
     option (google.api.http) = {
       get : "/v1alpha/__liveness"
       additional_bindings : [ {get : "/v1alpha/health/mgmt"} ]
@@ -26,7 +26,7 @@ service MgmtPublicService {
   // Readiness method receives a ReadinessRequest message and returns a
   // ReadinessResponse message.
   // See https://github.com/grpc/grpc/blob/master/doc/health-checking.md
-  rpc Readiness(ReadinessRequest) returns (ReadinessResponse) {
+  rpc Readiness(common.ReadinessRequest) returns (common.ReadinessResponse) {
     option (google.api.http) = {
       get : "/v1alpha/__readiness"
       additional_bindings : [ {get : "/v1alpha/ready/mgmt"} ]
@@ -62,7 +62,7 @@ service MgmtPublicService {
     option (google.api.method_signature) = "name";
   }
 
-// CreateToken method receives a CreateTokenRequest message and returns
+  // CreateToken method receives a CreateTokenRequest message and returns
   // a CreateTokenResponse message.
   rpc CreateToken(CreateTokenRequest) returns (CreateTokenResponse) {
     option (google.api.http) = {

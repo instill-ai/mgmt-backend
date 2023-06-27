@@ -10,8 +10,8 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 	"github.com/instill-ai/x/repo"
 
-	mgmtPB "github.com/instill-ai/protogen-go/vdp/mgmt/v1alpha"
-	usagePB "github.com/instill-ai/protogen-go/vdp/usage/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/base/mgmt/v1alpha"
+	usagePB "github.com/instill-ai/protogen-go/base/usage/v1alpha"
 	usageClient "github.com/instill-ai/usage-client/client"
 	usageReporter "github.com/instill-ai/usage-client/reporter"
 )
@@ -66,7 +66,7 @@ func (u *usage) RetrieveUsageData() interface{} {
 	}
 
 	pbUsers := []*mgmtPB.User{}
-	for idx, _ := range dbUsers {
+	for idx := range dbUsers {
 		pbUser, err := datamodel.DBUser2PBUser(&dbUsers[idx])
 		if err != nil {
 			logger.Error(fmt.Sprintf("%s", err))

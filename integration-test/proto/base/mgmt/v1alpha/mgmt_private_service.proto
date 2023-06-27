@@ -1,12 +1,12 @@
 syntax = "proto3";
 
-package vdp.mgmt.v1alpha;
+package base.mgmt.v1alpha;
 
 // Google API
 import "google/api/annotations.proto";
 import "google/api/client.proto";
 
-import "../../../vdp/mgmt/v1alpha/mgmt.proto";
+import "../../../base/mgmt/v1alpha/mgmt.proto";
 
 // Mgmt service responds to internal access
 service MgmtPrivateService {
@@ -69,5 +69,4 @@ service MgmtPrivateService {
     };
     option (google.api.method_signature) = "permalink";
   }
-
 }

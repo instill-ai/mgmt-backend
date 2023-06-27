@@ -29,7 +29,7 @@ jobs:
             mgmt-backend,
             controller,
           ]
-    uses: instill-ai/vdp/.github/workflows/integration-test-backend.yml@main
+    uses: instill-ai/base/.github/workflows/integration-test-backend.yml@main
     with:
       component: ${{ matrix.component }}
       target: latest
@@ -37,7 +37,7 @@ jobs:
     needs: build-push-image
     if: github.ref == 'refs/heads/main'
     name: Console
-    uses: instill-ai/vdp/.github/workflows/integration-test-console.yml@main
+    uses: instill-ai/base/.github/workflows/integration-test-console.yml@main
     with:
       target: latest
 
@@ -89,17 +89,15 @@ jobs:
             GOLANG_VERSION=${{ env.GOLANG_VERSION }}
           tags: instill/mgmt-backend:latest
 
-      - name: Checkout (vdp)
+      - name: Checkout (base)
         uses: actions/checkout@v3
         with:
-          repository: instill-ai/vdp
+          repository: instill-ai/base
 
-      - name: Launch VDP
+      - name: Launch Instill Base
         run: |
           COMPOSE_PROFILES=all \
           EDITION=local-ce:test \
-          ITMODE_ENABLED=true \
-          TRITON_CONDA_ENV_PLATFORM=cpu \
           docker compose -f docker-compose.yml -f docker-compose.latest.yml up -d --quiet-pull
           COMPOSE_PROFILES=all \
           EDITION=local-ce:test \

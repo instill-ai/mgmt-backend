@@ -2,16 +2,16 @@
 
 [![Integration Test](https://github.com/instill-ai/mgmt-backend/actions/workflows/integration-test.yml/badge.svg)](https://github.com/instill-ai/mgmt-backend/actions/workflows/integration-test.yml)
 
-mgmt-backend communicates with [Versatile Data Pipeline (VDP)](https://github.com/instill-ai/vdp) to manage the user resources.
+mgmt-backend manages user-related resources.
 
 ## Local dev
 
-On the local machine, clone `vdp` repository in your workspace, move to the repository folder, and launch all dependent microservices:
+On the local machine, clone `base` repository in your workspace, move to the repository folder, and launch all dependent microservices:
 ```
 $ cd <your-workspace>
-$ git clone https://github.com/instill-ai/vdp.git
-$ cd vdp
-$ make latest PROFILE=mgmt ITMODE_ENABLED=true
+$ git clone https://github.com/instill-ai/base.git
+$ cd base
+$ make latest PROFILE=mgmt
 ```
 
 Clone `mgmt-backend` repository in your workspace and move to the repository folder:
