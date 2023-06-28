@@ -10,12 +10,14 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0
 	github.com/iancoleman/strcase v0.2.0
+	github.com/influxdata/influxdb-client-go/v2 v2.12.3
 	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20230622154941-b51cc4cf49d0
 	github.com/instill-ai/usage-client v0.2.4-alpha
 	github.com/instill-ai/x v0.3.0-alpha
 	github.com/jackc/pgx/v5 v5.2.0
 	github.com/knadh/koanf v1.4.4
 	github.com/mennanov/fieldmask-utils v0.5.0
+	go.einride.tech/aip v0.60.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.17.0
 	go.opentelemetry.io/otel v1.16.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.39.0
@@ -27,6 +29,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.16.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/net v0.10.0
+	google.golang.org/genproto/googleapis/api v0.0.0-20230530153820-e85fd2cbaebc
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc
 	google.golang.org/grpc v1.56.0
 	google.golang.org/protobuf v1.30.0
@@ -39,6 +42,7 @@ require (
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/catalinc/hashcash v0.0.0-20220723060415-5e3ec3e24f67 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
+	github.com/deepmap/oapi-codegen v1.8.2 // indirect
 	github.com/docker/docker v20.10.24+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
@@ -47,6 +51,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/influxdata/line-protocol v0.0.0-20200327222509-2487e7298839 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.13.0 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
@@ -76,6 +81,7 @@ require (
 	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	google.golang.org/genproto v0.0.0-20230530153820-e85fd2cbaebc // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20230530153820-e85fd2cbaebc // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/instill-ai/protogen-go => ./protogen-go

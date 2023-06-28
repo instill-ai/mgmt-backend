@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/iancoleman/strcase"
+	"go.einride.tech/aip/filtering"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -26,6 +27,7 @@ import (
 	custom_otel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
 	mgmtPB "github.com/instill-ai/protogen-go/base/mgmt/v1alpha"
 	healthcheckPB "github.com/instill-ai/protogen-go/common/healthcheck/v1alpha"
+	pipelinePB "github.com/instill-ai/protogen-go/vdp/pipeline/v1alpha"
 	checkfield "github.com/instill-ai/x/checkfield"
 )
 
@@ -614,4 +616,57 @@ func (h *PublicHandler) DeleteToken(ctx context.Context, req *mgmtPB.DeleteToken
 		logger.Error(err.Error())
 	}
 	return &mgmtPB.DeleteTokenResponse{}, st.Err()
+}
+
+func (h *PublicHandler) ListPipielineTriggerDataPoint(ctx context.Context, req *mgmtPB.ListPipelineTriggerRecordRequest) (*mgmtPB.ListPipelineTriggerRecordResponse, error) {
+
+	eventName := "ListPipielineTriggerDataPoint"
+
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	// logUUID, _ := uuid.NewV4()
+
+	// logger, _ := logger.GetZapLogger(ctx)
+
+	pbUser, err := h.GetUser(ctx)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListPipelineTriggerRecordResponse{}, err
+	}
+
+	var mode pipelinePB.Pipeline_Mode
+
+	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
+		filtering.DeclareStandardFunctions(),
+		filtering.DeclareIdent("start", filtering.TypeTimestamp),
+		filtering.DeclareIdent("stop", filtering.TypeTimestamp),
+		filtering.DeclareIdent("pipeline_id", filtering.TypeString),
+		filtering.DeclareEnumIdent("pipeline_mode", mode.Type()),
+	}...)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListPipelineTriggerRecordResponse{}, err
+	}
+
+	filter, err := filtering.ParseFilter(req, declarations)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListPipelineTriggerRecordResponse{}, err
+	}
+
+	pipelineTriggerDataPoints, totalSize, nextPageToken, err := h.Service.ListPipielineTriggerRecord(ctx, pbUser, req.GetPageSize(), req.GetPageToken(), filter)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListPipelineTriggerRecordResponse{}, err
+	}
+
+	resp := mgmtPB.ListPipelineTriggerRecordResponse{
+		PipelineTriggerDataPoint: pipelineTriggerDataPoints,
+		NextPageToken:            nextPageToken,
+		TotalSize:                totalSize,
+	}
+
+	return &resp, nil
 }
