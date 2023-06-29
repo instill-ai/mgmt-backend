@@ -80,14 +80,6 @@ func main() {
 		}()
 	}
 
-	if mp, err := custom_otel.SetupMetrics(ctx, "mgmt-backend-init"); err != nil {
-		panic(err)
-	} else {
-		defer func() {
-			err = mp.Shutdown(ctx)
-		}()
-	}
-
 	ctx, span := otel.Tracer("init-tracer").Start(ctx,
 		"main",
 	)

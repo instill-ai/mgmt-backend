@@ -76,9 +76,12 @@ func (h *PublicHandler) Readiness(ctx context.Context, in *mgmtPB.ReadinessReque
 // GetUser returns the authenticated user
 func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
 
-	ctx, span := tracer.Start(ctx, "GetUser",
+	eventName := "GetUser"
+	ctx, span := tracer.Start(ctx, eventName,
 		trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
 
 	logger, _ := logger.GetZapLogger(ctx)
 
@@ -182,12 +185,9 @@ func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
 
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
+		logUUID.String(),
 		pbUser,
-		false,
-		"GetUser",
-		"request",
-		"GetUser done",
-		false,
+		eventName,
 		custom_otel.SetEventResource(dbUser),
 	)))
 
@@ -198,9 +198,12 @@ func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
 // Note: this endpoint assumes the ID of the authenticated user is the default user.
 func (h *PublicHandler) QueryAuthenticatedUser(ctx context.Context, req *mgmtPB.QueryAuthenticatedUserRequest) (*mgmtPB.QueryAuthenticatedUserResponse, error) {
 
-	ctx, span := tracer.Start(ctx, "QueryAuthenticatedUser",
+	eventName := "QueryAuthenticatedUser"
+	ctx, span := tracer.Start(ctx, eventName,
 		trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
 
 	logger, _ := logger.GetZapLogger(ctx)
 
@@ -211,12 +214,9 @@ func (h *PublicHandler) QueryAuthenticatedUser(ctx context.Context, req *mgmtPB.
 
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
+		logUUID.String(),
 		pbUser,
-		false,
-		"QueryAuthenticatedUser",
-		"request",
-		"QueryAuthenticatedUser done",
-		false,
+		eventName,
 		custom_otel.SetEventResource(pbUser),
 	)))
 
@@ -230,9 +230,12 @@ func (h *PublicHandler) QueryAuthenticatedUser(ctx context.Context, req *mgmtPB.
 // Note: this endpoint assumes the ID of the authenticated user is the default user.
 func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.PatchAuthenticatedUserRequest) (*mgmtPB.PatchAuthenticatedUserResponse, error) {
 
-	ctx, span := tracer.Start(ctx, "PatchAuthenticatedUser",
+	eventName := "PatchAuthenticatedUser"
+	ctx, span := tracer.Start(ctx, eventName,
 		trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
 
 	logger, _ := logger.GetZapLogger(ctx)
 
@@ -426,12 +429,9 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
+		logUUID.String(),
 		pbUserUpdated,
-		false,
-		"PatchAuthenticatedUser",
-		"request",
-		"PatchAuthenticatedUser done",
-		false,
+		eventName,
 		custom_otel.SetEventResource(dbUserUpdated),
 	)))
 
@@ -446,9 +446,12 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 // ExistUsername verifies if a username (ID) has been occupied
 func (h *PublicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUsernameRequest) (*mgmtPB.ExistUsernameResponse, error) {
 
-	ctx, span := tracer.Start(ctx, "ExistUsername",
+	eventName := "ExistUsername"
+	ctx, span := tracer.Start(ctx, eventName,
 		trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
 
 	logger, _ := logger.GetZapLogger(ctx)
 
@@ -531,12 +534,9 @@ func (h *PublicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUser
 
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
+		logUUID.String(),
 		pbUser,
-		false,
-		"ExistUsername",
-		"request",
-		"ExistUsername done",
-		false,
+		eventName,
 		custom_otel.SetEventResource(dbUser),
 	)))
 
@@ -621,14 +621,13 @@ func (h *PublicHandler) DeleteToken(ctx context.Context, req *mgmtPB.DeleteToken
 func (h *PublicHandler) ListPipielineTriggerDataPoint(ctx context.Context, req *mgmtPB.ListPipelineTriggerRecordRequest) (*mgmtPB.ListPipelineTriggerRecordResponse, error) {
 
 	eventName := "ListPipielineTriggerDataPoint"
-
 	ctx, span := tracer.Start(ctx, eventName,
 		trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
-	// logUUID, _ := uuid.NewV4()
+	logUUID, _ := uuid.NewV4()
 
-	// logger, _ := logger.GetZapLogger(ctx)
+	logger, _ := logger.GetZapLogger(ctx)
 
 	pbUser, err := h.GetUser(ctx)
 	if err != nil {
@@ -667,6 +666,14 @@ func (h *PublicHandler) ListPipielineTriggerDataPoint(ctx context.Context, req *
 		NextPageToken:            nextPageToken,
 		TotalSize:                totalSize,
 	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		pbUser,
+		eventName,
+		custom_otel.SetEventResult(pipelineTriggerDataPoints[:10]),
+	)))
 
 	return &resp, nil
 }
