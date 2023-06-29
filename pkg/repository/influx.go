@@ -129,7 +129,6 @@ func (i *influxDB) QueryPipelineTriggerDataPoint(ctx context.Context, owner stri
 			total = totalQueryResult.Record().ValueByKey("pipeline_trigger_id").(int64)
 		}
 	}
-	fmt.Println("=======query:\n", query)
 
 	result, err := i.queryAPI.Query(ctx, query)
 	var lastTimestamp time.Time
