@@ -618,9 +618,9 @@ func (h *PublicHandler) DeleteToken(ctx context.Context, req *mgmtPB.DeleteToken
 	return &mgmtPB.DeleteTokenResponse{}, st.Err()
 }
 
-func (h *PublicHandler) ListPipielineTriggerDataPoint(ctx context.Context, req *mgmtPB.ListPipelineTriggerRecordRequest) (*mgmtPB.ListPipelineTriggerRecordResponse, error) {
+func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgmtPB.ListPipelineTriggerRecordsRequest) (*mgmtPB.ListPipelineTriggerRecordsResponse, error) {
 
-	eventName := "ListPipielineTriggerDataPoint"
+	eventName := "ListPipelineTriggerRecords"
 	ctx, span := tracer.Start(ctx, eventName,
 		trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
@@ -632,7 +632,7 @@ func (h *PublicHandler) ListPipielineTriggerDataPoint(ctx context.Context, req *
 	pbUser, err := h.GetUser(ctx)
 	if err != nil {
 		span.SetStatus(1, err.Error())
-		return &mgmtPB.ListPipelineTriggerRecordResponse{}, err
+		return &mgmtPB.ListPipelineTriggerRecordsResponse{}, err
 	}
 
 	var mode pipelinePB.Pipeline_Mode
@@ -646,22 +646,22 @@ func (h *PublicHandler) ListPipielineTriggerDataPoint(ctx context.Context, req *
 	}...)
 	if err != nil {
 		span.SetStatus(1, err.Error())
-		return &mgmtPB.ListPipelineTriggerRecordResponse{}, err
+		return &mgmtPB.ListPipelineTriggerRecordsResponse{}, err
 	}
 
 	filter, err := filtering.ParseFilter(req, declarations)
 	if err != nil {
 		span.SetStatus(1, err.Error())
-		return &mgmtPB.ListPipelineTriggerRecordResponse{}, err
+		return &mgmtPB.ListPipelineTriggerRecordsResponse{}, err
 	}
 
-	pipelineTriggerDataPoints, totalSize, nextPageToken, err := h.Service.ListPipielineTriggerRecord(ctx, pbUser, req.GetPageSize(), req.GetPageToken(), filter)
+	pipelineTriggerDataPoints, totalSize, nextPageToken, err := h.Service.ListPipelineTriggerRecords(ctx, pbUser, req.GetPageSize(), req.GetPageToken(), filter)
 	if err != nil {
 		span.SetStatus(1, err.Error())
-		return &mgmtPB.ListPipelineTriggerRecordResponse{}, err
+		return &mgmtPB.ListPipelineTriggerRecordsResponse{}, err
 	}
 
-	resp := mgmtPB.ListPipelineTriggerRecordResponse{
+	resp := mgmtPB.ListPipelineTriggerRecordsResponse{
 		PipelineTriggerDataPoint: pipelineTriggerDataPoints,
 		NextPageToken:            nextPageToken,
 		TotalSize:                totalSize,

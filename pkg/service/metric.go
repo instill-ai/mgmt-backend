@@ -12,7 +12,7 @@ import (
 	mgmtPB "github.com/instill-ai/protogen-go/base/mgmt/v1alpha"
 )
 
-func (s *service) ListPipielineTriggerRecord(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerRecord, int64, string, error) {
+func (s *service) ListPipelineTriggerRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerRecord, int64, string, error) {
 
 	if !config.Config.Log.External {
 		return nil, 0, "", status.Errorf(codes.Internal, "[influxdb] service not found")

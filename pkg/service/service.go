@@ -26,7 +26,7 @@ type Service interface {
 	DeleteUser(ctx context.Context, uid uuid.UUID) error
 	DeleteUserByID(ctx context.Context, id string) error
 
-	ListPipielineTriggerRecord(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerRecord, int64, string, error)
+	ListPipelineTriggerRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerRecord, int64, string, error)
 }
 
 type service struct {
