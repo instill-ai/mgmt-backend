@@ -18,10 +18,10 @@ func (s *service) ListPipelineTriggerRecords(ctx context.Context, owner *mgmtPB.
 		return nil, 0, "", status.Errorf(codes.Internal, "[influxdb] service not found")
 	}
 
-	pipelineTriggerDataPoints, ps, pt, err := s.influxDB.QueryPipelineTriggerDataPoint(ctx, *owner.Uid, pageSize, pageToken, filter)
+	pipelineTriggerRecords, ps, pt, err := s.influxDB.QueryPipelineTriggerRecords(ctx, *owner.Uid, pageSize, pageToken, filter)
 	if err != nil {
 		return nil, 0, "", err
 	}
 
-	return pipelineTriggerDataPoints, ps, pt, nil
+	return pipelineTriggerRecords, ps, pt, nil
 }

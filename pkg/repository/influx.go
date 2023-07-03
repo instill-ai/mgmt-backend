@@ -29,7 +29,7 @@ const MaxPageSize = 1000
 
 // InfluxDB interface
 type InfluxDB interface {
-	QueryPipelineTriggerDataPoint(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (pipelines []*mgmtPB.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error)
+	QueryPipelineTriggerRecords(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (pipelines []*mgmtPB.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error)
 }
 
 type influxDB struct {
@@ -45,7 +45,7 @@ func NewInfluxDB(queryAPI api.QueryAPI, bucket string) InfluxDB {
 	}
 }
 
-func (i *influxDB) QueryPipelineTriggerDataPoint(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (dataPoints []*mgmtPB.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error) {
+func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error) {
 
 	logger, _ := logger.GetZapLogger(ctx)
 
@@ -147,8 +147,8 @@ func (i *influxDB) QueryPipelineTriggerDataPoint(ctx context.Context, owner stri
 			if err != nil {
 				return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid parse key: %s", err.Error())
 			}
-			dataPoints = append(
-				dataPoints,
+			records = append(
+				records,
 				&mgmtPB.PipelineTriggerRecord{
 					TriggerTime:         timestamppb.New(triggerTime),
 					PipelineTriggerId:   result.Record().ValueByKey("pipeline_trigger_id").(string),
@@ -172,13 +172,13 @@ func (i *influxDB) QueryPipelineTriggerDataPoint(ctx context.Context, owner stri
 		ownerUUID = result.Record().ValueByKey("owner_uid").(string)
 	}
 
-	if int64(len(dataPoints)) < total {
+	if int64(len(records)) < total {
 		pageToken = paginate.EncodeToken(lastTimestamp, ownerUUID)
 	} else {
 		pageToken = ""
 	}
 
-	return dataPoints, int64(len(dataPoints)), pageToken, nil
+	return records, int64(len(records)), pageToken, nil
 }
 
 // TranspileFilter transpiles a parsed AIP filter expression to GORM DB clauses

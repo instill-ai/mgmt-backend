@@ -655,14 +655,14 @@ func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgm
 		return &mgmtPB.ListPipelineTriggerRecordsResponse{}, err
 	}
 
-	pipelineTriggerDataPoints, totalSize, nextPageToken, err := h.Service.ListPipelineTriggerRecords(ctx, pbUser, req.GetPageSize(), req.GetPageToken(), filter)
+	pipelineTriggerRecords, totalSize, nextPageToken, err := h.Service.ListPipelineTriggerRecords(ctx, pbUser, req.GetPageSize(), req.GetPageToken(), filter)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return &mgmtPB.ListPipelineTriggerRecordsResponse{}, err
 	}
 
 	resp := mgmtPB.ListPipelineTriggerRecordsResponse{
-		PipelineTriggerDataPoint: pipelineTriggerDataPoints,
+		PipelineTriggerDataPoint: pipelineTriggerRecords,
 		NextPageToken:            nextPageToken,
 		TotalSize:                totalSize,
 	}
@@ -672,7 +672,7 @@ func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgm
 		logUUID.String(),
 		pbUser,
 		eventName,
-		custom_otel.SetEventResult(pipelineTriggerDataPoints[:10]),
+		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v",  totalSize)),
 	)))
 
 	return &resp, nil
