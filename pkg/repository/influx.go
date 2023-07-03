@@ -165,7 +165,7 @@ func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string
 			return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
 		}
 		if result.Record() == nil {
-			return nil, 0, "", status.Errorf(codes.NotFound, "Empty query result")
+			return nil, 0, "", nil
 		}
 
 		lastTimestamp = result.Record().Time()
