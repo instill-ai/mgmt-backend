@@ -152,8 +152,8 @@ func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string
 				&mgmtPB.PipelineTriggerRecord{
 					TriggerTime:         timestamppb.New(triggerTime),
 					PipelineTriggerId:   result.Record().ValueByKey("pipeline_trigger_id").(string),
-					PipelineName:        result.Record().ValueByKey("pipeline_name").(string),
-					PipelinePermalink:   result.Record().ValueByKey("pipeline_permalink").(string),
+					PipelineId:          result.Record().ValueByKey("pipeline_id").(string),
+					PipelineUid:         result.Record().ValueByKey("pipeline_uid").(string),
 					PipelineMode:        pipelinePB.Pipeline_Mode(pipelinePB.Pipeline_Mode_value[result.Record().ValueByKey("pipeline_mode").(string)]),
 					ComputeTimeDuration: float32(result.Record().ValueByKey("compute_time_duration").(float64)),
 					Status:              result.Record().ValueByKey("status").(string),
