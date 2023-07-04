@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
+
+	pipelinePB "github.com/instill-ai/protogen-go/vdp/pipeline/v1alpha"
 )
 
 // Base contains common columns for all tables
@@ -29,3 +31,6 @@ type User struct {
 	NewsletterSubscription bool `gorm:"default:false"`
 	CookieToken            sql.NullString
 }
+
+// PipelineMode is an alias type for Protobuf enum Pipeline.Mode
+type PipelineMode pipelinePB.Pipeline_Mode

@@ -25,7 +25,7 @@ type Repository interface {
 	UpdateUser(ctx context.Context, uid uuid.UUID, user *datamodel.User) error
 	DeleteUser(ctx context.Context, uid uuid.UUID) error
 	DeleteUserByID(ctx context.Context, id string) error
-	GetAllUsers(ctx context.Context, ) ([]datamodel.User, error)
+	GetAllUsers(ctx context.Context) ([]datamodel.User, error)
 }
 
 type repository struct {
@@ -129,7 +129,7 @@ func (r *repository) GetUser(uid uuid.UUID) (*datamodel.User, error) {
 // GetAllUsers gets all users in the database
 // Return error types
 //   - codes.Internal
-func (r *repository) GetAllUsers(ctx context.Context, ) ([]datamodel.User, error) {
+func (r *repository) GetAllUsers(ctx context.Context) ([]datamodel.User, error) {
 	logger, _ := logger.GetZapLogger(ctx)
 	var users []datamodel.User
 	if result := r.db.Find(&users); result.Error != nil {

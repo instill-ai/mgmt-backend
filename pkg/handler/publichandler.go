@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/iancoleman/strcase"
+	"go.einride.tech/aip/filtering"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -26,6 +27,7 @@ import (
 	custom_otel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
 	mgmtPB "github.com/instill-ai/protogen-go/base/mgmt/v1alpha"
 	healthcheckPB "github.com/instill-ai/protogen-go/common/healthcheck/v1alpha"
+	pipelinePB "github.com/instill-ai/protogen-go/vdp/pipeline/v1alpha"
 	checkfield "github.com/instill-ai/x/checkfield"
 )
 
@@ -74,9 +76,12 @@ func (h *PublicHandler) Readiness(ctx context.Context, in *mgmtPB.ReadinessReque
 // GetUser returns the authenticated user
 func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
 
-	ctx, span := tracer.Start(ctx, "GetUser",
+	eventName := "GetUser"
+	ctx, span := tracer.Start(ctx, eventName,
 		trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
 
 	logger, _ := logger.GetZapLogger(ctx)
 
@@ -180,12 +185,9 @@ func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
 
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
+		logUUID.String(),
 		pbUser,
-		false,
-		"GetUser",
-		"request",
-		"GetUser done",
-		false,
+		eventName,
 		custom_otel.SetEventResource(dbUser),
 	)))
 
@@ -196,9 +198,12 @@ func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
 // Note: this endpoint assumes the ID of the authenticated user is the default user.
 func (h *PublicHandler) QueryAuthenticatedUser(ctx context.Context, req *mgmtPB.QueryAuthenticatedUserRequest) (*mgmtPB.QueryAuthenticatedUserResponse, error) {
 
-	ctx, span := tracer.Start(ctx, "QueryAuthenticatedUser",
+	eventName := "QueryAuthenticatedUser"
+	ctx, span := tracer.Start(ctx, eventName,
 		trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
 
 	logger, _ := logger.GetZapLogger(ctx)
 
@@ -209,12 +214,9 @@ func (h *PublicHandler) QueryAuthenticatedUser(ctx context.Context, req *mgmtPB.
 
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
+		logUUID.String(),
 		pbUser,
-		false,
-		"QueryAuthenticatedUser",
-		"request",
-		"QueryAuthenticatedUser done",
-		false,
+		eventName,
 		custom_otel.SetEventResource(pbUser),
 	)))
 
@@ -228,9 +230,12 @@ func (h *PublicHandler) QueryAuthenticatedUser(ctx context.Context, req *mgmtPB.
 // Note: this endpoint assumes the ID of the authenticated user is the default user.
 func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.PatchAuthenticatedUserRequest) (*mgmtPB.PatchAuthenticatedUserResponse, error) {
 
-	ctx, span := tracer.Start(ctx, "PatchAuthenticatedUser",
+	eventName := "PatchAuthenticatedUser"
+	ctx, span := tracer.Start(ctx, eventName,
 		trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
 
 	logger, _ := logger.GetZapLogger(ctx)
 
@@ -424,12 +429,9 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
+		logUUID.String(),
 		pbUserUpdated,
-		false,
-		"PatchAuthenticatedUser",
-		"request",
-		"PatchAuthenticatedUser done",
-		false,
+		eventName,
 		custom_otel.SetEventResource(dbUserUpdated),
 	)))
 
@@ -444,9 +446,12 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 // ExistUsername verifies if a username (ID) has been occupied
 func (h *PublicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUsernameRequest) (*mgmtPB.ExistUsernameResponse, error) {
 
-	ctx, span := tracer.Start(ctx, "ExistUsername",
+	eventName := "ExistUsername"
+	ctx, span := tracer.Start(ctx, eventName,
 		trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
 
 	logger, _ := logger.GetZapLogger(ctx)
 
@@ -529,12 +534,9 @@ func (h *PublicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUser
 
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
+		logUUID.String(),
 		pbUser,
-		false,
-		"ExistUsername",
-		"request",
-		"ExistUsername done",
-		false,
+		eventName,
 		custom_otel.SetEventResource(dbUser),
 	)))
 
@@ -614,4 +616,64 @@ func (h *PublicHandler) DeleteToken(ctx context.Context, req *mgmtPB.DeleteToken
 		logger.Error(err.Error())
 	}
 	return &mgmtPB.DeleteTokenResponse{}, st.Err()
+}
+
+func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgmtPB.ListPipelineTriggerRecordsRequest) (*mgmtPB.ListPipelineTriggerRecordsResponse, error) {
+
+	eventName := "ListPipelineTriggerRecords"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	pbUser, err := h.GetUser(ctx)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListPipelineTriggerRecordsResponse{}, err
+	}
+
+	var mode pipelinePB.Pipeline_Mode
+
+	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
+		filtering.DeclareStandardFunctions(),
+		filtering.DeclareIdent("start", filtering.TypeTimestamp),
+		filtering.DeclareIdent("stop", filtering.TypeTimestamp),
+		filtering.DeclareIdent("pipeline_id", filtering.TypeString),
+		filtering.DeclareEnumIdent("pipeline_mode", mode.Type()),
+	}...)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListPipelineTriggerRecordsResponse{}, err
+	}
+
+	filter, err := filtering.ParseFilter(req, declarations)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListPipelineTriggerRecordsResponse{}, err
+	}
+
+	pipelineTriggerRecords, totalSize, nextPageToken, err := h.Service.ListPipelineTriggerRecords(ctx, pbUser, req.GetPageSize(), req.GetPageToken(), filter)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListPipelineTriggerRecordsResponse{}, err
+	}
+
+	resp := mgmtPB.ListPipelineTriggerRecordsResponse{
+		PipelineTriggerRecord: pipelineTriggerRecords,
+		NextPageToken:         nextPageToken,
+		TotalSize:             totalSize,
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		pbUser,
+		eventName,
+		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v", totalSize)),
+	)))
+
+	return &resp, nil
 }

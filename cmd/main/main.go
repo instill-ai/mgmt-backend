@@ -77,14 +77,6 @@ func main() {
 		}()
 	}
 
-	if mp, err := custom_otel.SetupMetrics(ctx, "mgmt-backend"); err != nil {
-		panic(err)
-	} else {
-		defer func() {
-			err = mp.Shutdown(ctx)
-		}()
-	}
-
 	ctx, span := otel.Tracer("main-tracer").Start(ctx,
 		"main",
 	)
@@ -145,8 +137,12 @@ func main() {
 		grpcServerOpts = append(grpcServerOpts, grpc.Creds(creds))
 	}
 
+	influxDBClient, influxDBQueryAPI := external.InitInfluxDBServiceClient(ctx)
+	defer influxDBClient.Close()
+
+	influxDB := repository.NewInfluxDB(influxDBQueryAPI, config.Config.InfluxDB.Bucket)
 	repository := repository.NewRepository(db)
-	service := service.NewService(repository)
+	service := service.NewService(repository, influxDB)
 
 	// Start usage reporter
 	var usg usage.Usage

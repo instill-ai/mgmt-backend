@@ -5,11 +5,14 @@ import (
 	"strings"
 
 	"github.com/gofrs/uuid"
+	"go.einride.tech/aip/filtering"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
+
+	mgmtPB "github.com/instill-ai/protogen-go/base/mgmt/v1alpha"
 )
 
 // Service interface
@@ -22,16 +25,20 @@ type Service interface {
 	UpdateUser(ctx context.Context, uid uuid.UUID, user *datamodel.User) (*datamodel.User, error)
 	DeleteUser(ctx context.Context, uid uuid.UUID) error
 	DeleteUserByID(ctx context.Context, id string) error
+
+	ListPipelineTriggerRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerRecord, int64, string, error)
 }
 
 type service struct {
 	repository repository.Repository
+	influxDB repository.InfluxDB
 }
 
 // NewService initiates a service instance
-func NewService(r repository.Repository) Service {
+func NewService(r repository.Repository, i repository.InfluxDB) Service {
 	return &service{
 		repository: r,
+		influxDB: i,
 	}
 }
 
