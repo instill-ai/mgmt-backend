@@ -662,9 +662,9 @@ func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgm
 	}
 
 	resp := mgmtPB.ListPipelineTriggerRecordsResponse{
-		PipelineTriggerDataPoint: pipelineTriggerRecords,
-		NextPageToken:            nextPageToken,
-		TotalSize:                totalSize,
+		PipelineTriggerRecord: pipelineTriggerRecords,
+		NextPageToken:         nextPageToken,
+		TotalSize:             totalSize,
 	}
 
 	logger.Info(string(custom_otel.NewLogMessage(
@@ -672,7 +672,7 @@ func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgm
 		logUUID.String(),
 		pbUser,
 		eventName,
-		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v",  totalSize)),
+		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v", totalSize)),
 	)))
 
 	return &resp, nil

@@ -81,7 +81,7 @@ func NewLogMessage(
 ) []byte {
 	logMessage := logMessage{}
 	logMessage.Id = logID
-	logMessage.ServiceName = "pipeline-backend"
+	logMessage.ServiceName = "mgmt-backend"
 	logMessage.TraceInfo = struct {
 		TraceId string "json:\"traceID\""
 		SpanId  string "json:\"spanID\""
