@@ -662,9 +662,9 @@ func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgm
 	}
 
 	resp := mgmtPB.ListPipelineTriggerRecordsResponse{
-		PipelineTriggerRecord: pipelineTriggerRecords,
-		NextPageToken:         nextPageToken,
-		TotalSize:             totalSize,
+		PipelineTriggerRecords: pipelineTriggerRecords,
+		NextPageToken:          nextPageToken,
+		TotalSize:              totalSize,
 	}
 
 	logger.Info(string(custom_otel.NewLogMessage(
