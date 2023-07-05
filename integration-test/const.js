@@ -5,11 +5,11 @@ let host
 let publicPort
 let privatePort
 
-if (__ENV.API_GATEWAY_HOST && !__ENV.API_GATEWAY_PORT || !__ENV.API_GATEWAY_HOST && __ENV.API_GATEWAY_PORT) {
-  fail("both API_GATEWAY_HOST and API_GATEWAY_PORT should be properly configured.")
+if (__ENV.API_GATEWAY_BASE_HOST && !__ENV.API_GATEWAY_BASE_PORT || !__ENV.API_GATEWAY_BASE_HOST && __ENV.API_GATEWAY_BASE_PORT) {
+  fail("both API_GATEWAY_BASE_HOST and API_GATEWAY_BASE_PORT should be properly configured.")
 }
 
-export const apiGatewayMode = (__ENV.API_GATEWAY_HOST && __ENV.API_GATEWAY_PORT);
+export const apiGatewayMode = (__ENV.API_GATEWAY_BASE_HOST && __ENV.API_GATEWAY_BASE_PORT);
 
 if (__ENV.API_GATEWAY_PROTOCOL) {
   if (__ENV.API_GATEWAY_PROTOCOL !== "http" && __ENV.API_GATEWAY_PROTOCOL != "https") {
@@ -22,9 +22,9 @@ if (__ENV.API_GATEWAY_PROTOCOL) {
 
 if (apiGatewayMode) {
   // api gateway mode
-  host = __ENV.API_GATEWAY_HOST
+  host = __ENV.API_GATEWAY_BASE_HOST
   privatePort = 3084
-  publicPort = __ENV.API_GATEWAY_PORT
+  publicPort = __ENV.API_GATEWAY_BASE_PORT
 } else {
   // direct microservice mode
   host = "mgmt-backend"
