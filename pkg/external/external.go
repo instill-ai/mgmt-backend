@@ -41,7 +41,7 @@ func InitUsageServiceClient(ctx context.Context, serverConfig *config.ServerConf
 }
 
 // InitInfluxDBServiceClient initialises a InfluxDBServiceClient instance
-func InitInfluxDBServiceClient(ctx context.Context) (influxdb2.Client, api.QueryAPI) {
+func InitInfluxDBServiceClient(ctx context.Context, appConfig *config.AppConfig) (influxdb2.Client, api.QueryAPI) {
 
 	logger, _ := logger.GetZapLogger(ctx)
 
@@ -49,14 +49,14 @@ func InitInfluxDBServiceClient(ctx context.Context) (influxdb2.Client, api.Query
 	var err error
 
 	influxOptions := influxdb2.DefaultOptions()
-	if config.Config.Server.Debug {
+	if appConfig.Server.Debug {
 		influxOptions = influxOptions.SetLogLevel(log.DebugLevel)
 	}
-	influxOptions = influxOptions.SetFlushInterval(uint(time.Duration(config.Config.InfluxDB.FlushInterval * int(time.Second)).Milliseconds()))
+	influxOptions = influxOptions.SetFlushInterval(uint(time.Duration(appConfig.InfluxDB.FlushInterval * int(time.Second)).Milliseconds()))
 
-	if config.Config.InfluxDB.HTTPS.Cert != "" && config.Config.InfluxDB.HTTPS.Key != "" {
+	if appConfig.InfluxDB.HTTPS.Cert != "" && appConfig.InfluxDB.HTTPS.Key != "" {
 		// TODO: support TLS
-		creds, err = credentials.NewServerTLSFromFile(config.Config.InfluxDB.HTTPS.Cert, config.Config.InfluxDB.HTTPS.Key)
+		creds, err = credentials.NewServerTLSFromFile(appConfig.InfluxDB.HTTPS.Cert, appConfig.InfluxDB.HTTPS.Key)
 		if err != nil {
 			logger.Fatal(err.Error())
 		}
@@ -64,8 +64,8 @@ func InitInfluxDBServiceClient(ctx context.Context) (influxdb2.Client, api.Query
 	}
 
 	client := influxdb2.NewClientWithOptions(
-		config.Config.InfluxDB.URL,
-		config.Config.InfluxDB.Token,
+		appConfig.InfluxDB.URL,
+		appConfig.InfluxDB.Token,
 		influxOptions,
 	)
 
@@ -73,7 +73,7 @@ func InitInfluxDBServiceClient(ctx context.Context) (influxdb2.Client, api.Query
 		logger.Fatal(err.Error())
 	}
 
-	queryAPI := client.QueryAPI(config.Config.InfluxDB.Org)
+	queryAPI := client.QueryAPI(appConfig.InfluxDB.Org)
 
 	return client, queryAPI
 }

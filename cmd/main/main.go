@@ -137,7 +137,7 @@ func main() {
 		grpcServerOpts = append(grpcServerOpts, grpc.Creds(creds))
 	}
 
-	influxDBClient, influxDBQueryAPI := external.InitInfluxDBServiceClient(ctx)
+	influxDBClient, influxDBQueryAPI := external.InitInfluxDBServiceClient(ctx, &config.Config)
 	defer influxDBClient.Close()
 
 	influxDB := repository.NewInfluxDB(influxDBQueryAPI, config.Config.InfluxDB.Bucket)
