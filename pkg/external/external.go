@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/influxdata/influxdb-client-go/v2"
+	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/influxdata/influxdb-client-go/v2/api"
 	"github.com/influxdata/influxdb-client-go/v2/log"
 	"google.golang.org/grpc"
@@ -70,7 +70,7 @@ func InitInfluxDBServiceClient(ctx context.Context, appConfig *config.AppConfig)
 	)
 
 	if _, err := client.Ping(ctx); err != nil {
-		logger.Fatal(err.Error())
+		logger.Warn(err.Error())
 	}
 
 	queryAPI := client.QueryAPI(appConfig.InfluxDB.Org)
