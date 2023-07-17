@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"time"
 
-	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/influxdata/influxdb-client-go/v2/api"
 	"github.com/influxdata/influxdb-client-go/v2/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+
+	influxdb3 "github.com/InfluxCommunity/influxdb3-go/influx"
+	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
@@ -40,8 +42,8 @@ func InitUsageServiceClient(ctx context.Context, serverConfig *config.ServerConf
 	return usagePB.NewUsageServiceClient(clientConn), clientConn
 }
 
-// InitInfluxDBServiceClient initialises a InfluxDBServiceClient instance
-func InitInfluxDBServiceClient(ctx context.Context, appConfig *config.AppConfig) (influxdb2.Client, api.QueryAPI) {
+// InitInfluxDBServiceClientV2 initialises a InfluxDBServiceClientV2 instance
+func InitInfluxDBServiceClientV2(ctx context.Context, appConfig *config.AppConfig) (influxdb2.Client, api.QueryAPI) {
 
 	logger, _ := logger.GetZapLogger(ctx)
 
@@ -76,4 +78,21 @@ func InitInfluxDBServiceClient(ctx context.Context, appConfig *config.AppConfig)
 	queryAPI := client.QueryAPI(appConfig.InfluxDB.Org)
 
 	return client, queryAPI
+}
+
+// InitInfluxDBServiceClientV3 initialises a InfluxDBServiceClientV3 instance
+func InitInfluxDBServiceClientV3(ctx context.Context, appConfig *config.AppConfig) *influxdb3.Client {
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	client, err := influxdb3.New(influxdb3.Configs{
+		HostURL: appConfig.InfluxDB.URL,
+		AuthToken: appConfig.InfluxDB.Token,
+	})
+
+	if err != nil {
+		logger.Error(err.Error())
+	}
+
+	return client
 }
