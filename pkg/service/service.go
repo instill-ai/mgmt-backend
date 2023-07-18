@@ -27,18 +27,21 @@ type Service interface {
 	DeleteUserByID(ctx context.Context, id string) error
 
 	ListPipelineTriggerRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerRecord, int64, string, error)
+	ListPipelineTriggerChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerChartRecord, error)
+	ListConnectorExecuteRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteRecord, int64, string, error)
+	ListConnectorExecuteChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteChartRecord, error)
 }
 
 type service struct {
 	repository repository.Repository
-	influxDB repository.InfluxDB
+	influxDB   repository.InfluxDB
 }
 
 // NewService initiates a service instance
 func NewService(r repository.Repository, i repository.InfluxDB) Service {
 	return &service{
 		repository: r,
-		influxDB: i,
+		influxDB:   i,
 	}
 }
 

@@ -27,7 +27,6 @@ import (
 	custom_otel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
 	mgmtPB "github.com/instill-ai/protogen-go/base/mgmt/v1alpha"
 	healthcheckPB "github.com/instill-ai/protogen-go/common/healthcheck/v1alpha"
-	pipelinePB "github.com/instill-ai/protogen-go/vdp/pipeline/v1alpha"
 	checkfield "github.com/instill-ai/x/checkfield"
 )
 
@@ -635,14 +634,16 @@ func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgm
 		return &mgmtPB.ListPipelineTriggerRecordsResponse{}, err
 	}
 
-	var mode pipelinePB.Pipeline_Mode
+	var mode mgmtPB.Mode
+	var status mgmtPB.Status
 
 	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
 		filtering.DeclareStandardFunctions(),
 		filtering.DeclareIdent("start", filtering.TypeTimestamp),
 		filtering.DeclareIdent("stop", filtering.TypeTimestamp),
 		filtering.DeclareIdent("pipeline_id", filtering.TypeString),
-		filtering.DeclareEnumIdent("pipeline_mode", mode.Type()),
+		filtering.DeclareEnumIdent("trigger_mode", mode.Type()),
+		filtering.DeclareEnumIdent("status", status.Type()),
 	}...)
 	if err != nil {
 		span.SetStatus(1, err.Error())
@@ -673,6 +674,182 @@ func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgm
 		pbUser,
 		eventName,
 		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v", totalSize)),
+	)))
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req *mgmtPB.ListPipelineTriggerChartRecordsRequest) (*mgmtPB.ListPipelineTriggerChartRecordsResponse, error) {
+
+	eventName := "ListPipelineTriggerChartRecords"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	pbUser, err := h.GetUser(ctx)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListPipelineTriggerChartRecordsResponse{}, err
+	}
+
+	var mode mgmtPB.Mode
+	var status mgmtPB.Status
+
+	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
+		filtering.DeclareStandardFunctions(),
+		filtering.DeclareIdent("start", filtering.TypeTimestamp),
+		filtering.DeclareIdent("stop", filtering.TypeTimestamp),
+		filtering.DeclareIdent("pipeline_id", filtering.TypeString),
+		filtering.DeclareEnumIdent("trigger_mode", mode.Type()),
+		filtering.DeclareEnumIdent("status", status.Type()),
+	}...)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListPipelineTriggerChartRecordsResponse{}, err
+	}
+
+	filter, err := filtering.ParseFilter(req, declarations)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListPipelineTriggerChartRecordsResponse{}, err
+	}
+
+	pipelineTriggerChartRecords, err := h.Service.ListPipelineTriggerChartRecords(ctx, pbUser, req.GetAggregationWindow(), filter)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListPipelineTriggerChartRecordsResponse{}, err
+	}
+
+	resp := mgmtPB.ListPipelineTriggerChartRecordsResponse{
+		PipelineTriggerChartRecords: pipelineTriggerChartRecords,
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		pbUser,
+		eventName,
+	)))
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) ListConnectorExecuteRecords(ctx context.Context, req *mgmtPB.ListConnectorExecuteRecordsRequest) (*mgmtPB.ListConnectorExecuteRecordsResponse, error) {
+
+	eventName := "ListConnectorExecuteRecords"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	pbUser, err := h.GetUser(ctx)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListConnectorExecuteRecordsResponse{}, err
+	}
+
+	var status mgmtPB.Status
+
+	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
+		filtering.DeclareStandardFunctions(),
+		filtering.DeclareIdent("start", filtering.TypeTimestamp),
+		filtering.DeclareIdent("stop", filtering.TypeTimestamp),
+		filtering.DeclareIdent("connector_id", filtering.TypeString),
+		filtering.DeclareEnumIdent("status", status.Type()),
+	}...)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListConnectorExecuteRecordsResponse{}, err
+	}
+
+	filter, err := filtering.ParseFilter(req, declarations)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListConnectorExecuteRecordsResponse{}, err
+	}
+
+	connectorExecuteRecords, totalSize, nextPageToken, err := h.Service.ListConnectorExecuteRecords(ctx, pbUser, req.GetPageSize(), req.GetPageToken(), filter)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListConnectorExecuteRecordsResponse{}, err
+	}
+
+	resp := mgmtPB.ListConnectorExecuteRecordsResponse{
+		ConnectorExecuteRecords: connectorExecuteRecords,
+		NextPageToken:           nextPageToken,
+		TotalSize:               totalSize,
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		pbUser,
+		eventName,
+		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v", totalSize)),
+	)))
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) ListConnectorExecuteChartRecords(ctx context.Context, req *mgmtPB.ListConnectorExecuteChartRecordsRequest) (*mgmtPB.ListConnectorExecuteChartRecordsResponse, error) {
+
+	eventName := "ListConnectorExecuteChartRecords"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	pbUser, err := h.GetUser(ctx)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListConnectorExecuteChartRecordsResponse{}, err
+	}
+
+	var status mgmtPB.Status
+
+	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
+		filtering.DeclareStandardFunctions(),
+		filtering.DeclareIdent("start", filtering.TypeTimestamp),
+		filtering.DeclareIdent("stop", filtering.TypeTimestamp),
+		filtering.DeclareIdent("connector_id", filtering.TypeString),
+		filtering.DeclareEnumIdent("status", status.Type()),
+	}...)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListConnectorExecuteChartRecordsResponse{}, err
+	}
+
+	filter, err := filtering.ParseFilter(req, declarations)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListConnectorExecuteChartRecordsResponse{}, err
+	}
+
+	connectorExecuteChartRecords, err := h.Service.ListConnectorExecuteChartRecords(ctx, pbUser, req.GetAggregationWindow(), filter)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListConnectorExecuteChartRecordsResponse{}, err
+	}
+
+	resp := mgmtPB.ListConnectorExecuteChartRecordsResponse{
+		ConnectorExecuteChartRecords: connectorExecuteChartRecords,
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		pbUser,
+		eventName,
 	)))
 
 	return &resp, nil
