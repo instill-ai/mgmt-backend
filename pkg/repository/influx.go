@@ -27,7 +27,7 @@ const DefaultPageSize = 100
 const MaxPageSize = 1000
 
 // Default aggregate window
-const AggregationWindow = 3600000000000
+var defaultAggregationWindow = time.Hour.Nanoseconds()
 
 // InfluxDB interface
 type InfluxDB interface {
@@ -197,8 +197,8 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 	start := time.Time{}.Format(time.RFC3339Nano)
 	stop := time.Now().Format(time.RFC3339Nano)
 
-	if aggregationWindow == 0 {
-		aggregationWindow = AggregationWindow
+	if aggregationWindow < time.Minute.Nanoseconds() {
+		aggregationWindow = defaultAggregationWindow
 	}
 
 	// TODO: design better filter expression to flux transpiler
@@ -451,8 +451,8 @@ func (i *influxDB) QueryConnectorExecuteChartRecords(ctx context.Context, owner 
 	start := time.Time{}.Format(time.RFC3339Nano)
 	stop := time.Now().Format(time.RFC3339Nano)
 
-	if aggregationWindow == 0 {
-		aggregationWindow = AggregationWindow
+	if aggregationWindow < time.Minute.Nanoseconds() {
+		aggregationWindow = defaultAggregationWindow
 	}
 
 	// TODO: design better filter expression to flux transpiler
