@@ -41,6 +41,7 @@ export default function (data) {
   mgmtPublic.CheckPublicListTokens();
   mgmtPublic.CheckPublicGetToken();
   mgmtPublic.CheckPublicDeleteToken();
+  mgmtPublic.CheckPublicMetrics();
 }
 
 export function teardown(data) {

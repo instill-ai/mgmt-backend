@@ -242,3 +242,92 @@ export function CheckPublicDeleteToken() {
 
   client.close();
 }
+
+export function CheckPublicMetrics() {
+
+  client.connect(constant.mgmtPublicGRPCHost, {
+    plaintext: true
+  });
+
+  group(`Management Public API: List Pipeline Trigger Records`, () => {
+
+    let emptyPipelineTriggerRecordResponse = {
+      "pipelineTriggerRecords":[],
+      "nextPageToken":"",
+      "totalSize":"0"
+    }
+
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords', {}), {
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords status': (r) => r && r.status == grpc.StatusOK,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords response pipelineTriggerRecords length is 0': (r) => r && r.message.pipelineTriggerRecords.length === 0,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords response next_page_token is empty': (r) => r && r.message.totalSize === emptyPipelineTriggerRecordResponse.totalSize,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords response total_size is 0': (r) => r && r.message.nextPageToken === emptyPipelineTriggerRecordResponse.nextPageToken,
+    });
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords', {
+      filter: "pipeline_id=\"a\" AND trigger_mode=MODE_SYNC",
+    }), {
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords with filter status': (r) => r && r.status == grpc.StatusOK,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords with filter response pipelineTriggerRecords length is 0': (r) => r && r.message.pipelineTriggerRecords.length === 0,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords with filter response next_page_token is empty': (r) => r && r.message.totalSize === emptyPipelineTriggerRecordResponse.totalSize,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords with filter response total_size is 0': (r) => r && r.message.nextPageToken === emptyPipelineTriggerRecordResponse.nextPageToken,
+    });
+
+  });
+
+  group(`Management Public API: List Pipeline Trigger Chart Records`, () => {
+
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords', {}), {
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords status': (r) => r && r.status == grpc.StatusOK,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords response pipelineTriggerChartRecords lenght is 0': (r) => r && r.message.pipelineTriggerChartRecords.length === 0,
+    });
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords', {
+      filter: "pipeline_id=\"a\" AND trigger_mode=MODE_SYNC",
+    }), {
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords with filter status': (r) => r && r.status == grpc.StatusOK,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords with filter response pipelineTriggerChartRecords lenght is 0': (r) => r && r.message.pipelineTriggerChartRecords.length === 0,
+    });
+
+  });
+
+  group(`Management Public API: List Connector Execute Records`, () => {
+
+    let emptyConnectorExecuteRecordResponse = {
+      "connectorExecuteRecords":[],
+      "nextPageToken":"",
+      "totalSize":"0"
+    }
+
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords', {}), {
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords status': (r) => r && r.status == grpc.StatusOK,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords response connectorExecuteRecords length is 0': (r) => r && r.message.connectorExecuteRecords.length === 0,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords response next_page_token is empty': (r) => r && r.message.totalSize === emptyConnectorExecuteRecordResponse.totalSize,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords response total_size is 0': (r) => r && r.message.nextPageToken === emptyConnectorExecuteRecordResponse.nextPageToken,
+    });
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords', {
+      filter: "connector_id=\"a\" AND status=STATUS_COMPLETED",
+    }), {
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords with filter status': (r) => r && r.status == grpc.StatusOK,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords with filter response connectorExecuteRecords length is 0': (r) => r && r.message.connectorExecuteRecords.length === 0,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords with filter response next_page_token is empty': (r) => r && r.message.totalSize === emptyConnectorExecuteRecordResponse.totalSize,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords with filter response total_size is 0': (r) => r && r.message.nextPageToken === emptyConnectorExecuteRecordResponse.nextPageToken,
+    });
+
+  });
+
+  group(`Management Public API: List Connector Execute Chart Records`, () => {
+
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords', {}), {
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords status': (r) => r && r.status == grpc.StatusOK,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords response connectorExecuteChartRecords lenght is 0': (r) => r && r.message.connectorExecuteChartRecords.length === 0,
+    });
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords', {
+      filter: "connector_id=\"a\" AND status=STATUS_COMPLETED",
+    }), {
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords with filter status': (r) => r && r.status == grpc.StatusOK,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords with filter response connectorExecuteChartRecords lenght is 0': (r) => r && r.message.connectorExecuteChartRecords.length === 0,
+    });
+
+  });
+
+  client.close();
+}
