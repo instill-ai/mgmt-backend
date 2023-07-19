@@ -270,3 +270,140 @@ export function CheckPublicDeleteToken() {
     );
   });
 }
+
+export function CheckPublicMetrics() {
+  group(`Management Public API: List Pipeline Trigger Records`, () => {
+
+    let emptyPipelineTriggerRecordResponse = {
+      "pipelineTriggerRecords": [],
+      "nextPageToken": "",
+      "totalSize": "0"
+    }
+
+    check(
+      http.request(
+        "GET",
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/triggers`
+      ),
+      {
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response status is 200`]:
+          (r) => r.status === 200,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response pipelineTriggerRecords length is 0`]:
+          (r) => r.json().pipeline_trigger_records.length === 0,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response next_page_token is empty`]:
+          (r) => r.json().total_size === emptyPipelineTriggerRecordResponse.totalSize,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response total_size is 0`]:
+          (r) => r.json().next_page_token === emptyPipelineTriggerRecordResponse.nextPageToken,
+      }
+    )
+    check(
+      http.request(
+        "GET",
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/triggers?filter=trigger_mode=MODE_SYNC`
+      ),
+      {
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers with filter response status is 200`]:
+          (r) => r.status === 200,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers with filter response pipelineTriggerRecords length is 0`]:
+          (r) => r.json().pipeline_trigger_records.length === 0,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers with filter response next_page_token is empty`]:
+          (r) => r.json().total_size === emptyPipelineTriggerRecordResponse.totalSize,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers with filter response total_size is 0`]:
+          (r) => r.json().next_page_token === emptyPipelineTriggerRecordResponse.nextPageToken,
+      }
+    )
+  })
+  group(`Management Public API: List Pipeline Trigger Chart Records`, () => {
+    check(
+      http.request(
+        "GET",
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/charts`
+      ),
+      {
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/charts response status is 200`]:
+          (r) => r.status === 200,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/charts response pipelineTriggerRecords length is 0`]:
+          (r) => r.json().pipeline_trigger_chart_records.length === 0,
+      }
+    )
+    check(
+      http.request(
+        "GET",
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/charts?trigger_mode=MODE_SYNC`
+      ),
+      {
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/charts with filter response status is 200`]:
+          (r) => r.status === 200,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/charts with filter response pipelineTriggerRecords length is 0`]:
+          (r) => r.json().pipeline_trigger_chart_records.length === 0,
+      }
+    )
+  })
+  group(`Management Public API: List Connector Execute Records`, () => {
+
+    let emptyConnectorExecuteRecordResponse = {
+      "connectorExecuteRecords": [],
+      "nextPageToken": "",
+      "totalSize": "0"
+    }
+
+    check(
+      http.request(
+        "GET",
+        `${constant.mgmtPublicHost}/metrics/vdp/connector/executes`
+      ),
+      {
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes response status is 200`]:
+          (r) => r.status === 200,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes response connectorExecuteRecords length is 0`]:
+          (r) => r.json().connector_execute_records.length === 0,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes response next_page_token is empty`]:
+          (r) => r.json().total_size === emptyConnectorExecuteRecordResponse.totalSize,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes response total_size is 0`]:
+          (r) => r.json().next_page_token === emptyConnectorExecuteRecordResponse.nextPageToken,
+      }
+    )
+    check(
+      http.request(
+        "GET",
+        `${constant.mgmtPublicHost}/metrics/vdp/connector/executes?status=STATUS_COMPLETED`
+      ),
+      {
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes with filter response status is 200`]:
+          (r) => r.status === 200,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes with filter response connectorExecuteRecords length is 0`]:
+          (r) => r.json().connector_execute_records.length === 0,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes with filter response next_page_token is empty`]:
+          (r) => r.json().total_size === emptyConnectorExecuteRecordResponse.totalSize,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes with filter response total_size is 0`]:
+          (r) => r.json().next_page_token === emptyConnectorExecuteRecordResponse.nextPageToken,
+      }
+    )
+  })
+  group(`Management Public API: List Connector Execute Chart Records`, () => {
+    check(
+      http.request(
+        "GET",
+        `${constant.mgmtPublicHost}/metrics/vdp/connector/charts`
+      ),
+      {
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/charts response status is 200`]:
+          (r) => r.status === 200,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/charts response connectorExecuteChartRecords length is 0`]:
+          (r) => r.json().connector_execute_chart_records.length === 0,
+      }
+    )
+    check(
+      http.request(
+        "GET",
+        `${constant.mgmtPublicHost}/metrics/vdp/connector/charts?status=STATUS_COMPLETED`
+      ),
+      {
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/charts with filter response status is 200`]:
+          (r) => r.status === 200,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/charts with filter response connectorExecuteChartRecords length is 0`]:
+          (r) => r.json().connector_execute_chart_records.length === 0,
+      }
+    )
+  })
+}
