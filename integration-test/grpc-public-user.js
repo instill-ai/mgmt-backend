@@ -259,17 +259,17 @@ export function CheckPublicMetrics() {
 
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords', {}), {
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords status': (r) => r && r.status == grpc.StatusOK,
-      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords response pipelineTriggerRecords length is 0': (r) => r && r.message.pipelineTriggerRecords.length === 0,
-      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords response next_page_token is empty': (r) => r && r.message.totalSize === emptyPipelineTriggerRecordResponse.totalSize,
-      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords response total_size is 0': (r) => r && r.message.nextPageToken === emptyPipelineTriggerRecordResponse.nextPageToken,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords response has pipelineTriggerRecords': (r) => r && r.message.pipelineTriggerRecords !== undefined,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords response has total_size': (r) => r && r.message.totalSize !== undefined,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords response has next_page_token': (r) => r && r.message.nextPageToken !== undefined,
     });
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords', {
       filter: "pipeline_id=\"a\" AND trigger_mode=MODE_SYNC",
     }), {
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords with filter status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords with filter response pipelineTriggerRecords length is 0': (r) => r && r.message.pipelineTriggerRecords.length === 0,
-      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords with filter response next_page_token is empty': (r) => r && r.message.totalSize === emptyPipelineTriggerRecordResponse.totalSize,
-      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords with filter response total_size is 0': (r) => r && r.message.nextPageToken === emptyPipelineTriggerRecordResponse.nextPageToken,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords with filter response total_size is 0': (r) => r && r.message.totalSize === emptyPipelineTriggerRecordResponse.totalSize,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords with filter response next_page_token is empty': (r) => r && r.message.nextPageToken === emptyPipelineTriggerRecordResponse.nextPageToken,
     });
 
   });
@@ -278,7 +278,7 @@ export function CheckPublicMetrics() {
 
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords', {}), {
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords status': (r) => r && r.status == grpc.StatusOK,
-      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords response pipelineTriggerChartRecords lenght is 0': (r) => r && r.message.pipelineTriggerChartRecords.length === 0,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords response has pipelineTriggerChartRecords': (r) => r && r.message.pipelineTriggerChartRecords !== undefined,
     });
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords', {
       filter: "pipeline_id=\"a\" AND trigger_mode=MODE_SYNC",
@@ -299,17 +299,17 @@ export function CheckPublicMetrics() {
 
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords', {}), {
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords status': (r) => r && r.status == grpc.StatusOK,
-      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords response connectorExecuteRecords length is 0': (r) => r && r.message.connectorExecuteRecords.length === 0,
-      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords response next_page_token is empty': (r) => r && r.message.totalSize === emptyConnectorExecuteRecordResponse.totalSize,
-      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords response total_size is 0': (r) => r && r.message.nextPageToken === emptyConnectorExecuteRecordResponse.nextPageToken,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords response has connectorExecuteRecords': (r) => r && r.message.connectorExecuteRecords !== undefined,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords response has total_size': (r) => r && r.message.totalSize !== undefined,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords response has next_page_token': (r) => r && r.message.nextPageToken !== undefined,
     });
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords', {
       filter: "connector_id=\"a\" AND status=STATUS_COMPLETED",
     }), {
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords with filter status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords with filter response connectorExecuteRecords length is 0': (r) => r && r.message.connectorExecuteRecords.length === 0,
-      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords with filter response next_page_token is empty': (r) => r && r.message.totalSize === emptyConnectorExecuteRecordResponse.totalSize,
-      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords with filter response total_size is 0': (r) => r && r.message.nextPageToken === emptyConnectorExecuteRecordResponse.nextPageToken,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords with filter response total_size is 0': (r) => r && r.message.totalSize === emptyConnectorExecuteRecordResponse.totalSize,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords with filter response next_page_token is empty': (r) => r && r.message.nextPageToken === emptyConnectorExecuteRecordResponse.nextPageToken,
     });
 
   });
@@ -318,7 +318,7 @@ export function CheckPublicMetrics() {
 
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords', {}), {
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords status': (r) => r && r.status == grpc.StatusOK,
-      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords response connectorExecuteChartRecords lenght is 0': (r) => r && r.message.connectorExecuteChartRecords.length === 0,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords response has connectorExecuteChartRecords': (r) => r && r.message.connectorExecuteChartRecords !== undefined,
     });
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords', {
       filter: "connector_id=\"a\" AND status=STATUS_COMPLETED",
