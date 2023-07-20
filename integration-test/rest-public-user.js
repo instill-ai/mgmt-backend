@@ -299,7 +299,7 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/triggers?filter=trigger_mode=MODE_SYNC`
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/triggers?filter=trigger_mode=MODE_SYNC%20AND%20pipeline_id=%22a%22`
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers with filter response status is 200`]:
@@ -329,7 +329,7 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/charts?trigger_mode=MODE_SYNC`
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/charts?filter=trigger_mode=MODE_SYNC%20AND%20pipeline_id=%22a%22`
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/charts with filter response status is 200`]:
@@ -366,7 +366,7 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/connector/executes?status=STATUS_COMPLETED`
+        `${constant.mgmtPublicHost}/metrics/vdp/connector/executes?filter=status=STATUS_COMPLETED%20AND%20connector_id=%22a%22`
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes with filter response status is 200`]:
@@ -396,7 +396,7 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/connector/charts?status=STATUS_COMPLETED`
+        `${constant.mgmtPublicHost}/metrics/vdp/connector/charts?filter=status=STATUS_COMPLETED%20AND%20connector_id=%22a%22`
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/connector/charts with filter response status is 200`]:
