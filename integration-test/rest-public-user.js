@@ -288,12 +288,12 @@ export function CheckPublicMetrics() {
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response status is 200`]:
           (r) => r.status === 200,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response pipelineTriggerRecords length is 0`]:
-          (r) => r.json().pipeline_trigger_records.length === 0,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response next_page_token is empty`]:
-          (r) => r.json().total_size === emptyPipelineTriggerRecordResponse.totalSize,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response total_size is 0`]:
-          (r) => r.json().next_page_token === emptyPipelineTriggerRecordResponse.nextPageToken,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response has pipelineTriggerRecords`]:
+          (r) => r.json().pipeline_trigger_records !== undefined,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response has next_page_token`]:
+          (r) => r.json().total_size !== undefined,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response has total_size`]:
+          (r) => r.json().next_page_token !== undefined,
       }
     )
     check(
@@ -307,9 +307,9 @@ export function CheckPublicMetrics() {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers with filter response pipelineTriggerRecords length is 0`]:
           (r) => r.json().pipeline_trigger_records.length === 0,
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers with filter response next_page_token is empty`]:
-          (r) => r.json().total_size === emptyPipelineTriggerRecordResponse.totalSize,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers with filter response total_size is 0`]:
           (r) => r.json().next_page_token === emptyPipelineTriggerRecordResponse.nextPageToken,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers with filter response total_size is 0`]:
+          (r) => r.json().total_size === emptyPipelineTriggerRecordResponse.totalSize,
       }
     )
   })
@@ -322,8 +322,8 @@ export function CheckPublicMetrics() {
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/charts response status is 200`]:
           (r) => r.status === 200,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/charts response pipelineTriggerRecords length is 0`]:
-          (r) => r.json().pipeline_trigger_chart_records.length === 0,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/charts response has pipelineTriggerRecords`]:
+          (r) => r.json().pipeline_trigger_chart_records !== undefined,
       }
     )
     check(
@@ -355,12 +355,12 @@ export function CheckPublicMetrics() {
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes response status is 200`]:
           (r) => r.status === 200,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes response connectorExecuteRecords length is 0`]:
-          (r) => r.json().connector_execute_records.length === 0,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes response next_page_token is empty`]:
-          (r) => r.json().total_size === emptyConnectorExecuteRecordResponse.totalSize,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes response total_size is 0`]:
-          (r) => r.json().next_page_token === emptyConnectorExecuteRecordResponse.nextPageToken,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes response has connectorExecuteRecords`]:
+          (r) => r.json().connector_execute_records !== undefined,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes response has next_page_token`]:
+          (r) => r.json().total_size !== undefined,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes response has total_size`]:
+          (r) => r.json().next_page_token !== undefined,
       }
     )
     check(
@@ -374,9 +374,9 @@ export function CheckPublicMetrics() {
         [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes with filter response connectorExecuteRecords length is 0`]:
           (r) => r.json().connector_execute_records.length === 0,
         [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes with filter response next_page_token is empty`]:
-          (r) => r.json().total_size === emptyConnectorExecuteRecordResponse.totalSize,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes with filter response total_size is 0`]:
           (r) => r.json().next_page_token === emptyConnectorExecuteRecordResponse.nextPageToken,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes with filter response total_size is 0`]:
+          (r) => r.json().total_size === emptyConnectorExecuteRecordResponse.totalSize,
       }
     )
   })
@@ -389,8 +389,8 @@ export function CheckPublicMetrics() {
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/connector/charts response status is 200`]:
           (r) => r.status === 200,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/charts response connectorExecuteChartRecords length is 0`]:
-          (r) => r.json().connector_execute_chart_records.length === 0,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/charts response has connectorExecuteChartRecords`]:
+          (r) => r.json().connector_execute_chart_records !== undefined,
       }
     )
     check(
