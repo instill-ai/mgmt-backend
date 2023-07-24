@@ -106,6 +106,7 @@ func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string
 			|> filter(fn: (r) => r["owner_uid"] == "%v")
 			%v
 			|> group()
+			|> sort(columns: ["trigger_time"])
 			|> limit(n: %v)`,
 		i.bucket,
 		start,
@@ -177,8 +178,18 @@ func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string
 			if v, match := result.Record().ValueByKey("compute_time_duration").(float64); match {
 				record.ComputeTimeDuration = float32(v)
 			}
+			// TODO: temporary solution for legacy data format, currently there is no way to update the tags in influxdb
 			if v, match := result.Record().ValueByKey("status").(string); match {
-				record.Status = mgmtPB.Status(mgmtPB.Status_value[v])
+				if v == "completed" {
+					record.Status = mgmtPB.Status_STATUS_COMPLETED
+				} else if v == "errored" {
+					record.Status = mgmtPB.Status_STATUS_ERRORED
+				} else {
+					record.Status = mgmtPB.Status(mgmtPB.Status_value[v])
+				}
+			}
+			if v, match := result.Record().ValueByKey("pipeline_mode").(string); match {
+				record.TriggerMode = mgmtPB.Mode(mgmtPB.Mode_value[v])
 			}
 
 			records = append(records, record)
@@ -246,6 +257,7 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 			|> filter(fn: (r) => r["owner_uid"] == "%v")
 			%v
 			|> group(columns: ["pipeline_id", "pipeline_uid", "trigger_mode", "status"])
+			|> sort(columns: ["trigger_time"])
 			|> aggregateWindow(every: duration(v: %v), column: "trigger_time", fn: count, createEmpty: false)
 		t2 = from(bucket: "%v")
 			|> range(start: %v, stop: %v)
@@ -254,6 +266,7 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 			|> filter(fn: (r) => r["owner_uid"] == "%v")
 			%v
 			|> group(columns: ["pipeline_id", "pipeline_uid", "trigger_mode", "status"])
+			|> sort(columns: ["trigger_time"])
 			|> aggregateWindow(every: duration(v: %v), fn: sum, column: "compute_time_duration", createEmpty: false)
 		join(tables: {t1: t1, t2:t2}, on: ["_start", "_stop", "_time", "pipeline_id", "pipeline_uid", "trigger_mode", "status"])`,
 		i.bucket,
@@ -384,6 +397,7 @@ func (i *influxDB) QueryConnectorExecuteRecords(ctx context.Context, owner strin
 			|> filter(fn: (r) => r["connector_owner_uid"] == "%v")
 			%v
 			|> group()
+			|> sort(columns: ["execute_time"])
 			|> limit(n: %v)`,
 		i.bucket,
 		start,
@@ -533,6 +547,7 @@ func (i *influxDB) QueryConnectorExecuteChartRecords(ctx context.Context, owner 
 			|> filter(fn: (r) => r["connector_owner_uid"] == "%v")
 			%v
 			|> group(columns: ["connector_id", "connector_uid", "status"])
+			|> sort(columns: ["execute_time"])
 			|> aggregateWindow(every: duration(v: %v), column: "execute_time", fn: count, createEmpty: false)
 		t2 = from(bucket: "%v")
 			|> range(start: %v, stop: %v)
@@ -541,6 +556,7 @@ func (i *influxDB) QueryConnectorExecuteChartRecords(ctx context.Context, owner 
 			|> filter(fn: (r) => r["connector_owner_uid"] == "%v")
 			%v
 			|> group(columns: ["connector_id", "connector_uid", "status"])
+			|> sort(columns: ["execute_time"])
 			|> aggregateWindow(every: duration(v: %v), fn: sum, column: "compute_time_duration", createEmpty: false)
 		join(tables: {t1: t1, t2:t2}, on: ["_start", "_stop", "_time", "connector_id", "connector_uid", "status"])`,
 		i.bucket,
