@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.12-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.3.11-alpha...v0.3.12-alpha) (2023-07-24)
+
+
+### Bug Fixes
+
+* **metric:** fix pagination with multiple key sorting ([#106](https://github.com/instill-ai/mgmt-backend/issues/106)) ([aed156f](https://github.com/instill-ai/mgmt-backend/commit/aed156fa0b73a077e633ae6677a8bef1cf75db53))
+
+
+### Miscellaneous Chores
+
+* **release:** release v0.3.12-alpha ([8315a0b](https://github.com/instill-ai/mgmt-backend/commit/8315a0ba7a3d0063d9426cc8b18ad920b5423a2d))
+
 ## [0.3.11-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.3.10-alpha...v0.3.11-alpha) (2023-07-09)
 
 
