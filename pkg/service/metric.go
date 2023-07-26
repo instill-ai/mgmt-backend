@@ -18,6 +18,16 @@ func (s *service) ListPipelineTriggerRecords(ctx context.Context, owner *mgmtPB.
 	return pipelineTriggerRecords, ps, pt, nil
 }
 
+func (s *service) ListPipelineTriggerTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerTableRecord, int64, string, error) {
+
+	pipelineTriggerTableRecords, ps, pt, err := s.influxDB.QueryPipelineTriggerTableRecords(ctx, *owner.Uid, pageSize, pageToken, filter)
+	if err != nil {
+		return nil, 0, "", err
+	}
+
+	return pipelineTriggerTableRecords, ps, pt, nil
+}
+
 func (s *service) ListPipelineTriggerChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerChartRecord, error) {
 
 	pipelineTriggerChartRecords, err := s.influxDB.QueryPipelineTriggerChartRecords(ctx, *owner.Uid, aggregationWindow, filter)
@@ -36,6 +46,16 @@ func (s *service) ListConnectorExecuteRecords(ctx context.Context, owner *mgmtPB
 	}
 
 	return connectorExecuteRecords, ps, pt, nil
+}
+
+func (s *service) ListConnectorExecuteTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteTableRecord, int64, string, error) {
+
+	connectorExecuteTableRecords, ps, pt, err := s.influxDB.QueryConnectorExecuteTableRecords(ctx, *owner.Uid, pageSize, pageToken, filter)
+	if err != nil {
+		return nil, 0, "", err
+	}
+
+	return connectorExecuteTableRecords, ps, pt, nil
 }
 
 func (s *service) ListConnectorExecuteChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteChartRecord, error) {

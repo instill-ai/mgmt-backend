@@ -642,6 +642,7 @@ func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgm
 		filtering.DeclareIdent("start", filtering.TypeTimestamp),
 		filtering.DeclareIdent("stop", filtering.TypeTimestamp),
 		filtering.DeclareIdent("pipeline_id", filtering.TypeString),
+		filtering.DeclareIdent("pipeline_uid", filtering.TypeString),
 		filtering.DeclareEnumIdent("trigger_mode", mode.Type()),
 		filtering.DeclareEnumIdent("status", status.Type()),
 	}...)
@@ -666,6 +667,64 @@ func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgm
 		PipelineTriggerRecords: pipelineTriggerRecords,
 		NextPageToken:          nextPageToken,
 		TotalSize:              totalSize,
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		pbUser,
+		eventName,
+		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v", totalSize)),
+	)))
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) ListPipelineTriggerTableRecords(ctx context.Context, req *mgmtPB.ListPipelineTriggerTableRecordsRequest) (*mgmtPB.ListPipelineTriggerTableRecordsResponse, error) {
+
+	eventName := "ListPipelineTriggerTableRecords"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	pbUser, err := h.GetUser(ctx)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListPipelineTriggerTableRecordsResponse{}, err
+	}
+
+	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
+		filtering.DeclareStandardFunctions(),
+		filtering.DeclareIdent("start", filtering.TypeTimestamp),
+		filtering.DeclareIdent("stop", filtering.TypeTimestamp),
+		filtering.DeclareIdent("pipeline_id", filtering.TypeString),
+		filtering.DeclareIdent("pipeline_uid", filtering.TypeString),
+	}...)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListPipelineTriggerTableRecordsResponse{}, err
+	}
+
+	filter, err := filtering.ParseFilter(req, declarations)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListPipelineTriggerTableRecordsResponse{}, err
+	}
+
+	pipelineTriggerTableRecords, totalSize, nextPageToken, err := h.Service.ListPipelineTriggerTableRecords(ctx, pbUser, req.GetPageSize(), req.GetPageToken(), filter)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListPipelineTriggerTableRecordsResponse{}, err
+	}
+
+	resp := mgmtPB.ListPipelineTriggerTableRecordsResponse{
+		PipelineTriggerTableRecords: pipelineTriggerTableRecords,
+		NextPageToken:               nextPageToken,
+		TotalSize:                   totalSize,
 	}
 
 	logger.Info(string(custom_otel.NewLogMessage(
@@ -704,6 +763,7 @@ func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req
 		filtering.DeclareIdent("start", filtering.TypeTimestamp),
 		filtering.DeclareIdent("stop", filtering.TypeTimestamp),
 		filtering.DeclareIdent("pipeline_id", filtering.TypeString),
+		filtering.DeclareIdent("pipeline_uid", filtering.TypeString),
 		filtering.DeclareEnumIdent("trigger_mode", mode.Type()),
 		filtering.DeclareEnumIdent("status", status.Type()),
 	}...)
@@ -762,6 +822,9 @@ func (h *PublicHandler) ListConnectorExecuteRecords(ctx context.Context, req *mg
 		filtering.DeclareIdent("start", filtering.TypeTimestamp),
 		filtering.DeclareIdent("stop", filtering.TypeTimestamp),
 		filtering.DeclareIdent("connector_id", filtering.TypeString),
+		filtering.DeclareIdent("connector_uid", filtering.TypeString),
+		filtering.DeclareIdent("pipeline_id", filtering.TypeString),
+		filtering.DeclareIdent("pipeline_uid", filtering.TypeString),
 		filtering.DeclareEnumIdent("status", status.Type()),
 	}...)
 	if err != nil {
@@ -785,6 +848,64 @@ func (h *PublicHandler) ListConnectorExecuteRecords(ctx context.Context, req *mg
 		ConnectorExecuteRecords: connectorExecuteRecords,
 		NextPageToken:           nextPageToken,
 		TotalSize:               totalSize,
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		pbUser,
+		eventName,
+		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v", totalSize)),
+	)))
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) ListConnectorExecuteTableRecords(ctx context.Context, req *mgmtPB.ListConnectorExecuteTableRecordsRequest) (*mgmtPB.ListConnectorExecuteTableRecordsResponse, error) {
+
+	eventName := "ListConnectorExecuteTableRecords"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	pbUser, err := h.GetUser(ctx)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListConnectorExecuteTableRecordsResponse{}, err
+	}
+
+	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
+		filtering.DeclareStandardFunctions(),
+		filtering.DeclareIdent("start", filtering.TypeTimestamp),
+		filtering.DeclareIdent("stop", filtering.TypeTimestamp),
+		filtering.DeclareIdent("connector_id", filtering.TypeString),
+		filtering.DeclareIdent("connector_uid", filtering.TypeString),
+	}...)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListConnectorExecuteTableRecordsResponse{}, err
+	}
+
+	filter, err := filtering.ParseFilter(req, declarations)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListConnectorExecuteTableRecordsResponse{}, err
+	}
+
+	connectorExecuteTableRecords, totalSize, nextPageToken, err := h.Service.ListConnectorExecuteTableRecords(ctx, pbUser, req.GetPageSize(), req.GetPageToken(), filter)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return &mgmtPB.ListConnectorExecuteTableRecordsResponse{}, err
+	}
+
+	resp := mgmtPB.ListConnectorExecuteTableRecordsResponse{
+		ConnectorExecuteTableRecords: connectorExecuteTableRecords,
+		NextPageToken:                nextPageToken,
+		TotalSize:                    totalSize,
 	}
 
 	logger.Info(string(custom_otel.NewLogMessage(
@@ -822,6 +943,9 @@ func (h *PublicHandler) ListConnectorExecuteChartRecords(ctx context.Context, re
 		filtering.DeclareIdent("start", filtering.TypeTimestamp),
 		filtering.DeclareIdent("stop", filtering.TypeTimestamp),
 		filtering.DeclareIdent("connector_id", filtering.TypeString),
+		filtering.DeclareIdent("connector_uid", filtering.TypeString),
+		filtering.DeclareIdent("pipeline_id", filtering.TypeString),
+		filtering.DeclareIdent("pipeline_uid", filtering.TypeString),
 		filtering.DeclareEnumIdent("status", status.Type()),
 	}...)
 	if err != nil {

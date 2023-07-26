@@ -32,8 +32,10 @@ var defaultAggregationWindow = time.Hour.Nanoseconds()
 // InfluxDB interface
 type InfluxDB interface {
 	QueryPipelineTriggerRecords(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (pipelines []*mgmtPB.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error)
+	QueryPipelineTriggerTableRecords(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerTableRecord, totalSize int64, nextPageToken string, err error)
 	QueryPipelineTriggerChartRecords(ctx context.Context, owner string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerChartRecord, err error)
 	QueryConnectorExecuteRecords(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.ConnectorExecuteRecord, totalSize int64, nextPageToken string, err error)
+	QueryConnectorExecuteTableRecords(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.ConnectorExecuteTableRecord, totalSize int64, nextPageToken string, err error)
 	QueryConnectorExecuteChartRecords(ctx context.Context, owner string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtPB.ConnectorExecuteChartRecord, err error)
 }
 
@@ -50,11 +52,15 @@ func NewInfluxDB(queryAPI api.QueryAPI, bucket string) InfluxDB {
 	}
 }
 
-//TODO: reuse duplicate codes
-
-func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error) {
-
-	logger, _ := logger.GetZapLogger(ctx)
+func (i *influxDB) constructRecordQuery(
+	ctx context.Context,
+	owner string,
+	pageSize int64,
+	pageToken string,
+	filter filtering.Filter,
+	measurement string,
+	sortKey string,
+) (query string, total int64, err error) {
 
 	if pageSize == 0 {
 		pageSize = DefaultPageSize
@@ -68,7 +74,7 @@ func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string
 	// TODO: design better filter expression to flux transpiler
 	expr, err := i.transpileFilter(filter)
 	if err != nil {
-		return nil, 0, "", status.Errorf(codes.Internal, err.Error())
+		return "", 0, status.Errorf(codes.Internal, err.Error())
 	}
 
 	if expr != "" {
@@ -92,54 +98,64 @@ func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string
 	if pageToken != "" {
 		startTime, _, err := paginate.DecodeToken(pageToken)
 		if err != nil {
-			return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid page token: %s", err.Error())
+			return "", 0, status.Errorf(codes.InvalidArgument, "Invalid page token: %s", err.Error())
 		}
 		startTime = startTime.Add(time.Duration(1))
 		start = startTime.Format(time.RFC3339Nano)
 	}
 
-	query := fmt.Sprintf(
+	baseQuery := fmt.Sprintf(
 		`from(bucket: "%v")
 			|> range(start: %v, stop: %v)
-			|> filter(fn: (r) => r["_measurement"] == "pipeline.trigger")
+			|> filter(fn: (r) => r["_measurement"] == "%v")
 			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-			|> filter(fn: (r) => r["owner_uid"] == "%v")
+			|> filter(fn: (r) => %v)
 			%v
 			|> group()
-			|> sort(columns: ["trigger_time"])
-			|> limit(n: %v)`,
+			|> sort(columns: ["%v"])`,
 		i.bucket,
 		start,
 		stop,
+		measurement,
 		owner,
 		expr,
+		sortKey,
+	)
+
+	query = fmt.Sprintf(
+		`%v
+		|> limit(n: %v)`,
+		baseQuery,
 		pageSize,
 	)
 
 	totalQuery := fmt.Sprintf(
-		`from(bucket: "%v")
-			|> range(start: %v, stop: %v)
-			|> filter(fn: (r) => r["_measurement"] == "pipeline.trigger")
-			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-			|> filter(fn: (r) => r["owner_uid"] == "%v")
-			%v
-			|> group()
-			|> count(column: "pipeline_trigger_id")`,
-		i.bucket,
-		start,
-		stop,
-		owner,
-		expr,
+		`%v
+		|> count(column: "%v")`,
+		baseQuery,
+		sortKey,
 	)
 
 	totalQueryResult, err := i.queryAPI.Query(ctx, totalQuery)
-	total := int64(0)
+
 	if err != nil {
-		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
+		return "", 0, status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
 	} else {
 		if totalQueryResult.Next() {
-			total = totalQueryResult.Record().ValueByKey("pipeline_trigger_id").(int64)
+			total = totalQueryResult.Record().ValueByKey(sortKey).(int64)
 		}
+	}
+
+	return query, total, nil
+}
+
+func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error) {
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	query, total, err := i.constructRecordQuery(ctx, fmt.Sprintf("r[\"owner_uid\"] == \"%v\"", owner), pageSize, pageToken, filter, "pipeline.trigger", "trigger_time")
+	if err != nil {
+		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
 	}
 
 	result, err := i.queryAPI.Query(ctx, query)
@@ -203,6 +219,171 @@ func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string
 		}
 
 		lastTimestamp = result.Record().Time()
+	}
+
+	if int64(len(records)) < total {
+		pageToken = paginate.EncodeToken(lastTimestamp, owner)
+	} else {
+		pageToken = ""
+	}
+
+	return records, int64(len(records)), pageToken, nil
+}
+
+func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerTableRecord, totalSize int64, nextPageToken string, err error) {
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	if pageSize == 0 {
+		pageSize = DefaultPageSize
+	} else if pageSize > MaxPageSize {
+		pageSize = MaxPageSize
+	}
+
+	start := time.Time{}.Format(time.RFC3339Nano)
+	stop := time.Now().Format(time.RFC3339Nano)
+	mostRecetTimeFilter := time.Now().Format(time.RFC3339Nano)
+
+	// TODO: validate owner uid from token
+	if pageToken != "" {
+		mostRecetTime, _, err := paginate.DecodeToken(pageToken)
+		if err != nil {
+			return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid page token: %s", err.Error())
+		}
+		mostRecetTime = mostRecetTime.Add(time.Duration(-1))
+		mostRecetTimeFilter = mostRecetTime.Format(time.RFC3339Nano)
+	}
+
+	// TODO: design better filter expression to flux transpiler
+	expr, err := i.transpileFilter(filter)
+	if err != nil {
+		return nil, 0, "", status.Errorf(codes.Internal, err.Error())
+	}
+
+	if expr != "" {
+		exprs := strings.Split(expr, "&&")
+
+		iTime := 0
+		for _, expr := range exprs {
+			if strings.HasPrefix(expr, "start") {
+				start = strings.Split(expr, "@")[1]
+				iTime += 1
+			}
+			if strings.HasPrefix(expr, "stop") {
+				stop = strings.Split(expr, "@")[1]
+				iTime += 1
+			}
+		}
+
+		expr = strings.Join(exprs[iTime:], "")
+	}
+
+	baseQuery := fmt.Sprintf(
+		`t1 = from(bucket: "%v")
+			|> range(start: %v, stop: %v)
+			|> filter(fn: (r) => r["_measurement"] == "pipeline.trigger")
+			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+			|> filter(fn: (r) => r["owner_uid"] == "%v")
+			%v
+			|> drop(columns: ["owner_uid", "trigger_mode", "compute_time_duration", "pipeline_trigger_id", "status"])
+			|> group(columns: ["pipeline_id", "pipeline_uid"])
+			|> map(fn: (r) => ({r with trigger_time: time(v: r.trigger_time)}))
+			|> max(column: "trigger_time")
+			|> rename(columns: {trigger_time: "most_recent_trigger_time"})
+		t2 = from(bucket: "%v")
+			|> range(start: %v, stop: %v)
+			|> filter(fn: (r) => r["_measurement"] == "pipeline.trigger")
+			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+			|> filter(fn: (r) => r["owner_uid"] == "%v")
+			%v
+			|> drop(columns: ["owner_uid", "trigger_mode", "compute_time_duration", "pipeline_trigger_id"])
+			|> group(columns: ["pipeline_id", "pipeline_uid", "status"])
+			|> count(column: "trigger_time")
+			|> rename(columns: {trigger_time: "trigger_count"})
+			|> group(columns: ["pipeline_id", "pipeline_uid"])
+		join(tables: {t1: t1, t2: t2}, on: ["pipeline_id", "pipeline_uid"])
+			|> group()
+			|> pivot(rowKey: ["pipeline_id", "pipeline_uid", "most_recent_trigger_time"], columnKey: ["status"], valueColumn: "trigger_count")
+			|> sort(columns: ["most_recent_trigger_time"], desc: true)
+			|> filter(fn: (r) => r["most_recent_trigger_time"] < time(v: %v))`,
+		i.bucket,
+		start,
+		stop,
+		owner,
+		expr,
+		i.bucket,
+		start,
+		stop,
+		owner,
+		expr,
+		mostRecetTimeFilter,
+	)
+
+	query := fmt.Sprintf(
+		`%v
+		|> limit(n: %v)`,
+		baseQuery,
+		pageSize,
+	)
+
+	totalQuery := fmt.Sprintf(
+		`%v
+		|> count(column: "pipeline_uid")`,
+		baseQuery,
+	)
+
+	var lastTimestamp time.Time
+
+	result, err := i.queryAPI.Query(ctx, query)
+	if err != nil {
+		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
+	} else {
+		// Iterate over query response
+		for result.Next() {
+			// Notice when group key has changed
+			if result.TableChanged() {
+				logger.Debug(fmt.Sprintf("table: %s\n", result.TableMetadata().String()))
+			}
+
+			tableRecord := &mgmtPB.PipelineTriggerTableRecord{}
+
+			if v, match := result.Record().ValueByKey("pipeline_id").(string); match {
+				tableRecord.PipelineId = v
+			}
+			if v, match := result.Record().ValueByKey("pipeline_uid").(string); match {
+				tableRecord.PipelineUid = v
+			}
+			if v, match := result.Record().ValueByKey("STATUS_COMPLETED").(int64); match {
+				tableRecord.TriggerCountCompleted = v
+			}
+			if v, match := result.Record().ValueByKey("STATUS_ERRORED").(int64); match {
+				tableRecord.TriggerCountErrored = v
+			}
+
+			records = append(records, tableRecord)
+		}
+
+		// Check for an error
+		if result.Err() != nil {
+			return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
+		}
+		if result.Record() == nil {
+			return nil, 0, "", nil
+		}
+
+		if v, match := result.Record().ValueByKey("most_recent_trigger_time").(time.Time); match {
+			lastTimestamp = v
+		}
+	}
+
+	var total int64
+	totalQueryResult, err := i.queryAPI.Query(ctx, totalQuery)
+	if err != nil {
+		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid total query: %s", err.Error())
+	} else {
+		if totalQueryResult.Next() {
+			total = totalQueryResult.Record().ValueByKey("pipeline_uid").(int64)
+		}
 	}
 
 	if int64(len(records)) < total {
@@ -347,90 +528,9 @@ func (i *influxDB) QueryConnectorExecuteRecords(ctx context.Context, owner strin
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	if pageSize == 0 {
-		pageSize = DefaultPageSize
-	} else if pageSize > MaxPageSize {
-		pageSize = MaxPageSize
-	}
-
-	start := time.Time{}.Format(time.RFC3339Nano)
-	stop := time.Now().Format(time.RFC3339Nano)
-
-	// TODO: design better filter expression to flux transpiler
-	expr, err := i.transpileFilter(filter)
-	if err != nil {
-		return nil, 0, "", status.Errorf(codes.Internal, err.Error())
-	}
-
-	if expr != "" {
-		exprs := strings.Split(expr, "&&")
-
-		iTime := 0
-		for _, expr := range exprs {
-			if strings.HasPrefix(expr, "start") {
-				start = strings.Split(expr, "@")[1]
-				iTime += 1
-			}
-			if strings.HasPrefix(expr, "stop") {
-				stop = strings.Split(expr, "@")[1]
-				iTime += 1
-			}
-		}
-
-		expr = strings.Join(exprs[iTime:], "")
-	}
-
-	if pageToken != "" {
-		startTime, _, err := paginate.DecodeToken(pageToken)
-		if err != nil {
-			return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid page token: %s", err.Error())
-		}
-		startTime = startTime.Add(time.Duration(1))
-		start = startTime.Format(time.RFC3339Nano)
-	}
-
-	query := fmt.Sprintf(
-		`from(bucket: "%v")
-			|> range(start: %v, stop: %v)
-			|> filter(fn: (r) => r["_measurement"] == "connector.execute")
-			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-			|> filter(fn: (r) => r["connector_owner_uid"] == "%v")
-			%v
-			|> group()
-			|> sort(columns: ["execute_time"])
-			|> limit(n: %v)`,
-		i.bucket,
-		start,
-		stop,
-		owner,
-		expr,
-		pageSize,
-	)
-
-	totalQuery := fmt.Sprintf(
-		`from(bucket: "%v")
-			|> range(start: %v, stop: %v)
-			|> filter(fn: (r) => r["_measurement"] == "connector.execute")
-			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-			|> filter(fn: (r) => r["connector_owner_uid"] == "%v")
-			%v
-			|> group()
-			|> count(column: "connector_execute_id")`,
-		i.bucket,
-		start,
-		stop,
-		owner,
-		expr,
-	)
-
-	totalQueryResult, err := i.queryAPI.Query(ctx, totalQuery)
-	total := int64(0)
+	query, total, err := i.constructRecordQuery(ctx, fmt.Sprintf("r[\"connector_owner_uid\"] == \"%v\"", owner), pageSize, pageToken, filter, "connector.execute", "execute_time")
 	if err != nil {
 		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
-	} else {
-		if totalQueryResult.Next() {
-			total = totalQueryResult.Record().ValueByKey("connector_execute_id").(int64)
-		}
 	}
 
 	result, err := i.queryAPI.Query(ctx, query)
@@ -493,6 +593,171 @@ func (i *influxDB) QueryConnectorExecuteRecords(ctx context.Context, owner strin
 		}
 
 		lastTimestamp = result.Record().Time()
+	}
+
+	if int64(len(records)) < total {
+		pageToken = paginate.EncodeToken(lastTimestamp, owner)
+	} else {
+		pageToken = ""
+	}
+
+	return records, int64(len(records)), pageToken, nil
+}
+
+func (i *influxDB) QueryConnectorExecuteTableRecords(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.ConnectorExecuteTableRecord, totalSize int64, nextPageToken string, err error) {
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	if pageSize == 0 {
+		pageSize = DefaultPageSize
+	} else if pageSize > MaxPageSize {
+		pageSize = MaxPageSize
+	}
+
+	start := time.Time{}.Format(time.RFC3339Nano)
+	stop := time.Now().Format(time.RFC3339Nano)
+	mostRecetTimeFilter := time.Now().Format(time.RFC3339Nano)
+
+	// TODO: validate owner uid from token
+	if pageToken != "" {
+		mostRecetTime, _, err := paginate.DecodeToken(pageToken)
+		if err != nil {
+			return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid page token: %s", err.Error())
+		}
+		mostRecetTime = mostRecetTime.Add(time.Duration(-1))
+		mostRecetTimeFilter = mostRecetTime.Format(time.RFC3339Nano)
+	}
+
+	// TODO: design better filter expression to flux transpiler
+	expr, err := i.transpileFilter(filter)
+	if err != nil {
+		return nil, 0, "", status.Errorf(codes.Internal, err.Error())
+	}
+
+	if expr != "" {
+		exprs := strings.Split(expr, "&&")
+
+		iTime := 0
+		for _, expr := range exprs {
+			if strings.HasPrefix(expr, "start") {
+				start = strings.Split(expr, "@")[1]
+				iTime += 1
+			}
+			if strings.HasPrefix(expr, "stop") {
+				stop = strings.Split(expr, "@")[1]
+				iTime += 1
+			}
+		}
+
+		expr = strings.Join(exprs[iTime:], "")
+	}
+
+	baseQuery := fmt.Sprintf(
+		`t1 = from(bucket: "%v")
+			|> range(start: %v, stop: %v)
+			|> filter(fn: (r) => r["_measurement"] == "connector.execute")
+			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+			|> filter(fn: (r) => r["connector_owner_uid"] == "%v")
+			%v
+			|> drop(columns: ["connector_owner_uid", "compute_time_duration", "pipeline_uid", "pipeline_id", "status"])
+			|> group(columns: ["connector_id", "connector_uid"])
+			|> map(fn: (r) => ({r with execute_time: time(v: r.execute_time)}))
+			|> max(column: "execute_time")
+			|> rename(columns: {execute_time: "most_recent_execute_time"})
+		t2 = from(bucket: "%v")
+			|> range(start: %v, stop: %v)
+			|> filter(fn: (r) => r["_measurement"] == "connector.execute")
+			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+			|> filter(fn: (r) => r["connector_owner_uid"] == "%v")
+			%v
+			|> drop(columns: ["connector_owner_uid", "compute_time_duration", "pipeline_uid", "pipeline_id"])
+			|> group(columns: ["connector_id", "connector_uid", "status"])
+			|> count(column: "execute_time")
+			|> rename(columns: {execute_time: "execute_count"})
+			|> group(columns: ["connector_id", "connector_uid"])
+		join(tables: {t1: t1, t2: t2}, on: ["connector_id", "connector_uid"])
+			|> group()
+			|> pivot(rowKey: ["connector_id", "connector_uid", "most_recent_execute_time"], columnKey: ["status"], valueColumn: "execute_count")
+			|> sort(columns: ["most_recent_execute_time"], desc: true)
+			|> filter(fn: (r) => r["most_recent_execute_time"] < time(v: %v))`,
+		i.bucket,
+		start,
+		stop,
+		owner,
+		expr,
+		i.bucket,
+		start,
+		stop,
+		owner,
+		expr,
+		mostRecetTimeFilter,
+	)
+
+	query := fmt.Sprintf(
+		`%v
+		|> limit(n: %v)`,
+		baseQuery,
+		pageSize,
+	)
+
+	totalQuery := fmt.Sprintf(
+		`%v
+		|> count(column: "connector_uid")`,
+		baseQuery,
+	)
+
+	var lastTimestamp time.Time
+
+	result, err := i.queryAPI.Query(ctx, query)
+	if err != nil {
+		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
+	} else {
+		// Iterate over query response
+		for result.Next() {
+			// Notice when group key has changed
+			if result.TableChanged() {
+				logger.Debug(fmt.Sprintf("table: %s\n", result.TableMetadata().String()))
+			}
+
+			tableRecord := &mgmtPB.ConnectorExecuteTableRecord{}
+
+			if v, match := result.Record().ValueByKey("connector_id").(string); match {
+				tableRecord.ConnectorId = v
+			}
+			if v, match := result.Record().ValueByKey("connector_uid").(string); match {
+				tableRecord.ConnectorUid = v
+			}
+			if v, match := result.Record().ValueByKey("STATUS_COMPLETED").(int64); match {
+				tableRecord.ExecuteCountCompleted = v
+			}
+			if v, match := result.Record().ValueByKey("STATUS_ERRORED").(int64); match {
+				tableRecord.ExecuteCountErrored = v
+			}
+
+			records = append(records, tableRecord)
+		}
+
+		// Check for an error
+		if result.Err() != nil {
+			return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
+		}
+		if result.Record() == nil {
+			return nil, 0, "", nil
+		}
+
+		if v, match := result.Record().ValueByKey("most_recent_execute_time").(time.Time); match {
+			lastTimestamp = v
+		}
+	}
+
+	var total int64
+	totalQueryResult, err := i.queryAPI.Query(ctx, totalQuery)
+	if err != nil {
+		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid total query: %s", err.Error())
+	} else {
+		if totalQueryResult.Next() {
+			total = totalQueryResult.Record().ValueByKey("connector_uid").(int64)
+		}
 	}
 
 	if int64(len(records)) < total {
