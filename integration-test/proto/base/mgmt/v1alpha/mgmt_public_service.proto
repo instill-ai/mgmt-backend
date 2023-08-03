@@ -19,8 +19,9 @@ service MgmtPublicService {
   // See https://github.com/grpc/grpc/blob/master/doc/health-checking.md
   rpc Liveness(common.LivenessRequest) returns (common.LivenessResponse) {
     option (google.api.http) = {
-      get : "/v1alpha/__liveness"
-      additional_bindings : [ {get : "/v1alpha/health/mgmt"} ]
+      get: "/v1alpha/__liveness"
+      additional_bindings: [
+        {get: "/v1alpha/health/mgmt"}]
     };
   }
 
@@ -29,27 +30,24 @@ service MgmtPublicService {
   // See https://github.com/grpc/grpc/blob/master/doc/health-checking.md
   rpc Readiness(common.ReadinessRequest) returns (common.ReadinessResponse) {
     option (google.api.http) = {
-      get : "/v1alpha/__readiness"
-      additional_bindings : [ {get : "/v1alpha/ready/mgmt"} ]
+      get: "/v1alpha/__readiness"
+      additional_bindings: [
+        {get: "/v1alpha/ready/mgmt"}]
     };
   }
 
   // QueryAuthenticatedUser method receives a QueryAuthenticatedUserRequest
   // message and returns a QueryAuthenticatedUserResponse message.
-  rpc QueryAuthenticatedUser(QueryAuthenticatedUserRequest)
-      returns (QueryAuthenticatedUserResponse) {
-    option (google.api.http) = {
-      get : "/v1alpha/users/me"
-    };
+  rpc QueryAuthenticatedUser(QueryAuthenticatedUserRequest) returns (QueryAuthenticatedUserResponse) {
+    option (google.api.http) = {get: "/v1alpha/users/me"};
   }
 
   // PatchAuthenticatedUser method receives a PatchAuthenticatedUserRequest
   // message and returns a PatchAuthenticatedUserResponse message.
-  rpc PatchAuthenticatedUser(PatchAuthenticatedUserRequest)
-      returns (PatchAuthenticatedUserResponse) {
+  rpc PatchAuthenticatedUser(PatchAuthenticatedUserRequest) returns (PatchAuthenticatedUserResponse) {
     option (google.api.http) = {
-      patch : "/v1alpha/users/me"
-      body : "user"
+      patch: "/v1alpha/users/me"
+      body: "user"
     };
     option (google.api.method_signature) = "user,update_mask";
   }
@@ -57,9 +55,7 @@ service MgmtPublicService {
   // ExistUsername method receives a ExistUsernameRequest message and returns a
   // ExistUsernameResponse
   rpc ExistUsername(ExistUsernameRequest) returns (ExistUsernameResponse) {
-    option (google.api.http) = {
-      get : "/v1alpha/{name=users/*}/exist"
-    };
+    option (google.api.http) = {get: "/v1alpha/{name=users/*}/exist"};
     option (google.api.method_signature) = "name";
   }
 
@@ -67,8 +63,8 @@ service MgmtPublicService {
   // a CreateTokenResponse message.
   rpc CreateToken(CreateTokenRequest) returns (CreateTokenResponse) {
     option (google.api.http) = {
-      post : "/v1alpha/tokens"
-      body : "token"
+      post: "/v1alpha/tokens"
+      body: "token"
     };
     option (google.api.method_signature) = "token";
   }
@@ -76,60 +72,58 @@ service MgmtPublicService {
   // ListTokens method receives a ListTokensRequest message and returns a
   // ListTokensResponse message.
   rpc ListTokens(ListTokensRequest) returns (ListTokensResponse) {
-    option (google.api.http) = {
-      get : "/v1alpha/tokens"
-    };
+    option (google.api.http) = {get: "/v1alpha/tokens"};
   }
 
   // GetToken method receives a GetTokenRequest message and returns a
   // GetTokenResponse message.
   rpc GetToken(GetTokenRequest) returns (GetTokenResponse) {
-    option (google.api.http) = {
-      get : "/v1alpha/{name=tokens/*}"
-    };
+    option (google.api.http) = {get: "/v1alpha/{name=tokens/*}"};
     option (google.api.method_signature) = "name";
   }
 
   // DeleteToken method receives a DeleteTokenRequest message and returns
   // a DeleteTokenResponse message.
   rpc DeleteToken(DeleteTokenRequest) returns (DeleteTokenResponse) {
-    option (google.api.http) = {
-      delete : "/v1alpha/{name=tokens/*}"
-    };
+    option (google.api.http) = {delete: "/v1alpha/{name=tokens/*}"};
     option (google.api.method_signature) = "name";
   }
 
-// ========== Metric endpoints
+  // ========== Metric endpoints
 
   // ListPipelineTriggerRecords method receives a ListPipelineTriggerRecordsRequest message and returns a
   // ListPipelineTriggerRecordsResponse message.
   rpc ListPipelineTriggerRecords(ListPipelineTriggerRecordsRequest) returns (ListPipelineTriggerRecordsResponse) {
-    option (google.api.http) = {
-      get : "/v1alpha/metrics/vdp/pipeline/triggers"
-    };
+    option (google.api.http) = {get: "/v1alpha/metrics/vdp/pipeline/triggers"};
+  }
+
+  // ListPipelineTriggerTableRecords method receives a ListPipelineTriggerTableRecordsRequest message and returns a
+  // ListPipelineTriggerTableRecordsResponse message.
+  rpc ListPipelineTriggerTableRecords(ListPipelineTriggerTableRecordsRequest) returns (ListPipelineTriggerTableRecordsResponse) {
+    option (google.api.http) = {get: "/v1alpha/metrics/vdp/pipeline/tables"};
   }
 
   // ListPipelineTriggerChartRecords method receives a ListPipelineTriggerChartRecordsRequest message and returns a
   // ListPipelineTriggerChartRecordsResponse message.
   rpc ListPipelineTriggerChartRecords(ListPipelineTriggerChartRecordsRequest) returns (ListPipelineTriggerChartRecordsResponse) {
-    option (google.api.http) = {
-      get : "/v1alpha/metrics/vdp/pipeline/charts"
-    };
+    option (google.api.http) = {get: "/v1alpha/metrics/vdp/pipeline/charts"};
   }
 
   // ListConnectorExecuteRecords method receives a ListConnectorExecuteRecordsRequest message and returns a
   // ListConnectorExecuteRecordsResponse message.
   rpc ListConnectorExecuteRecords(ListConnectorExecuteRecordsRequest) returns (ListConnectorExecuteRecordsResponse) {
-    option (google.api.http) = {
-      get : "/v1alpha/metrics/vdp/connector/executes"
-    };
+    option (google.api.http) = {get: "/v1alpha/metrics/vdp/connector/executes"};
+  }
+
+  // ListConnectorExecuteTableRecords method receives a ListConnectorExecuteTableRecordsRequest message and returns a
+  // ListConnectorExecuteTableRecordsResponse message.
+  rpc ListConnectorExecuteTableRecords(ListConnectorExecuteTableRecordsRequest) returns (ListConnectorExecuteTableRecordsResponse) {
+    option (google.api.http) = {get: "/v1alpha/metrics/vdp/connector/tables"};
   }
 
   // ListConnectorExecuteChartRecords method receives a ListConnectorExecuteChartRecordsRequest message and returns a
   // ListConnectorExecuteChartRecordsResponse message.
   rpc ListConnectorExecuteChartRecords(ListConnectorExecuteChartRecordsRequest) returns (ListConnectorExecuteChartRecordsResponse) {
-    option (google.api.http) = {
-      get : "/v1alpha/metrics/vdp/connector/charts"
-    };
+    option (google.api.http) = {get: "/v1alpha/metrics/vdp/connector/charts"};
   }
 }

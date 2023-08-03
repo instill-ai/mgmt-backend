@@ -274,6 +274,31 @@ export function CheckPublicMetrics() {
 
   });
 
+  group(`Management Public API: List Pipeline Trigger Table Records`, () => {
+
+    let emptyPipelineTriggerTableRecordResponse = {
+      "pipelineTriggerTableRecords":[],
+      "nextPageToken":"",
+      "totalSize":"0"
+    }
+
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords', {}), {
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords status': (r) => r && r.status == grpc.StatusOK,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords response has pipelineTriggerTableRecords': (r) => r && r.message.pipelineTriggerTableRecords !== undefined,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords response has total_size': (r) => r && r.message.totalSize !== undefined,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords response has next_page_token': (r) => r && r.message.nextPageToken !== undefined,
+    });
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords', {
+      filter: "pipeline_id=\"iloveinstill\"",
+    }), {
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords with filter status': (r) => r && r.status == grpc.StatusOK,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords with filter response pipelineTriggerTableRecords length is 0': (r) => r && r.message.pipelineTriggerTableRecords.length === 0,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords with filter response total_size is 0': (r) => r && r.message.totalSize === emptyPipelineTriggerTableRecordResponse.totalSize,
+      'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords with filter response next_page_token is empty': (r) => r && r.message.nextPageToken === emptyPipelineTriggerTableRecordResponse.nextPageToken,
+    });
+
+  });
+
   group(`Management Public API: List Pipeline Trigger Chart Records`, () => {
 
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords', {}), {
@@ -310,6 +335,31 @@ export function CheckPublicMetrics() {
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords with filter response connectorExecuteRecords length is 0': (r) => r && r.message.connectorExecuteRecords.length === 0,
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords with filter response total_size is 0': (r) => r && r.message.totalSize === emptyConnectorExecuteRecordResponse.totalSize,
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords with filter response next_page_token is empty': (r) => r && r.message.nextPageToken === emptyConnectorExecuteRecordResponse.nextPageToken,
+    });
+
+  });
+
+  group(`Management Public API: List Connector Execute Table Records`, () => {
+
+    let emptyConnectorExecuteTableRecordResponse = {
+      "connectorExecuteTableRecords":[],
+      "nextPageToken":"",
+      "totalSize":"0"
+    }
+
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords', {}), {
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords status': (r) => r && r.status == grpc.StatusOK,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords response has connectorExecuteTableRecords': (r) => r && r.message.connectorExecuteTableRecords !== undefined,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords response has total_size': (r) => r && r.message.totalSize !== undefined,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords response has next_page_token': (r) => r && r.message.nextPageToken !== undefined,
+    });
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords', {
+      filter: "connector_id=\"iloveinstill\"",
+    }), {
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords with filter status': (r) => r && r.status == grpc.StatusOK,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords with filter response connectorExecuteTableRecords length is 0': (r) => r && r.message.connectorExecuteTableRecords.length === 0,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords with filter response total_size is 0': (r) => r && r.message.totalSize === emptyConnectorExecuteTableRecordResponse.totalSize,
+      'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords with filter response next_page_token is empty': (r) => r && r.message.nextPageToken === emptyConnectorExecuteTableRecordResponse.nextPageToken,
     });
 
   });

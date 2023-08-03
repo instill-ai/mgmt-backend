@@ -313,6 +313,47 @@ export function CheckPublicMetrics() {
       }
     )
   })
+  group(`Management Public API: List Pipeline Trigger Table Records`, () => {
+
+    let emptyPipelineTriggerTableRecordResponse = {
+      "pipelineTriggerTableRecords": [],
+      "nextPageToken": "",
+      "totalSize": "0"
+    }
+
+    check(
+      http.request(
+        "GET",
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/tables`
+      ),
+      {
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables response status is 200`]:
+          (r) => r.status === 200,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables response has pipelineTriggerTableRecords`]:
+          (r) => r.json().pipeline_trigger_table_records !== undefined,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables response has next_page_token`]:
+          (r) => r.json().total_size !== undefined,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables response has total_size`]:
+          (r) => r.json().next_page_token !== undefined,
+      }
+    )
+    check(
+      http.request(
+        "GET",
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/tables?filter=pipeline_id=%22iloveinstill%22`
+      ),
+      {
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables with filter response status is 200`]:
+          (r) => r.status === 200,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables with filter response pipelineTriggerTableRecords length is 0`]:
+          (r) => r.json().pipeline_trigger_table_records.length === 0,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables with filter response next_page_token is empty`]:
+          (r) => r.json().next_page_token === emptyPipelineTriggerTableRecordResponse.nextPageToken,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables with filter response total_size is 0`]:
+          (r) => r.json().total_size === emptyPipelineTriggerTableRecordResponse.totalSize,
+      }
+    )
+  })
   group(`Management Public API: List Pipeline Trigger Chart Records`, () => {
     check(
       http.request(
@@ -377,6 +418,47 @@ export function CheckPublicMetrics() {
           (r) => r.json().next_page_token === emptyConnectorExecuteRecordResponse.nextPageToken,
         [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes with filter response total_size is 0`]:
           (r) => r.json().total_size === emptyConnectorExecuteRecordResponse.totalSize,
+      }
+    )
+  })
+  group(`Management Public API: List Connector Execute Table Records`, () => {
+
+    let emptyConnectorExecuteTableRecordResponse = {
+      "connectorExecuteTableRecords": [],
+      "nextPageToken": "",
+      "totalSize": "0"
+    }
+
+    check(
+      http.request(
+        "GET",
+        `${constant.mgmtPublicHost}/metrics/vdp/connector/tables`
+      ),
+      {
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/tables response status is 200`]:
+          (r) => r.status === 200,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/tables response has connectorExecuteTableRecords`]:
+          (r) => r.json().connector_execute_table_records !== undefined,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/tables response has next_page_token`]:
+          (r) => r.json().total_size !== undefined,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes response has total_size`]:
+          (r) => r.json().next_page_token !== undefined,
+      }
+    )
+    check(
+      http.request(
+        "GET",
+        `${constant.mgmtPublicHost}/metrics/vdp/connector/tables?connector_id=%22iloveinstill%22`
+      ),
+      {
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/tables with filter response status is 200`]:
+          (r) => r.status === 200,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/tables with filter response connectorExecuteTableRecords length is 0`]:
+          (r) => r.json().connector_execute_table_records.length === 0,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/tables with filter response next_page_token is empty`]:
+          (r) => r.json().next_page_token === emptyConnectorExecuteTableRecordResponse.nextPageToken,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/connector/tables with filter response total_size is 0`]:
+          (r) => r.json().total_size === emptyConnectorExecuteTableRecordResponse.totalSize,
       }
     )
   })
