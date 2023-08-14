@@ -12,8 +12,8 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/influxdata/influxdb-client-go/v2 v2.12.3
-	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20230726170555-2b2173d99bba
-	github.com/instill-ai/usage-client v0.2.4-alpha
+	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20230814104042-37ca0356defc
+	github.com/instill-ai/usage-client v0.2.4-alpha.0.20230814155646-874e57a1e4b0
 	github.com/instill-ai/x v0.3.0-alpha
 	github.com/jackc/pgx/v5 v5.2.0
 	github.com/knadh/koanf v1.4.4
@@ -39,7 +39,6 @@ require (
 )
 
 require (
-	cloud.google.com/go/longrunning v0.5.1 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/apache/arrow/go/v12 v12.0.0 // indirect
 	github.com/apache/thrift v0.16.0 // indirect

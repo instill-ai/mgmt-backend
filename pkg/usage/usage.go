@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
@@ -40,7 +41,14 @@ func NewUsage(ctx context.Context, r repository.Repository, usc usagePB.UsageSer
 		return nil
 	}
 
-	reporter, err := usageClient.InitReporter(ctx, usc, usagePB.Session_SERVICE_MGMT, edition, version)
+	var defaultOwnerUID string
+	if user, err := r.GetUserByID(constant.DefaultUserID); err == nil {
+		defaultOwnerUID = user.UID.String()
+	} else {
+		logger.Error(err.Error())
+	}
+
+	reporter, err := usageClient.InitReporter(ctx, usc, usagePB.Session_SERVICE_MGMT, edition, version, defaultOwnerUID)
 	if err != nil {
 		logger.Error(err.Error())
 		return nil
@@ -91,9 +99,17 @@ func (u *usage) StartReporter(ctx context.Context) {
 	}
 
 	logger, _ := logger.GetZapLogger(ctx)
+
+	var defaultOwnerUID string
+	if user, err := u.repository.GetUserByID(constant.DefaultUserID); err == nil {
+		defaultOwnerUID = user.UID.String()
+	} else {
+		logger.Error(err.Error())
+	}
+
 	go func() {
 		time.Sleep(5 * time.Second)
-		err := usageClient.StartReporter(ctx, u.reporter, usagePB.Session_SERVICE_MGMT, u.edition, u.version, u.RetrieveUsageData)
+		err := usageClient.StartReporter(ctx, u.reporter, usagePB.Session_SERVICE_MGMT, u.edition, u.version, defaultOwnerUID, u.RetrieveUsageData)
 		if err != nil {
 			logger.Error(fmt.Sprintf("unable to start reporter: %v\n", err))
 		}
@@ -104,8 +120,17 @@ func (u *usage) TriggerSingleReporter(ctx context.Context) {
 	if u.reporter == nil {
 		return
 	}
+
 	logger, _ := logger.GetZapLogger(ctx)
-	err := usageClient.SingleReporter(ctx, u.reporter, usagePB.Session_SERVICE_MGMT, u.edition, u.version, u.RetrieveUsageData())
+
+	var defaultOwnerUID string
+	if user, err := u.repository.GetUserByID(constant.DefaultUserID); err == nil {
+		defaultOwnerUID = user.UID.String()
+	} else {
+		logger.Error(err.Error())
+	}
+
+	err := usageClient.SingleReporter(ctx, u.reporter, usagePB.Session_SERVICE_MGMT, u.edition, u.version, defaultOwnerUID, u.RetrieveUsageData())
 	if err != nil {
 		logger.Error(fmt.Sprintf("unable to trigger single reporter: %v\n", err))
 	} else {
