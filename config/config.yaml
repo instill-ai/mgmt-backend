@@ -11,6 +11,7 @@ server:
     host: usage.instill.tech
     port: 443
   debug: true
+  defaultuseruid:
 database:
   username: postgres
   password: password
