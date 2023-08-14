@@ -29,9 +29,15 @@ import (
 func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 
 	// Generate a random uid to the user
-	defaultUserUID, err := uuid.NewV4()
+	var defaultUserUID uuid.UUID
+	var err error
+	if config.Config.Server.DefualtUserUid != "" {
+		defaultUserUID, err = uuid.FromString(config.Config.Server.DefualtUserUid)
+	} else {
+		defaultUserUID, err = uuid.NewV4()
+	}
 	if err != nil {
-		return status.Errorf(codes.Internal, "error %v", err)
+		return status.Errorf(codes.Internal, "uuid generation error %v", err)
 	}
 
 	r := repository.NewRepository(db)

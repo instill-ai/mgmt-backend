@@ -39,7 +39,8 @@ type ServerConfig struct {
 		Host       string `koanf:"host"`
 		Port       int    `koanf:"port"`
 	}
-	Debug bool `koanf:"debug"`
+	Debug          bool   `koanf:"debug"`
+	DefualtUserUid string `koanf:"defaultuseruid"`
 }
 
 // DatabaseConfig related to database
