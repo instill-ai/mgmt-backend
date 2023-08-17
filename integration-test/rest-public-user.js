@@ -448,7 +448,7 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/connector/tables?connector_id=%22iloveinstill%22`
+        `${constant.mgmtPublicHost}/metrics/vdp/connector/tables?filter=connector_id=%22iloveinstill%22`
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/connector/tables with filter response status is 200`]:
