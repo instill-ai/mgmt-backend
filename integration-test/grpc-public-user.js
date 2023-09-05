@@ -245,6 +245,9 @@ export function CheckPublicDeleteToken() {
 
 export function CheckPublicMetrics() {
 
+  let pipeline_id = randomString(10)
+  let connector_id = randomString(10)
+
   client.connect(constant.mgmtPublicGRPCHost, {
     plaintext: true
   });
@@ -264,7 +267,7 @@ export function CheckPublicMetrics() {
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords response has next_page_token': (r) => r && r.message.nextPageToken !== undefined,
     });
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords', {
-      filter: "pipeline_id=\"a\" AND trigger_mode=MODE_SYNC",
+      filter: `pipeline_id="${pipeline_id}" AND trigger_mode=MODE_SYNC`,
     }), {
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords with filter status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords with filter response pipelineTriggerRecords length is 0': (r) => r && r.message.pipelineTriggerRecords.length === 0,
@@ -289,7 +292,7 @@ export function CheckPublicMetrics() {
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords response has next_page_token': (r) => r && r.message.nextPageToken !== undefined,
     });
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords', {
-      filter: "pipeline_id=\"iloveinstill\"",
+      filter: `pipeline_id="${pipeline_id}"`,
     }), {
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords with filter status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords with filter response pipelineTriggerTableRecords length is 0': (r) => r && r.message.pipelineTriggerTableRecords.length === 0,
@@ -306,7 +309,7 @@ export function CheckPublicMetrics() {
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords response has pipelineTriggerChartRecords': (r) => r && r.message.pipelineTriggerChartRecords !== undefined,
     });
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords', {
-      filter: "pipeline_id=\"a\" AND trigger_mode=MODE_SYNC",
+      filter: `pipeline_id="${pipeline_id}" AND trigger_mode=MODE_SYNC`,
     }), {
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords with filter status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords with filter response pipelineTriggerChartRecords lenght is 0': (r) => r && r.message.pipelineTriggerChartRecords.length === 0,
@@ -329,7 +332,7 @@ export function CheckPublicMetrics() {
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords response has next_page_token': (r) => r && r.message.nextPageToken !== undefined,
     });
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords', {
-      filter: "connector_id=\"a\" AND status=STATUS_COMPLETED",
+      filter: `connector_id="${connector_id}" AND status=STATUS_COMPLETED`,
     }), {
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords with filter status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords with filter response connectorExecuteRecords length is 0': (r) => r && r.message.connectorExecuteRecords.length === 0,
@@ -354,7 +357,7 @@ export function CheckPublicMetrics() {
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords response has next_page_token': (r) => r && r.message.nextPageToken !== undefined,
     });
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords', {
-      filter: "connector_id=\"iloveinstill\"",
+      filter: `connector_id="${connector_id}"`,
     }), {
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords with filter status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords with filter response connectorExecuteTableRecords length is 0': (r) => r && r.message.connectorExecuteTableRecords.length === 0,
@@ -371,7 +374,7 @@ export function CheckPublicMetrics() {
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords response has connectorExecuteChartRecords': (r) => r && r.message.connectorExecuteChartRecords !== undefined,
     });
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords', {
-      filter: "connector_id=\"a\" AND status=STATUS_COMPLETED",
+      filter: `connector_id="${connector_id}" AND status=STATUS_COMPLETED`,
     }), {
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords with filter status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords with filter response connectorExecuteChartRecords lenght is 0': (r) => r && r.message.connectorExecuteChartRecords.length === 0,
