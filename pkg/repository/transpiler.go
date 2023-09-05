@@ -275,3 +275,54 @@ func (t *Transpiler) transpileTimestampCallExpr(e *expr.Expr) (string, error) {
 
 	return stringArg.StringValue, nil
 }
+
+// TODO: temporary solution to recusrively find target filter expr name to replace
+func ExtractConstExpr(exprr *expr.Expr, targetName string, found bool) (string, bool) {
+	if len(exprr.GetCallExpr().GetArgs()) == 0 && exprr.GetIdentExpr().GetName() == targetName {
+		return "", true
+	}
+	if found {
+		return exprr.GetConstExpr().GetStringValue(), true
+	}
+
+	var strValue string
+	for _, e := range exprr.GetCallExpr().GetArgs() {
+		strValue, found = ExtractConstExpr(e, targetName, found)
+		if strValue != "" && found {
+			return strValue, true
+		}
+	}
+
+	return "", false
+}
+
+// TODO: temporary solution to hijack and replace the `pipeline_id` filter on the fly to swap to `pipeline_uid` for query
+func HijackConstExpr(exprr *expr.Expr, beforeExprName string, replaceExprName string, replaceExprValue string, found bool) (string, bool) {
+	if len(exprr.GetCallExpr().GetArgs()) == 0 && exprr.GetIdentExpr().GetName() == beforeExprName {
+		exprr.GetIdentExpr().Name = replaceExprName
+		return "", true
+	}
+	if found {
+		*exprr = expr.Expr{
+			Id: exprr.GetId(),
+			ExprKind: &expr.Expr_ConstExpr{
+				ConstExpr: &expr.Constant{
+					ConstantKind: &expr.Constant_StringValue{
+						StringValue: replaceExprValue,
+					},
+				},
+			},
+		}
+		return exprr.GetConstExpr().GetStringValue(), true
+	}
+
+	var strValue string
+	for _, e := range exprr.GetCallExpr().GetArgs() {
+		strValue, found = HijackConstExpr(e, beforeExprName, replaceExprName, replaceExprValue, found)
+		if strValue != "" && found {
+			return strValue, true
+		}
+	}
+
+	return "", false
+}

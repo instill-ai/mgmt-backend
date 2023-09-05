@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/x/paginate"
 
@@ -79,20 +80,17 @@ func (i *influxDB) constructRecordQuery(
 
 	if expr != "" {
 		exprs := strings.Split(expr, "&&")
-
-		iTime := 0
-		for _, expr := range exprs {
-			if strings.HasPrefix(expr, "start") {
+		for i, expr := range exprs {
+			if strings.HasPrefix(expr, constant.Start) {
 				start = strings.Split(expr, "@")[1]
-				iTime += 1
+				exprs[i] = ""
 			}
-			if strings.HasPrefix(expr, "stop") {
+			if strings.HasPrefix(expr, constant.Stop) {
 				stop = strings.Split(expr, "@")[1]
-				iTime += 1
+				exprs[i] = ""
 			}
 		}
-
-		expr = strings.Join(exprs[iTime:], "")
+		expr = strings.Join(exprs, "")
 	}
 
 	if pageToken != "" {
@@ -153,7 +151,7 @@ func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	query, total, err := i.constructRecordQuery(ctx, fmt.Sprintf("r[\"owner_uid\"] == \"%v\"", owner), pageSize, pageToken, filter, "pipeline.trigger", "trigger_time")
+	query, total, err := i.constructRecordQuery(ctx, fmt.Sprintf("r[\"owner_uid\"] == \"%v\"", owner), pageSize, pageToken, filter, constant.PipelineTriggerMeasurement, constant.TriggerTime)
 	if err != nil {
 		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
 	}
@@ -172,39 +170,45 @@ func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string
 
 			record := &mgmtPB.PipelineTriggerRecord{}
 
-			if v, match := result.Record().ValueByKey("trigger_time").(string); match {
+			if v, match := result.Record().ValueByKey(constant.TriggerTime).(string); match {
 				triggerTime, err := time.Parse(time.RFC3339Nano, v)
 				if err != nil {
 					return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid parse key: %s", err.Error())
 				}
 				record.TriggerTime = timestamppb.New(triggerTime)
 			}
-			if v, match := result.Record().ValueByKey("pipeline_trigger_id").(string); match {
+			if v, match := result.Record().ValueByKey(constant.PipelineTriggerID).(string); match {
 				record.PipelineTriggerId = v
 			}
-			if v, match := result.Record().ValueByKey("pipeline_id").(string); match {
+			if v, match := result.Record().ValueByKey(constant.PipelineID).(string); match {
 				record.PipelineId = v
 			}
-			if v, match := result.Record().ValueByKey("pipeline_uid").(string); match {
+			if v, match := result.Record().ValueByKey(constant.PipelineUID).(string); match {
 				record.PipelineUid = v
 			}
-			if v, match := result.Record().ValueByKey("trigger_mode").(string); match {
+			if v, match := result.Record().ValueByKey(constant.PipelineReleaseID).(string); match {
+				record.PipelineReleaseId = v
+			}
+			if v, match := result.Record().ValueByKey(constant.PipelineReleaseUID).(string); match {
+				record.PipelineReleaseUid = v
+			}
+			if v, match := result.Record().ValueByKey(constant.TriggerMode).(string); match {
 				record.TriggerMode = mgmtPB.Mode(mgmtPB.Mode_value[v])
 			}
-			if v, match := result.Record().ValueByKey("compute_time_duration").(float64); match {
+			if v, match := result.Record().ValueByKey(constant.ComputeTimeDuration).(float64); match {
 				record.ComputeTimeDuration = float32(v)
 			}
 			// TODO: temporary solution for legacy data format, currently there is no way to update the tags in influxdb
-			if v, match := result.Record().ValueByKey("status").(string); match {
-				if v == "completed" {
+			if v, match := result.Record().ValueByKey(constant.Status).(string); match {
+				if v == constant.Completed {
 					record.Status = mgmtPB.Status_STATUS_COMPLETED
-				} else if v == "errored" {
+				} else if v == constant.Errored {
 					record.Status = mgmtPB.Status_STATUS_ERRORED
 				} else {
 					record.Status = mgmtPB.Status(mgmtPB.Status_value[v])
 				}
 			}
-			if v, match := result.Record().ValueByKey("pipeline_mode").(string); match {
+			if v, match := result.Record().ValueByKey(constant.PipelineMode).(string); match {
 				record.TriggerMode = mgmtPB.Mode(mgmtPB.Mode_value[v])
 			}
 
@@ -262,20 +266,17 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 
 	if expr != "" {
 		exprs := strings.Split(expr, "&&")
-
-		iTime := 0
-		for _, expr := range exprs {
-			if strings.HasPrefix(expr, "start") {
+		for i, expr := range exprs {
+			if strings.HasPrefix(expr, constant.Start) {
 				start = strings.Split(expr, "@")[1]
-				iTime += 1
+				exprs[i] = ""
 			}
-			if strings.HasPrefix(expr, "stop") {
+			if strings.HasPrefix(expr, constant.Stop) {
 				stop = strings.Split(expr, "@")[1]
-				iTime += 1
+				exprs[i] = ""
 			}
 		}
-
-		expr = strings.Join(exprs[iTime:], "")
+		expr = strings.Join(exprs, "")
 	}
 
 	baseQuery := fmt.Sprintf(
@@ -347,16 +348,22 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 
 			tableRecord := &mgmtPB.PipelineTriggerTableRecord{}
 
-			if v, match := result.Record().ValueByKey("pipeline_id").(string); match {
+			if v, match := result.Record().ValueByKey(constant.PipelineID).(string); match {
 				tableRecord.PipelineId = v
 			}
-			if v, match := result.Record().ValueByKey("pipeline_uid").(string); match {
+			if v, match := result.Record().ValueByKey(constant.PipelineUID).(string); match {
 				tableRecord.PipelineUid = v
 			}
-			if v, match := result.Record().ValueByKey("STATUS_COMPLETED").(int64); match {
+			if v, match := result.Record().ValueByKey(constant.PipelineReleaseID).(string); match {
+				tableRecord.PipelineReleaseId = v
+			}
+			if v, match := result.Record().ValueByKey(constant.PipelineReleaseUID).(string); match {
+				tableRecord.PipelineReleaseUid = v
+			}
+			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_COMPLETED.String()).(int64); match {
 				tableRecord.TriggerCountCompleted = v
 			}
-			if v, match := result.Record().ValueByKey("STATUS_ERRORED").(int64); match {
+			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_ERRORED.String()).(int64); match {
 				tableRecord.TriggerCountErrored = v
 			}
 
@@ -382,7 +389,7 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid total query: %s", err.Error())
 	} else {
 		if totalQueryResult.Next() {
-			total = totalQueryResult.Record().ValueByKey("pipeline_uid").(int64)
+			total = totalQueryResult.Record().ValueByKey(constant.PipelineUID).(int64)
 		}
 	}
 
@@ -414,20 +421,17 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 
 	if expr != "" {
 		exprs := strings.Split(expr, "&&")
-
-		iTime := 0
-		for _, expr := range exprs {
-			if strings.HasPrefix(expr, "start") {
+		for i, expr := range exprs {
+			if strings.HasPrefix(expr, constant.Start) {
 				start = strings.Split(expr, "@")[1]
-				iTime += 1
+				exprs[i] = ""
 			}
-			if strings.HasPrefix(expr, "stop") {
+			if strings.HasPrefix(expr, constant.Stop) {
 				stop = strings.Split(expr, "@")[1]
-				iTime += 1
+				exprs[i] = ""
 			}
 		}
-
-		expr = strings.Join(exprs[iTime:], "")
+		expr = strings.Join(exprs, "")
 	}
 
 	query := fmt.Sprintf(
@@ -483,16 +487,22 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 
 				chartRecord = &mgmtPB.PipelineTriggerChartRecord{}
 
-				if v, match := result.Record().ValueByKey("pipeline_id").(string); match {
+				if v, match := result.Record().ValueByKey(constant.PipelineID).(string); match {
 					chartRecord.PipelineId = v
 				}
-				if v, match := result.Record().ValueByKey("pipeline_uid").(string); match {
+				if v, match := result.Record().ValueByKey(constant.PipelineUID).(string); match {
 					chartRecord.PipelineUid = v
 				}
-				if v, match := result.Record().ValueByKey("trigger_mode").(string); match {
+				if v, match := result.Record().ValueByKey(constant.PipelineReleaseID).(string); match {
+					chartRecord.PipelineReleaseId = v
+				}
+				if v, match := result.Record().ValueByKey(constant.PipelineReleaseUID).(string); match {
+					chartRecord.PipelineReleaseUid = v
+				}
+				if v, match := result.Record().ValueByKey(constant.TriggerMode).(string); match {
 					chartRecord.TriggerMode = mgmtPB.Mode(mgmtPB.Mode_value[v])
 				}
-				if v, match := result.Record().ValueByKey("status").(string); match {
+				if v, match := result.Record().ValueByKey(constant.Status).(string); match {
 					chartRecord.Status = mgmtPB.Status(mgmtPB.Status_value[v])
 				}
 				chartRecord.TimeBuckets = []*timestamppb.Timestamp{}
@@ -505,10 +515,10 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 			if v, match := result.Record().ValueByKey("_time").(time.Time); match {
 				chartRecord.TimeBuckets = append(chartRecord.TimeBuckets, timestamppb.New(v))
 			}
-			if v, match := result.Record().ValueByKey("trigger_time").(int64); match {
+			if v, match := result.Record().ValueByKey(constant.TriggerTime).(int64); match {
 				chartRecord.TriggerCounts = append(chartRecord.TriggerCounts, v)
 			}
-			if v, match := result.Record().ValueByKey("compute_time_duration").(float64); match {
+			if v, match := result.Record().ValueByKey(constant.ComputeTimeDuration).(float64); match {
 				chartRecord.ComputeTimeDuration = append(chartRecord.ComputeTimeDuration, float32(v))
 			}
 		}
@@ -528,7 +538,7 @@ func (i *influxDB) QueryConnectorExecuteRecords(ctx context.Context, owner strin
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	query, total, err := i.constructRecordQuery(ctx, fmt.Sprintf("r[\"connector_owner_uid\"] == \"%v\"", owner), pageSize, pageToken, filter, "connector.execute", "execute_time")
+	query, total, err := i.constructRecordQuery(ctx, fmt.Sprintf("r[\"connector_owner_uid\"] == \"%v\"", owner), pageSize, pageToken, filter, constant.ConnectorExecuteMeasurement, "execute_time")
 	if err != nil {
 		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
 	}
@@ -547,38 +557,38 @@ func (i *influxDB) QueryConnectorExecuteRecords(ctx context.Context, owner strin
 
 			record := &mgmtPB.ConnectorExecuteRecord{}
 
-			if v, match := result.Record().ValueByKey("execute_time").(string); match {
+			if v, match := result.Record().ValueByKey(constant.Executetime).(string); match {
 				executeTime, err := time.Parse(time.RFC3339Nano, v)
 				if err != nil {
 					return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid parse key: %s", err.Error())
 				}
 				record.ExecuteTime = timestamppb.New(executeTime)
 			}
-			if v, match := result.Record().ValueByKey("pipeline_trigger_id").(string); match {
+			if v, match := result.Record().ValueByKey(constant.PipelineTriggerID).(string); match {
 				record.PipelineTriggerId = v
 			}
-			if v, match := result.Record().ValueByKey("pipeline_id").(string); match {
+			if v, match := result.Record().ValueByKey(constant.PipelineID).(string); match {
 				record.PipelineId = v
 			}
-			if v, match := result.Record().ValueByKey("pipeline_uid").(string); match {
+			if v, match := result.Record().ValueByKey(constant.PipelineUID).(string); match {
 				record.PipelineUid = v
 			}
-			if v, match := result.Record().ValueByKey("connector_execute_id").(string); match {
+			if v, match := result.Record().ValueByKey(constant.ConnectorExecuteID).(string); match {
 				record.ConnectorExecuteId = v
 			}
-			if v, match := result.Record().ValueByKey("connector_id").(string); match {
+			if v, match := result.Record().ValueByKey(constant.ConnectorID).(string); match {
 				record.ConnectorId = v
 			}
-			if v, match := result.Record().ValueByKey("connector_uid").(string); match {
+			if v, match := result.Record().ValueByKey(constant.ConnectorUID).(string); match {
 				record.ConnectorUid = v
 			}
-			if v, match := result.Record().ValueByKey("connector_definition_uid").(string); match {
+			if v, match := result.Record().ValueByKey(constant.ConnectorDefinitionUID).(string); match {
 				record.ConnectorDefinitionUid = v
 			}
-			if v, match := result.Record().ValueByKey("compute_time_duration").(float64); match {
+			if v, match := result.Record().ValueByKey(constant.ComputeTimeDuration).(float64); match {
 				record.ComputeTimeDuration = float32(v)
 			}
-			if v, match := result.Record().ValueByKey("status").(string); match {
+			if v, match := result.Record().ValueByKey(constant.Status).(string); match {
 				record.Status = mgmtPB.Status(mgmtPB.Status_value[v])
 			}
 
@@ -636,20 +646,17 @@ func (i *influxDB) QueryConnectorExecuteTableRecords(ctx context.Context, owner 
 
 	if expr != "" {
 		exprs := strings.Split(expr, "&&")
-
-		iTime := 0
-		for _, expr := range exprs {
-			if strings.HasPrefix(expr, "start") {
+		for i, expr := range exprs {
+			if strings.HasPrefix(expr, constant.Start) {
 				start = strings.Split(expr, "@")[1]
-				iTime += 1
+				exprs[i] = ""
 			}
-			if strings.HasPrefix(expr, "stop") {
+			if strings.HasPrefix(expr, constant.Stop) {
 				stop = strings.Split(expr, "@")[1]
-				iTime += 1
+				exprs[i] = ""
 			}
 		}
-
-		expr = strings.Join(exprs[iTime:], "")
+		expr = strings.Join(exprs, "")
 	}
 
 	baseQuery := fmt.Sprintf(
@@ -721,16 +728,16 @@ func (i *influxDB) QueryConnectorExecuteTableRecords(ctx context.Context, owner 
 
 			tableRecord := &mgmtPB.ConnectorExecuteTableRecord{}
 
-			if v, match := result.Record().ValueByKey("connector_id").(string); match {
+			if v, match := result.Record().ValueByKey(constant.ConnectorID).(string); match {
 				tableRecord.ConnectorId = v
 			}
-			if v, match := result.Record().ValueByKey("connector_uid").(string); match {
+			if v, match := result.Record().ValueByKey(constant.ConnectorUID).(string); match {
 				tableRecord.ConnectorUid = v
 			}
-			if v, match := result.Record().ValueByKey("STATUS_COMPLETED").(int64); match {
+			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_COMPLETED.String()).(int64); match {
 				tableRecord.ExecuteCountCompleted = v
 			}
-			if v, match := result.Record().ValueByKey("STATUS_ERRORED").(int64); match {
+			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_ERRORED.String()).(int64); match {
 				tableRecord.ExecuteCountErrored = v
 			}
 
@@ -756,7 +763,7 @@ func (i *influxDB) QueryConnectorExecuteTableRecords(ctx context.Context, owner 
 		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid total query: %s", err.Error())
 	} else {
 		if totalQueryResult.Next() {
-			total = totalQueryResult.Record().ValueByKey("connector_uid").(int64)
+			total = totalQueryResult.Record().ValueByKey(constant.ConnectorUID).(int64)
 		}
 	}
 
@@ -788,20 +795,17 @@ func (i *influxDB) QueryConnectorExecuteChartRecords(ctx context.Context, owner 
 
 	if expr != "" {
 		exprs := strings.Split(expr, "&&")
-
-		iTime := 0
-		for _, expr := range exprs {
-			if strings.HasPrefix(expr, "start") {
+		for i, expr := range exprs {
+			if strings.HasPrefix(expr, constant.Start) {
 				start = strings.Split(expr, "@")[1]
-				iTime += 1
+				exprs[i] = ""
 			}
-			if strings.HasPrefix(expr, "stop") {
+			if strings.HasPrefix(expr, constant.Stop) {
 				stop = strings.Split(expr, "@")[1]
-				iTime += 1
+				exprs[i] = ""
 			}
 		}
-
-		expr = strings.Join(exprs[iTime:], "")
+		expr = strings.Join(exprs, "")
 	}
 
 	query := fmt.Sprintf(
@@ -857,13 +861,13 @@ func (i *influxDB) QueryConnectorExecuteChartRecords(ctx context.Context, owner 
 
 				chartRecord = &mgmtPB.ConnectorExecuteChartRecord{}
 
-				if v, match := result.Record().ValueByKey("connector_id").(string); match {
+				if v, match := result.Record().ValueByKey(constant.ConnectorID).(string); match {
 					chartRecord.ConnectorId = v
 				}
-				if v, match := result.Record().ValueByKey("connector_uid").(string); match {
+				if v, match := result.Record().ValueByKey(constant.ConnectorUID).(string); match {
 					chartRecord.ConnectorUid = v
 				}
-				if v, match := result.Record().ValueByKey("status").(string); match {
+				if v, match := result.Record().ValueByKey(constant.Status).(string); match {
 					chartRecord.Status = mgmtPB.Status(mgmtPB.Status_value[v])
 				}
 				chartRecord.TimeBuckets = []*timestamppb.Timestamp{}
@@ -879,10 +883,10 @@ func (i *influxDB) QueryConnectorExecuteChartRecords(ctx context.Context, owner 
 			if v, match := result.Record().ValueByKey("_time").(time.Time); match {
 				chartRecord.TimeBuckets = append(chartRecord.TimeBuckets, timestamppb.New(v))
 			}
-			if v, match := result.Record().ValueByKey("execute_time").(int64); match {
+			if v, match := result.Record().ValueByKey(constant.Executetime).(int64); match {
 				chartRecord.ExecuteCounts = append(chartRecord.ExecuteCounts, v)
 			}
-			if v, match := result.Record().ValueByKey("compute_time_duration").(float64); match {
+			if v, match := result.Record().ValueByKey(constant.ComputeTimeDuration).(float64); match {
 				chartRecord.ComputeTimeDuration = append(chartRecord.ComputeTimeDuration, float32(v))
 			}
 		}

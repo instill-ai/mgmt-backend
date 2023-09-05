@@ -12,6 +12,20 @@ server:
     port: 443
   debug: true
   defaultuseruid:
+connectorbackend:
+  host: connector-backend
+  privateport: 3082
+  publicport: 8082
+  https:
+    cert:
+    key:
+pipelinebackend:
+  host: pipeline-backend
+  privateport: 3081
+  publicport: 8081
+  https:
+    cert:
+    key:
 database:
   username: postgres
   password: password
