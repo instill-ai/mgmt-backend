@@ -47,10 +47,9 @@ type ServerConfig struct {
 
 // ConnectorBackendConfig related to connector-backend
 type ConnectorBackendConfig struct {
-	Host        string `koanf:"host"`
-	PrivatePort int    `koanf:"privateport"`
-	PublicPort  int    `koanf:"publicport"`
-	HTTPS       struct {
+	Host       string `koanf:"host"`
+	PublicPort int    `koanf:"publicport"`
+	HTTPS      struct {
 		Cert string `koanf:"cert"`
 		Key  string `koanf:"key"`
 	}
@@ -58,10 +57,9 @@ type ConnectorBackendConfig struct {
 
 // PipelineBackendConfig related to pipeline-backend
 type PipelineBackendConfig struct {
-	Host        string `koanf:"host"`
-	PrivatePort int    `koanf:"privateport"`
-	PublicPort  int    `koanf:"publicport"`
-	HTTPS       struct {
+	Host       string `koanf:"host"`
+	PublicPort int    `koanf:"publicport"`
+	HTTPS      struct {
 		Cert string `koanf:"cert"`
 		Key  string `koanf:"key"`
 	}
