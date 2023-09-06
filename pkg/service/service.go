@@ -13,6 +13,8 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 
 	mgmtPB "github.com/instill-ai/protogen-go/base/mgmt/v1alpha"
+	connectorPB "github.com/instill-ai/protogen-go/vdp/connector/v1alpha"
+	pipelinePB "github.com/instill-ai/protogen-go/vdp/pipeline/v1alpha"
 )
 
 // Service interface
@@ -35,15 +37,19 @@ type Service interface {
 }
 
 type service struct {
-	repository repository.Repository
-	influxDB   repository.InfluxDB
+	repository                   repository.Repository
+	influxDB                     repository.InfluxDB
+	connectorPublicServiceClient connectorPB.ConnectorPublicServiceClient
+	pipelinePublicServiceClient  pipelinePB.PipelinePublicServiceClient
 }
 
 // NewService initiates a service instance
-func NewService(r repository.Repository, i repository.InfluxDB) Service {
+func NewService(r repository.Repository, i repository.InfluxDB, c connectorPB.ConnectorPublicServiceClient, p pipelinePB.PipelinePublicServiceClient) Service {
 	return &service{
-		repository: r,
-		influxDB:   i,
+		repository:                   r,
+		influxDB:                     i,
+		connectorPublicServiceClient: c,
+		pipelinePublicServiceClient:  p,
 	}
 }
 

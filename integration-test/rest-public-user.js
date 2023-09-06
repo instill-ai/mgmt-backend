@@ -274,6 +274,8 @@ export function CheckPublicDeleteToken() {
 export function CheckPublicMetrics() {
   group(`Management Public API: List Pipeline Trigger Records`, () => {
 
+    let pipeline_id = randomString(10)
+
     let emptyPipelineTriggerRecordResponse = {
       "pipelineTriggerRecords": [],
       "nextPageToken": "",
@@ -299,7 +301,7 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/triggers?filter=trigger_mode=MODE_SYNC%20AND%20pipeline_id=%22a%22`
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/triggers?filter=trigger_mode=MODE_SYNC%20AND%20pipeline_id=%22${pipeline_id}%22`
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers with filter response status is 200`]:
@@ -314,6 +316,8 @@ export function CheckPublicMetrics() {
     )
   })
   group(`Management Public API: List Pipeline Trigger Table Records`, () => {
+
+    let pipeline_id = randomString(10)
 
     let emptyPipelineTriggerTableRecordResponse = {
       "pipelineTriggerTableRecords": [],
@@ -340,7 +344,7 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/tables?filter=pipeline_id=%22iloveinstill%22`
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/tables?filter=pipeline_id=%22${pipeline_id}%22`
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables with filter response status is 200`]:
@@ -355,6 +359,9 @@ export function CheckPublicMetrics() {
     )
   })
   group(`Management Public API: List Pipeline Trigger Chart Records`, () => {
+
+    let pipeline_id = randomString(10)
+
     check(
       http.request(
         "GET",
@@ -370,7 +377,7 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/charts?filter=trigger_mode=MODE_SYNC%20AND%20pipeline_id=%22a%22`
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/charts?filter=trigger_mode=MODE_SYNC%20AND%20pipeline_id=%22${pipeline_id}%22`
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/charts with filter response status is 200`]:
@@ -381,6 +388,8 @@ export function CheckPublicMetrics() {
     )
   })
   group(`Management Public API: List Connector Execute Records`, () => {
+
+    let connector_id = randomString(10)
 
     let emptyConnectorExecuteRecordResponse = {
       "connectorExecuteRecords": [],
@@ -407,7 +416,7 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/connector/executes?filter=status=STATUS_COMPLETED%20AND%20connector_id=%22a%22`
+        `${constant.mgmtPublicHost}/metrics/vdp/connector/executes?filter=status=STATUS_COMPLETED%20AND%20connector_id=%22${connector_id}%22`
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes with filter response status is 200`]:
@@ -422,6 +431,8 @@ export function CheckPublicMetrics() {
     )
   })
   group(`Management Public API: List Connector Execute Table Records`, () => {
+
+    let connector_id = randomString(10)
 
     let emptyConnectorExecuteTableRecordResponse = {
       "connectorExecuteTableRecords": [],
@@ -448,7 +459,7 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/connector/tables?filter=connector_id=%22iloveinstill%22`
+        `${constant.mgmtPublicHost}/metrics/vdp/connector/tables?filter=connector_id=%22${connector_id}%22`
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/connector/tables with filter response status is 200`]:
@@ -463,6 +474,9 @@ export function CheckPublicMetrics() {
     )
   })
   group(`Management Public API: List Connector Execute Chart Records`, () => {
+
+    let connector_id = randomString(10)
+
     check(
       http.request(
         "GET",
@@ -478,7 +492,7 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/connector/charts?filter=status=STATUS_COMPLETED%20AND%20connector_id=%22a%22`
+        `${constant.mgmtPublicHost}/metrics/vdp/connector/charts?filter=status=STATUS_COMPLETED%20AND%20connector_id=%22${connector_id}%22`
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/connector/charts with filter response status is 200`]:

@@ -19,7 +19,57 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 
 	usagePB "github.com/instill-ai/protogen-go/base/usage/v1alpha"
+	connectorPB "github.com/instill-ai/protogen-go/vdp/connector/v1alpha"
+	pipelinePB "github.com/instill-ai/protogen-go/vdp/pipeline/v1alpha"
 )
+
+// InitConnectorPublicServiceClient initialises a ConnectorPublicServiceClient instance
+func InitConnectorPublicServiceClient(ctx context.Context) (connectorPB.ConnectorPublicServiceClient, *grpc.ClientConn) {
+	logger, _ := logger.GetZapLogger(ctx)
+
+	var clientDialOpts grpc.DialOption
+	if config.Config.ConnectorBackend.HTTPS.Cert != "" && config.Config.ConnectorBackend.HTTPS.Key != "" {
+		creds, err := credentials.NewServerTLSFromFile(config.Config.ConnectorBackend.HTTPS.Cert, config.Config.ConnectorBackend.HTTPS.Key)
+		if err != nil {
+			logger.Fatal(err.Error())
+		}
+		clientDialOpts = grpc.WithTransportCredentials(creds)
+	} else {
+		clientDialOpts = grpc.WithTransportCredentials(insecure.NewCredentials())
+	}
+
+	clientConn, err := grpc.Dial(fmt.Sprintf("%v:%v", config.Config.ConnectorBackend.Host, config.Config.ConnectorBackend.PublicPort), clientDialOpts)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, nil
+	}
+
+	return connectorPB.NewConnectorPublicServiceClient(clientConn), clientConn
+}
+
+// InitPipelinePublicServiceClient initialises a PipelinePublicServiceClient instance
+func InitPipelinePublicServiceClient(ctx context.Context) (pipelinePB.PipelinePublicServiceClient, *grpc.ClientConn) {
+	logger, _ := logger.GetZapLogger(ctx)
+
+	var clientDialOpts grpc.DialOption
+	if config.Config.PipelineBackend.HTTPS.Cert != "" && config.Config.PipelineBackend.HTTPS.Key != "" {
+		creds, err := credentials.NewServerTLSFromFile(config.Config.PipelineBackend.HTTPS.Cert, config.Config.PipelineBackend.HTTPS.Key)
+		if err != nil {
+			logger.Fatal(err.Error())
+		}
+		clientDialOpts = grpc.WithTransportCredentials(creds)
+	} else {
+		clientDialOpts = grpc.WithTransportCredentials(insecure.NewCredentials())
+	}
+
+	clientConn, err := grpc.Dial(fmt.Sprintf("%v:%v", config.Config.PipelineBackend.Host, config.Config.PipelineBackend.PublicPort), clientDialOpts)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, nil
+	}
+
+	return pipelinePB.NewPipelinePublicServiceClient(clientConn), clientConn
+}
 
 // InitUsageServiceClient initializes a UsageServiceClient instance
 func InitUsageServiceClient(ctx context.Context, serverConfig *config.ServerConfig) (usagePB.UsageServiceClient, *grpc.ClientConn) {
@@ -86,7 +136,7 @@ func InitInfluxDBServiceClientV3(ctx context.Context, appConfig *config.AppConfi
 	logger, _ := logger.GetZapLogger(ctx)
 
 	client, err := influxdb3.New(influxdb3.Configs{
-		HostURL: appConfig.InfluxDB.URL,
+		HostURL:   appConfig.InfluxDB.URL,
 		AuthToken: appConfig.InfluxDB.Token,
 	})
 

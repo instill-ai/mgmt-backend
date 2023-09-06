@@ -639,12 +639,14 @@ func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgm
 
 	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
 		filtering.DeclareStandardFunctions(),
-		filtering.DeclareIdent("start", filtering.TypeTimestamp),
-		filtering.DeclareIdent("stop", filtering.TypeTimestamp),
-		filtering.DeclareIdent("pipeline_id", filtering.TypeString),
-		filtering.DeclareIdent("pipeline_uid", filtering.TypeString),
-		filtering.DeclareEnumIdent("trigger_mode", mode.Type()),
-		filtering.DeclareEnumIdent("status", status.Type()),
+		filtering.DeclareIdent(constant.Start, filtering.TypeTimestamp),
+		filtering.DeclareIdent(constant.Stop, filtering.TypeTimestamp),
+		filtering.DeclareIdent(constant.PipelineID, filtering.TypeString),
+		filtering.DeclareIdent(constant.PipelineUID, filtering.TypeString),
+		filtering.DeclareIdent(constant.PipelineReleaseID, filtering.TypeString),
+		filtering.DeclareIdent(constant.PipelineReleaseUID, filtering.TypeString),
+		filtering.DeclareEnumIdent(constant.TriggerMode, mode.Type()),
+		filtering.DeclareEnumIdent(constant.Status, status.Type()),
 	}...)
 	if err != nil {
 		span.SetStatus(1, err.Error())
@@ -699,10 +701,12 @@ func (h *PublicHandler) ListPipelineTriggerTableRecords(ctx context.Context, req
 
 	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
 		filtering.DeclareStandardFunctions(),
-		filtering.DeclareIdent("start", filtering.TypeTimestamp),
-		filtering.DeclareIdent("stop", filtering.TypeTimestamp),
-		filtering.DeclareIdent("pipeline_id", filtering.TypeString),
-		filtering.DeclareIdent("pipeline_uid", filtering.TypeString),
+		filtering.DeclareIdent(constant.Start, filtering.TypeTimestamp),
+		filtering.DeclareIdent(constant.Stop, filtering.TypeTimestamp),
+		filtering.DeclareIdent(constant.PipelineID, filtering.TypeString),
+		filtering.DeclareIdent(constant.PipelineUID, filtering.TypeString),
+		filtering.DeclareIdent(constant.PipelineReleaseID, filtering.TypeString),
+		filtering.DeclareIdent(constant.PipelineReleaseUID, filtering.TypeString),
 	}...)
 	if err != nil {
 		span.SetStatus(1, err.Error())
@@ -760,12 +764,14 @@ func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req
 
 	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
 		filtering.DeclareStandardFunctions(),
-		filtering.DeclareIdent("start", filtering.TypeTimestamp),
-		filtering.DeclareIdent("stop", filtering.TypeTimestamp),
-		filtering.DeclareIdent("pipeline_id", filtering.TypeString),
-		filtering.DeclareIdent("pipeline_uid", filtering.TypeString),
-		filtering.DeclareEnumIdent("trigger_mode", mode.Type()),
-		filtering.DeclareEnumIdent("status", status.Type()),
+		filtering.DeclareIdent(constant.Start, filtering.TypeTimestamp),
+		filtering.DeclareIdent(constant.Stop, filtering.TypeTimestamp),
+		filtering.DeclareIdent(constant.PipelineID, filtering.TypeString),
+		filtering.DeclareIdent(constant.PipelineUID, filtering.TypeString),
+		filtering.DeclareIdent(constant.PipelineReleaseID, filtering.TypeString),
+		filtering.DeclareIdent(constant.PipelineReleaseUID, filtering.TypeString),
+		filtering.DeclareEnumIdent(constant.TriggerMode, mode.Type()),
+		filtering.DeclareEnumIdent(constant.Status, status.Type()),
 	}...)
 	if err != nil {
 		span.SetStatus(1, err.Error())
@@ -819,13 +825,15 @@ func (h *PublicHandler) ListConnectorExecuteRecords(ctx context.Context, req *mg
 
 	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
 		filtering.DeclareStandardFunctions(),
-		filtering.DeclareIdent("start", filtering.TypeTimestamp),
-		filtering.DeclareIdent("stop", filtering.TypeTimestamp),
-		filtering.DeclareIdent("connector_id", filtering.TypeString),
-		filtering.DeclareIdent("connector_uid", filtering.TypeString),
-		filtering.DeclareIdent("pipeline_id", filtering.TypeString),
-		filtering.DeclareIdent("pipeline_uid", filtering.TypeString),
-		filtering.DeclareEnumIdent("status", status.Type()),
+		filtering.DeclareIdent(constant.Start, filtering.TypeTimestamp),
+		filtering.DeclareIdent(constant.Stop, filtering.TypeTimestamp),
+		filtering.DeclareIdent(constant.ConnectorID, filtering.TypeString),
+		filtering.DeclareIdent(constant.ConnectorUID, filtering.TypeString),
+		filtering.DeclareIdent(constant.PipelineID, filtering.TypeString),
+		filtering.DeclareIdent(constant.PipelineUID, filtering.TypeString),
+		filtering.DeclareIdent(constant.PipelineReleaseID, filtering.TypeString),
+		filtering.DeclareIdent(constant.PipelineReleaseUID, filtering.TypeString),
+		filtering.DeclareEnumIdent(constant.Status, status.Type()),
 	}...)
 	if err != nil {
 		span.SetStatus(1, err.Error())
@@ -880,10 +888,10 @@ func (h *PublicHandler) ListConnectorExecuteTableRecords(ctx context.Context, re
 
 	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
 		filtering.DeclareStandardFunctions(),
-		filtering.DeclareIdent("start", filtering.TypeTimestamp),
-		filtering.DeclareIdent("stop", filtering.TypeTimestamp),
-		filtering.DeclareIdent("connector_id", filtering.TypeString),
-		filtering.DeclareIdent("connector_uid", filtering.TypeString),
+		filtering.DeclareIdent(constant.Start, filtering.TypeTimestamp),
+		filtering.DeclareIdent(constant.Stop, filtering.TypeTimestamp),
+		filtering.DeclareIdent(constant.ConnectorID, filtering.TypeString),
+		filtering.DeclareIdent(constant.ConnectorUID, filtering.TypeString),
 	}...)
 	if err != nil {
 		span.SetStatus(1, err.Error())
@@ -940,13 +948,15 @@ func (h *PublicHandler) ListConnectorExecuteChartRecords(ctx context.Context, re
 
 	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
 		filtering.DeclareStandardFunctions(),
-		filtering.DeclareIdent("start", filtering.TypeTimestamp),
-		filtering.DeclareIdent("stop", filtering.TypeTimestamp),
-		filtering.DeclareIdent("connector_id", filtering.TypeString),
-		filtering.DeclareIdent("connector_uid", filtering.TypeString),
-		filtering.DeclareIdent("pipeline_id", filtering.TypeString),
-		filtering.DeclareIdent("pipeline_uid", filtering.TypeString),
-		filtering.DeclareEnumIdent("status", status.Type()),
+		filtering.DeclareIdent(constant.Start, filtering.TypeTimestamp),
+		filtering.DeclareIdent(constant.Stop, filtering.TypeTimestamp),
+		filtering.DeclareIdent(constant.ConnectorID, filtering.TypeString),
+		filtering.DeclareIdent(constant.ConnectorUID, filtering.TypeString),
+		filtering.DeclareIdent(constant.PipelineID, filtering.TypeString),
+		filtering.DeclareIdent(constant.PipelineUID, filtering.TypeString),
+		filtering.DeclareIdent(constant.PipelineReleaseID, filtering.TypeString),
+		filtering.DeclareIdent(constant.PipelineReleaseUID, filtering.TypeString),
+		filtering.DeclareEnumIdent(constant.Status, status.Type()),
 	}...)
 	if err != nil {
 		span.SetStatus(1, err.Error())
