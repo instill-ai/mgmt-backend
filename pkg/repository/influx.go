@@ -287,7 +287,7 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 			|> filter(fn: (r) => r["owner_uid"] == "%v")
 			%v
 			|> drop(columns: ["owner_uid", "trigger_mode", "compute_time_duration", "pipeline_trigger_id", "status"])
-			|> group(columns: ["pipeline_id", "pipeline_uid"])
+			|> group(columns: ["pipeline_id", "pipeline_uid", "pipeline_release_id", "pipeline_release_uid"])
 			|> map(fn: (r) => ({r with trigger_time: time(v: r.trigger_time)}))
 			|> max(column: "trigger_time")
 			|> rename(columns: {trigger_time: "most_recent_trigger_time"})
@@ -298,13 +298,13 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 			|> filter(fn: (r) => r["owner_uid"] == "%v")
 			%v
 			|> drop(columns: ["owner_uid", "trigger_mode", "compute_time_duration", "pipeline_trigger_id"])
-			|> group(columns: ["pipeline_id", "pipeline_uid", "status"])
+			|> group(columns: ["pipeline_id", "pipeline_uid", "pipeline_release_id", "pipeline_release_uid", "status"])
 			|> count(column: "trigger_time")
 			|> rename(columns: {trigger_time: "trigger_count"})
-			|> group(columns: ["pipeline_id", "pipeline_uid"])
-		join(tables: {t1: t1, t2: t2}, on: ["pipeline_id", "pipeline_uid"])
+			|> group(columns: ["pipeline_id", "pipeline_uid", "pipeline_release_id", "pipeline_release_uid"])
+		join(tables: {t1: t1, t2: t2}, on: ["pipeline_id", "pipeline_uid", "pipeline_release_id", "pipeline_release_uid"])
 			|> group()
-			|> pivot(rowKey: ["pipeline_id", "pipeline_uid", "most_recent_trigger_time"], columnKey: ["status"], valueColumn: "trigger_count")
+			|> pivot(rowKey: ["pipeline_id", "pipeline_uid", "pipeline_release_id", "pipeline_release_uid", "most_recent_trigger_time"], columnKey: ["status"], valueColumn: "trigger_count")
 			|> sort(columns: ["most_recent_trigger_time"], desc: true)
 			|> filter(fn: (r) => r["most_recent_trigger_time"] < time(v: %v))`,
 		i.bucket,
@@ -441,7 +441,7 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
 			|> filter(fn: (r) => r["owner_uid"] == "%v")
 			%v
-			|> group(columns: ["pipeline_id", "pipeline_uid", "trigger_mode", "status"])
+			|> group(columns: ["pipeline_id", "pipeline_uid", "pipeline_release_id", "pipeline_release_uid", "trigger_mode", "status"])
 			|> sort(columns: ["trigger_time"])
 			|> aggregateWindow(every: duration(v: %v), column: "trigger_time", fn: count, createEmpty: false)
 		t2 = from(bucket: "%v")
@@ -450,10 +450,10 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
 			|> filter(fn: (r) => r["owner_uid"] == "%v")
 			%v
-			|> group(columns: ["pipeline_id", "pipeline_uid", "trigger_mode", "status"])
+			|> group(columns: ["pipeline_id", "pipeline_uid", "pipeline_release_id", "pipeline_release_uid", "trigger_mode", "status"])
 			|> sort(columns: ["trigger_time"])
 			|> aggregateWindow(every: duration(v: %v), fn: sum, column: "compute_time_duration", createEmpty: false)
-		join(tables: {t1: t1, t2:t2}, on: ["_start", "_stop", "_time", "pipeline_id", "pipeline_uid", "trigger_mode", "status"])`,
+		join(tables: {t1: t1, t2:t2}, on: ["_start", "_stop", "_time", "pipeline_id", "pipeline_uid", "pipeline_release_id", "pipeline_release_uid", "trigger_mode", "status"])`,
 		i.bucket,
 		start,
 		stop,
