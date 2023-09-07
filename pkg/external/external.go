@@ -24,12 +24,12 @@ import (
 )
 
 // InitConnectorPublicServiceClient initialises a ConnectorPublicServiceClient instance
-func InitConnectorPublicServiceClient(ctx context.Context) (connectorPB.ConnectorPublicServiceClient, *grpc.ClientConn) {
+func InitConnectorPublicServiceClient(ctx context.Context, appConfig *config.AppConfig) (connectorPB.ConnectorPublicServiceClient, *grpc.ClientConn) {
 	logger, _ := logger.GetZapLogger(ctx)
 
 	var clientDialOpts grpc.DialOption
-	if config.Config.ConnectorBackend.HTTPS.Cert != "" && config.Config.ConnectorBackend.HTTPS.Key != "" {
-		creds, err := credentials.NewServerTLSFromFile(config.Config.ConnectorBackend.HTTPS.Cert, config.Config.ConnectorBackend.HTTPS.Key)
+	if appConfig.ConnectorBackend.HTTPS.Cert != "" && appConfig.ConnectorBackend.HTTPS.Key != "" {
+		creds, err := credentials.NewServerTLSFromFile(appConfig.ConnectorBackend.HTTPS.Cert, appConfig.ConnectorBackend.HTTPS.Key)
 		if err != nil {
 			logger.Fatal(err.Error())
 		}
@@ -38,7 +38,7 @@ func InitConnectorPublicServiceClient(ctx context.Context) (connectorPB.Connecto
 		clientDialOpts = grpc.WithTransportCredentials(insecure.NewCredentials())
 	}
 
-	clientConn, err := grpc.Dial(fmt.Sprintf("%v:%v", config.Config.ConnectorBackend.Host, config.Config.ConnectorBackend.PublicPort), clientDialOpts)
+	clientConn, err := grpc.Dial(fmt.Sprintf("%v:%v", appConfig.ConnectorBackend.Host, appConfig.ConnectorBackend.PublicPort), clientDialOpts)
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, nil
@@ -48,12 +48,12 @@ func InitConnectorPublicServiceClient(ctx context.Context) (connectorPB.Connecto
 }
 
 // InitPipelinePublicServiceClient initialises a PipelinePublicServiceClient instance
-func InitPipelinePublicServiceClient(ctx context.Context) (pipelinePB.PipelinePublicServiceClient, *grpc.ClientConn) {
+func InitPipelinePublicServiceClient(ctx context.Context, appConfig *config.AppConfig) (pipelinePB.PipelinePublicServiceClient, *grpc.ClientConn) {
 	logger, _ := logger.GetZapLogger(ctx)
 
 	var clientDialOpts grpc.DialOption
-	if config.Config.PipelineBackend.HTTPS.Cert != "" && config.Config.PipelineBackend.HTTPS.Key != "" {
-		creds, err := credentials.NewServerTLSFromFile(config.Config.PipelineBackend.HTTPS.Cert, config.Config.PipelineBackend.HTTPS.Key)
+	if appConfig.PipelineBackend.HTTPS.Cert != "" && appConfig.PipelineBackend.HTTPS.Key != "" {
+		creds, err := credentials.NewServerTLSFromFile(appConfig.PipelineBackend.HTTPS.Cert, appConfig.PipelineBackend.HTTPS.Key)
 		if err != nil {
 			logger.Fatal(err.Error())
 		}
@@ -62,7 +62,7 @@ func InitPipelinePublicServiceClient(ctx context.Context) (pipelinePB.PipelinePu
 		clientDialOpts = grpc.WithTransportCredentials(insecure.NewCredentials())
 	}
 
-	clientConn, err := grpc.Dial(fmt.Sprintf("%v:%v", config.Config.PipelineBackend.Host, config.Config.PipelineBackend.PublicPort), clientDialOpts)
+	clientConn, err := grpc.Dial(fmt.Sprintf("%v:%v", appConfig.PipelineBackend.Host, appConfig.PipelineBackend.PublicPort), clientDialOpts)
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, nil

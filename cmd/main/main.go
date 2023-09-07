@@ -137,12 +137,12 @@ func main() {
 		grpcServerOpts = append(grpcServerOpts, grpc.Creds(creds))
 	}
 
-	connectorPublicServiceClient, connectorPublicServiceClientConn := external.InitConnectorPublicServiceClient(ctx)
+	connectorPublicServiceClient, connectorPublicServiceClientConn := external.InitConnectorPublicServiceClient(ctx, &config.Config)
 	if connectorPublicServiceClientConn != nil {
 		defer connectorPublicServiceClientConn.Close()
 	}
 
-	pipelinePublicServiceClient, pipelinePublicServiceClientConn := external.InitPipelinePublicServiceClient(ctx)
+	pipelinePublicServiceClient, pipelinePublicServiceClientConn := external.InitPipelinePublicServiceClient(ctx, &config.Config)
 	if pipelinePublicServiceClientConn != nil {
 		defer pipelinePublicServiceClientConn.Close()
 	}
