@@ -7,6 +7,7 @@ import (
 	"go.einride.tech/aip/filtering"
 
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
+	"github.com/instill-ai/mgmt-backend/pkg/middleware"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 
 	mgmtPB "github.com/instill-ai/protogen-go/base/mgmt/v1alpha"
@@ -15,6 +16,8 @@ import (
 )
 
 func (s *service) pipelineUIDLookup(ctx context.Context, filter filtering.Filter, owner *mgmtPB.User) filtering.Filter {
+
+	ctx = middleware.InjectOwnerToContext(ctx, owner)
 
 	// lookup pipeline uid
 	if len(filter.CheckedExpr.GetExpr().GetCallExpr().GetArgs()) > 0 {
@@ -42,6 +45,8 @@ func (s *service) pipelineUIDLookup(ctx context.Context, filter filtering.Filter
 }
 
 func (s *service) connectorUIDLookup(ctx context.Context, filter filtering.Filter, owner *mgmtPB.User) filtering.Filter {
+
+	ctx = middleware.InjectOwnerToContext(ctx, owner)
 
 	// lookup connector uid
 	if len(filter.CheckedExpr.GetExpr().GetCallExpr().GetArgs()) > 0 {

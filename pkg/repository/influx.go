@@ -435,36 +435,51 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 	}
 
 	query := fmt.Sprintf(
-		`t1 = from(bucket: "%v")
-			|> range(start: %v, stop: %v)
-			|> filter(fn: (r) => r["_measurement"] == "pipeline.trigger")
-			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-			|> filter(fn: (r) => r["owner_uid"] == "%v")
-			%v
-			|> group(columns: ["pipeline_id", "pipeline_uid", "pipeline_release_id", "pipeline_release_uid", "trigger_mode", "status"])
-			|> sort(columns: ["trigger_time"])
-			|> aggregateWindow(every: duration(v: %v), column: "trigger_time", fn: count, createEmpty: false)
-		t2 = from(bucket: "%v")
-			|> range(start: %v, stop: %v)
-			|> filter(fn: (r) => r["_measurement"] == "pipeline.trigger")
-			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-			|> filter(fn: (r) => r["owner_uid"] == "%v")
-			%v
-			|> group(columns: ["pipeline_id", "pipeline_uid", "pipeline_release_id", "pipeline_release_uid", "trigger_mode", "status"])
-			|> sort(columns: ["trigger_time"])
-			|> aggregateWindow(every: duration(v: %v), fn: sum, column: "compute_time_duration", createEmpty: false)
-		join(tables: {t1: t1, t2:t2}, on: ["_start", "_stop", "_time", "pipeline_id", "pipeline_uid", "pipeline_release_id", "pipeline_release_uid", "trigger_mode", "status"])`,
+		`base =
+			from(bucket: "%v")
+				|> range(start: %v, stop: %v)
+				|> filter(fn: (r) => r["_measurement"] == "pipeline.trigger")
+				|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+				|> filter(fn: (r) => r["owner_uid"] == "%v")
+				%v
+		bucketBase =
+			base
+				|> group(columns: ["pipeline_uid"])
+				|> sort(columns: ["trigger_time"])
+		bucketTrigger =
+			bucketBase
+				|> aggregateWindow(
+					every: duration(v: %v),
+					column: "trigger_time",
+					fn: count,
+					createEmpty: false,
+				)
+		bucketDuration =
+			bucketBase
+				|> aggregateWindow(
+					every: duration(v: %v),
+					fn: sum,
+					column: "compute_time_duration",
+					createEmpty: false,
+				)
+		bucket =
+			join(
+				tables: {t1: bucketTrigger, t2: bucketDuration},
+				on: ["_start", "_stop", "_time", "pipeline_uid"],
+			)
+		nameMap =
+			base
+				|> keep(columns: ["trigger_time", "pipeline_id", "pipeline_uid"])
+				|> group(columns: ["pipeline_uid"])
+				|> top(columns: ["trigger_time"], n: 1)
+				|> drop(columns: ["trigger_time"])
+		join(tables: {t1: bucket, t2: nameMap}, on: ["pipeline_uid"])`,
 		i.bucket,
 		start,
 		stop,
 		owner,
 		expr,
 		aggregationWindow,
-		i.bucket,
-		start,
-		stop,
-		owner,
-		expr,
 		aggregationWindow,
 	)
 
@@ -498,12 +513,6 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 				}
 				if v, match := result.Record().ValueByKey(constant.PipelineReleaseUID).(string); match {
 					chartRecord.PipelineReleaseUid = v
-				}
-				if v, match := result.Record().ValueByKey(constant.TriggerMode).(string); match {
-					chartRecord.TriggerMode = mgmtPB.Mode(mgmtPB.Mode_value[v])
-				}
-				if v, match := result.Record().ValueByKey(constant.Status).(string); match {
-					chartRecord.Status = mgmtPB.Status(mgmtPB.Status_value[v])
 				}
 				chartRecord.TimeBuckets = []*timestamppb.Timestamp{}
 				chartRecord.TriggerCounts = []int64{}
@@ -809,36 +818,51 @@ func (i *influxDB) QueryConnectorExecuteChartRecords(ctx context.Context, owner 
 	}
 
 	query := fmt.Sprintf(
-		`t1 = from(bucket: "%v")
-			|> range(start: %v, stop: %v)
-			|> filter(fn: (r) => r["_measurement"] == "connector.execute")
-			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-			|> filter(fn: (r) => r["connector_owner_uid"] == "%v")
-			%v
-			|> group(columns: ["connector_id", "connector_uid", "status"])
-			|> sort(columns: ["execute_time"])
-			|> aggregateWindow(every: duration(v: %v), column: "execute_time", fn: count, createEmpty: false)
-		t2 = from(bucket: "%v")
-			|> range(start: %v, stop: %v)
-			|> filter(fn: (r) => r["_measurement"] == "connector.execute")
-			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-			|> filter(fn: (r) => r["connector_owner_uid"] == "%v")
-			%v
-			|> group(columns: ["connector_id", "connector_uid", "status"])
-			|> sort(columns: ["execute_time"])
-			|> aggregateWindow(every: duration(v: %v), fn: sum, column: "compute_time_duration", createEmpty: false)
-		join(tables: {t1: t1, t2:t2}, on: ["_start", "_stop", "_time", "connector_id", "connector_uid", "status"])`,
+		`base =
+			from(bucket: "%v")
+				|> range(start: %v, stop: %v)
+				|> filter(fn: (r) => r["_measurement"] == "connector.execute")
+				|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+				|> filter(fn: (r) => r["connector_owner_uid"] == "%v")
+				%v
+		bucketBase =
+			base
+				|> group(columns: ["connector_uid"])
+				|> sort(columns: ["execute_time"])
+		bucketTrigger =
+			bucketBase
+				|> aggregateWindow(
+					every: duration(v: %v),
+					column: "execute_time",
+					fn: count,
+					createEmpty: false,
+				)
+		bucketDuration =
+			bucketBase
+				|> aggregateWindow(
+					every: duration(v: %v),
+					fn: sum,
+					column: "compute_time_duration",
+					createEmpty: false,
+				)
+		bucket =
+			join(
+				tables: {t1: bucketTrigger, t2: bucketDuration},
+				on: ["_start", "_stop", "_time", "connector_uid"],
+			)
+		nameMap =
+			base
+				|> keep(columns: ["execute_time", "connector_id", "connector_uid"])
+				|> group(columns: ["connector_uid"])
+				|> top(columns: ["execute_time"], n: 1)
+				|> drop(columns: ["execute_time"])
+		join(tables: {t1: bucket, t2: nameMap}, on: ["connector_uid"])`,
 		i.bucket,
 		start,
 		stop,
 		owner,
 		expr,
 		aggregationWindow,
-		i.bucket,
-		start,
-		stop,
-		owner,
-		expr,
 		aggregationWindow,
 	)
 
@@ -866,9 +890,6 @@ func (i *influxDB) QueryConnectorExecuteChartRecords(ctx context.Context, owner 
 				}
 				if v, match := result.Record().ValueByKey(constant.ConnectorUID).(string); match {
 					chartRecord.ConnectorUid = v
-				}
-				if v, match := result.Record().ValueByKey(constant.Status).(string); match {
-					chartRecord.Status = mgmtPB.Status(mgmtPB.Status_value[v])
 				}
 				chartRecord.TimeBuckets = []*timestamppb.Timestamp{}
 				chartRecord.ExecuteCounts = []int64{}
