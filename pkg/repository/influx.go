@@ -280,38 +280,56 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 	}
 
 	baseQuery := fmt.Sprintf(
-		`t1 = from(bucket: "%v")
-			|> range(start: %v, stop: %v)
-			|> filter(fn: (r) => r["_measurement"] == "pipeline.trigger")
-			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-			|> filter(fn: (r) => r["owner_uid"] == "%v")
-			%v
-			|> drop(columns: ["owner_uid", "trigger_mode", "compute_time_duration", "pipeline_trigger_id", "status"])
-			|> group(columns: ["pipeline_id", "pipeline_uid"])
-			|> map(fn: (r) => ({r with trigger_time: time(v: r.trigger_time)}))
-			|> max(column: "trigger_time")
-			|> rename(columns: {trigger_time: "most_recent_trigger_time"})
-		t2 = from(bucket: "%v")
-			|> range(start: %v, stop: %v)
-			|> filter(fn: (r) => r["_measurement"] == "pipeline.trigger")
-			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-			|> filter(fn: (r) => r["owner_uid"] == "%v")
-			%v
-			|> drop(columns: ["owner_uid", "trigger_mode", "compute_time_duration", "pipeline_trigger_id"])
-			|> group(columns: ["pipeline_id", "pipeline_uid", "status"])
-			|> count(column: "trigger_time")
-			|> rename(columns: {trigger_time: "trigger_count"})
-			|> group(columns: ["pipeline_id", "pipeline_uid"])
-		join(tables: {t1: t1, t2: t2}, on: ["pipeline_id", "pipeline_uid"])
-			|> group()
-			|> pivot(rowKey: ["pipeline_id", "pipeline_uid", "most_recent_trigger_time"], columnKey: ["status"], valueColumn: "trigger_count")
-			|> sort(columns: ["most_recent_trigger_time"], desc: true)
-			|> filter(fn: (r) => r["most_recent_trigger_time"] < time(v: %v))`,
-		i.bucket,
-		start,
-		stop,
-		owner,
-		expr,
+		`base =
+			from(bucket: "%v")
+				|> range(start: %v, stop: %v)
+				|> filter(fn: (r) => r["_measurement"] == "pipeline.trigger")
+				|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+				|> filter(fn: (r) => r["owner_uid"] == "%v")
+				%v
+		triggerRank =
+			base
+				|> drop(
+					columns: [
+						"owner_uid",
+						"trigger_mode",
+						"compute_time_duration",
+						"pipeline_trigger_id",
+						"status",
+					],
+				)
+				|> group(columns: ["pipeline_uid"])
+				|> map(fn: (r) => ({r with trigger_time: time(v: r.trigger_time)}))
+				|> max(column: "trigger_time")
+				|> rename(columns: {trigger_time: "most_recent_trigger_time"})
+		triggerCount =
+			base
+				|> drop(
+					columns: ["owner_uid", "trigger_mode", "compute_time_duration", "pipeline_trigger_id"],
+				)
+				|> group(columns: ["pipeline_uid", "status"])
+				|> count(column: "trigger_time")
+				|> rename(columns: {trigger_time: "trigger_count"})
+				|> group(columns: ["pipeline_uid"])
+		triggerTable =
+			join(tables: {t1: triggerRank, t2: triggerCount}, on: ["pipeline_uid"])
+				|> group()
+				|> pivot(
+					rowKey: ["pipeline_uid", "most_recent_trigger_time"],
+					columnKey: ["status"],
+					valueColumn: "trigger_count",
+				)
+				|> sort(columns: ["most_recent_trigger_time"], desc: true)
+				|> filter(
+					fn: (r) => r["most_recent_trigger_time"] < time(v: %v)
+				)
+		nameMap =
+			base
+				|> keep(columns: ["trigger_time", "pipeline_id", "pipeline_uid"])
+				|> group(columns: ["pipeline_uid"])
+				|> top(columns: ["trigger_time"], n: 1)
+				|> drop(columns: ["trigger_time"])
+		join(tables: {t1: triggerTable, t2: nameMap}, on: ["pipeline_uid"])`,
 		i.bucket,
 		start,
 		stop,
@@ -329,6 +347,7 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 
 	totalQuery := fmt.Sprintf(
 		`%v
+		|> group()
 		|> count(column: "pipeline_uid")`,
 		baseQuery,
 	)
@@ -669,38 +688,56 @@ func (i *influxDB) QueryConnectorExecuteTableRecords(ctx context.Context, owner 
 	}
 
 	baseQuery := fmt.Sprintf(
-		`t1 = from(bucket: "%v")
-			|> range(start: %v, stop: %v)
-			|> filter(fn: (r) => r["_measurement"] == "connector.execute")
-			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-			|> filter(fn: (r) => r["connector_owner_uid"] == "%v")
-			%v
-			|> drop(columns: ["connector_owner_uid", "compute_time_duration", "pipeline_uid", "pipeline_id", "status"])
-			|> group(columns: ["connector_id", "connector_uid"])
-			|> map(fn: (r) => ({r with execute_time: time(v: r.execute_time)}))
-			|> max(column: "execute_time")
-			|> rename(columns: {execute_time: "most_recent_execute_time"})
-		t2 = from(bucket: "%v")
-			|> range(start: %v, stop: %v)
-			|> filter(fn: (r) => r["_measurement"] == "connector.execute")
-			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-			|> filter(fn: (r) => r["connector_owner_uid"] == "%v")
-			%v
-			|> drop(columns: ["connector_owner_uid", "compute_time_duration", "pipeline_uid", "pipeline_id"])
-			|> group(columns: ["connector_id", "connector_uid", "status"])
-			|> count(column: "execute_time")
-			|> rename(columns: {execute_time: "execute_count"})
-			|> group(columns: ["connector_id", "connector_uid"])
-		join(tables: {t1: t1, t2: t2}, on: ["connector_id", "connector_uid"])
-			|> group()
-			|> pivot(rowKey: ["connector_id", "connector_uid", "most_recent_execute_time"], columnKey: ["status"], valueColumn: "execute_count")
-			|> sort(columns: ["most_recent_execute_time"], desc: true)
-			|> filter(fn: (r) => r["most_recent_execute_time"] < time(v: %v))`,
-		i.bucket,
-		start,
-		stop,
-		owner,
-		expr,
+		`base =
+			from(bucket: "%v")
+				|> range(start: %v, stop: %v)
+				|> filter(fn: (r) => r["_measurement"] == "connector.execute")
+				|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+				|> filter(fn: (r) => r["connector_owner_uid"] == "%v")
+				%v
+		executeRank =
+			base
+				|> drop(
+					columns: [
+						"connector_owner_uid",
+						"compute_time_duration",
+						"pipeline_id",
+						"pipeline_uid",
+						"status",
+					],
+				)
+				|> group(columns: ["connector_uid"])
+				|> map(fn: (r) => ({r with execute_time: time(v: r.execute_time)}))
+				|> max(column: "execute_time")
+				|> rename(columns: {execute_time: "most_recent_execute_time"})
+		executeCount =
+			base
+				|> drop(
+					columns: ["connector_owner_uid", "compute_time_duration", "pipeline_id", "pipeline_uid"],
+				)
+				|> group(columns: ["connector_uid", "status"])
+				|> count(column: "execute_time")
+				|> rename(columns: {execute_time: "execute_count"})
+				|> group(columns: ["connector_uid"])
+		executeTable =
+			join(tables: {t1: executeRank, t2: executeCount}, on: ["connector_uid"])
+				|> group()
+				|> pivot(
+					rowKey: ["connector_uid", "most_recent_execute_time"],
+					columnKey: ["status"],
+					valueColumn: "execute_count",
+				)
+				|> sort(columns: ["most_recent_execute_time"], desc: true)
+				|> filter(
+					fn: (r) => r["most_recent_execute_time"] < time(v: %v)
+				)
+		nameMap =
+			base
+				|> keep(columns: ["execute_time", "connector_id", "connector_uid"])
+				|> group(columns: ["connector_uid"])
+				|> top(columns: ["execute_time"], n: 1)
+				|> drop(columns: ["execute_time"])
+		join(tables: {t1: executeTable, t2: nameMap}, on: ["connector_uid"])`,
 		i.bucket,
 		start,
 		stop,
@@ -718,6 +755,7 @@ func (i *influxDB) QueryConnectorExecuteTableRecords(ctx context.Context, owner 
 
 	totalQuery := fmt.Sprintf(
 		`%v
+		|> group()
 		|> count(column: "connector_uid")`,
 		baseQuery,
 	)
