@@ -129,4 +129,4 @@ jobs:
 
       - name: Run integration-test
         run: |
-          make integration-test API_GATEWAY_BASE_HOST=localhost API_GATEWAY_BASE_PORT=7080
+          make integration-test API_GATEWAY_URL=localhost:8080
