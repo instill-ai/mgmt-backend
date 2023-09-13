@@ -319,7 +319,6 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 					columnKey: ["status"],
 					valueColumn: "trigger_count",
 				)
-				|> sort(columns: ["most_recent_trigger_time"], desc: true)
 				|> filter(
 					fn: (r) => r["most_recent_trigger_time"] < time(v: %v)
 				)
@@ -340,6 +339,8 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 
 	query := fmt.Sprintf(
 		`%v
+		|> group()
+		|> sort(columns: ["most_recent_trigger_time"], desc: true)
 		|> limit(n: %v)`,
 		baseQuery,
 		pageSize,
@@ -727,7 +728,6 @@ func (i *influxDB) QueryConnectorExecuteTableRecords(ctx context.Context, owner 
 					columnKey: ["status"],
 					valueColumn: "execute_count",
 				)
-				|> sort(columns: ["most_recent_execute_time"], desc: true)
 				|> filter(
 					fn: (r) => r["most_recent_execute_time"] < time(v: %v)
 				)
@@ -748,6 +748,8 @@ func (i *influxDB) QueryConnectorExecuteTableRecords(ctx context.Context, owner 
 
 	query := fmt.Sprintf(
 		`%v
+		|> group()
+		|> sort(columns: ["most_recent_execute_time"], desc: true)
 		|> limit(n: %v)`,
 		baseQuery,
 		pageSize,
