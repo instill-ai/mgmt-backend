@@ -328,6 +328,7 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 				|> group(columns: ["pipeline_uid"])
 				|> top(columns: ["trigger_time"], n: 1)
 				|> drop(columns: ["trigger_time"])
+				|> group()
 		join(tables: {t1: triggerTable, t2: nameMap}, on: ["pipeline_uid"])`,
 		i.bucket,
 		start,
@@ -737,6 +738,7 @@ func (i *influxDB) QueryConnectorExecuteTableRecords(ctx context.Context, owner 
 				|> group(columns: ["connector_uid"])
 				|> top(columns: ["execute_time"], n: 1)
 				|> drop(columns: ["execute_time"])
+				|> group()
 		join(tables: {t1: executeTable, t2: nameMap}, on: ["connector_uid"])`,
 		i.bucket,
 		start,
