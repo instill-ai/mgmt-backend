@@ -255,9 +255,9 @@ export function CheckPublicMetrics() {
   group(`Management Public API: List Pipeline Trigger Records`, () => {
 
     let emptyPipelineTriggerRecordResponse = {
-      "pipelineTriggerRecords":[],
-      "nextPageToken":"",
-      "totalSize":"0"
+      "pipelineTriggerRecords": [],
+      "nextPageToken": "",
+      "totalSize": "0"
     }
 
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords', {}), {
@@ -280,9 +280,9 @@ export function CheckPublicMetrics() {
   group(`Management Public API: List Pipeline Trigger Table Records`, () => {
 
     let emptyPipelineTriggerTableRecordResponse = {
-      "pipelineTriggerTableRecords":[],
-      "nextPageToken":"",
-      "totalSize":"0"
+      "pipelineTriggerTableRecords": [],
+      "nextPageToken": "",
+      "totalSize": "0"
     }
 
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords', {}), {
@@ -320,9 +320,9 @@ export function CheckPublicMetrics() {
   group(`Management Public API: List Connector Execute Records`, () => {
 
     let emptyConnectorExecuteRecordResponse = {
-      "connectorExecuteRecords":[],
-      "nextPageToken":"",
-      "totalSize":"0"
+      "connectorExecuteRecords": [],
+      "nextPageToken": "",
+      "totalSize": "0"
     }
 
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords', {}), {
@@ -345,9 +345,9 @@ export function CheckPublicMetrics() {
   group(`Management Public API: List Connector Execute Table Records`, () => {
 
     let emptyConnectorExecuteTableRecordResponse = {
-      "connectorExecuteTableRecords":[],
-      "nextPageToken":"",
-      "totalSize":"0"
+      "connectorExecuteTableRecords": [],
+      "nextPageToken": "",
+      "totalSize": "0"
     }
 
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords', {}), {

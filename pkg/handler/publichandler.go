@@ -659,7 +659,7 @@ func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgm
 		return &mgmtPB.ListPipelineTriggerRecordsResponse{}, err
 	}
 
-	pipelineTriggerRecords, totalSize, nextPageToken, err := h.Service.ListPipelineTriggerRecords(ctx, pbUser, req.GetPageSize(), req.GetPageToken(), filter)
+	pipelineTriggerRecords, totalSize, nextPageToken, err := h.Service.ListPipelineTriggerRecords(ctx, pbUser, int64(req.GetPageSize()), req.GetPageToken(), filter)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return &mgmtPB.ListPipelineTriggerRecordsResponse{}, err
@@ -668,7 +668,7 @@ func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgm
 	resp := mgmtPB.ListPipelineTriggerRecordsResponse{
 		PipelineTriggerRecords: pipelineTriggerRecords,
 		NextPageToken:          nextPageToken,
-		TotalSize:              totalSize,
+		TotalSize:              int32(totalSize),
 	}
 
 	logger.Info(string(custom_otel.NewLogMessage(
@@ -719,7 +719,7 @@ func (h *PublicHandler) ListPipelineTriggerTableRecords(ctx context.Context, req
 		return &mgmtPB.ListPipelineTriggerTableRecordsResponse{}, err
 	}
 
-	pipelineTriggerTableRecords, totalSize, nextPageToken, err := h.Service.ListPipelineTriggerTableRecords(ctx, pbUser, req.GetPageSize(), req.GetPageToken(), filter)
+	pipelineTriggerTableRecords, totalSize, nextPageToken, err := h.Service.ListPipelineTriggerTableRecords(ctx, pbUser, int64(req.GetPageSize()), req.GetPageToken(), filter)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return &mgmtPB.ListPipelineTriggerTableRecordsResponse{}, err
@@ -728,7 +728,7 @@ func (h *PublicHandler) ListPipelineTriggerTableRecords(ctx context.Context, req
 	resp := mgmtPB.ListPipelineTriggerTableRecordsResponse{
 		PipelineTriggerTableRecords: pipelineTriggerTableRecords,
 		NextPageToken:               nextPageToken,
-		TotalSize:                   totalSize,
+		TotalSize:                   int32(totalSize),
 	}
 
 	logger.Info(string(custom_otel.NewLogMessage(
@@ -784,7 +784,7 @@ func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req
 		return &mgmtPB.ListPipelineTriggerChartRecordsResponse{}, err
 	}
 
-	pipelineTriggerChartRecords, err := h.Service.ListPipelineTriggerChartRecords(ctx, pbUser, req.GetAggregationWindow(), filter)
+	pipelineTriggerChartRecords, err := h.Service.ListPipelineTriggerChartRecords(ctx, pbUser, int64(req.GetAggregationWindow()), filter)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return &mgmtPB.ListPipelineTriggerChartRecordsResponse{}, err
@@ -846,7 +846,7 @@ func (h *PublicHandler) ListConnectorExecuteRecords(ctx context.Context, req *mg
 		return &mgmtPB.ListConnectorExecuteRecordsResponse{}, err
 	}
 
-	connectorExecuteRecords, totalSize, nextPageToken, err := h.Service.ListConnectorExecuteRecords(ctx, pbUser, req.GetPageSize(), req.GetPageToken(), filter)
+	connectorExecuteRecords, totalSize, nextPageToken, err := h.Service.ListConnectorExecuteRecords(ctx, pbUser, int64(req.GetPageSize()), req.GetPageToken(), filter)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return &mgmtPB.ListConnectorExecuteRecordsResponse{}, err
@@ -855,7 +855,7 @@ func (h *PublicHandler) ListConnectorExecuteRecords(ctx context.Context, req *mg
 	resp := mgmtPB.ListConnectorExecuteRecordsResponse{
 		ConnectorExecuteRecords: connectorExecuteRecords,
 		NextPageToken:           nextPageToken,
-		TotalSize:               totalSize,
+		TotalSize:               int32(totalSize),
 	}
 
 	logger.Info(string(custom_otel.NewLogMessage(
@@ -904,7 +904,7 @@ func (h *PublicHandler) ListConnectorExecuteTableRecords(ctx context.Context, re
 		return &mgmtPB.ListConnectorExecuteTableRecordsResponse{}, err
 	}
 
-	connectorExecuteTableRecords, totalSize, nextPageToken, err := h.Service.ListConnectorExecuteTableRecords(ctx, pbUser, req.GetPageSize(), req.GetPageToken(), filter)
+	connectorExecuteTableRecords, totalSize, nextPageToken, err := h.Service.ListConnectorExecuteTableRecords(ctx, pbUser, int64(req.GetPageSize()), req.GetPageToken(), filter)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return &mgmtPB.ListConnectorExecuteTableRecordsResponse{}, err
@@ -913,7 +913,7 @@ func (h *PublicHandler) ListConnectorExecuteTableRecords(ctx context.Context, re
 	resp := mgmtPB.ListConnectorExecuteTableRecordsResponse{
 		ConnectorExecuteTableRecords: connectorExecuteTableRecords,
 		NextPageToken:                nextPageToken,
-		TotalSize:                    totalSize,
+		TotalSize:                    int32(totalSize),
 	}
 
 	logger.Info(string(custom_otel.NewLogMessage(
@@ -969,7 +969,7 @@ func (h *PublicHandler) ListConnectorExecuteChartRecords(ctx context.Context, re
 		return &mgmtPB.ListConnectorExecuteChartRecordsResponse{}, err
 	}
 
-	connectorExecuteChartRecords, err := h.Service.ListConnectorExecuteChartRecords(ctx, pbUser, req.GetAggregationWindow(), filter)
+	connectorExecuteChartRecords, err := h.Service.ListConnectorExecuteChartRecords(ctx, pbUser, int64(req.GetAggregationWindow()), filter)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return &mgmtPB.ListConnectorExecuteChartRecordsResponse{}, err

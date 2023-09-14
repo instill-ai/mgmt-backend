@@ -17,7 +17,7 @@ export const mgmtPrivateHost = apiGatewayMode ? "" : `http://mgmt-backend:3084/$
 export const mgmtPublicHost = apiGatewayMode ? `${proto}://${__ENV.API_GATEWAY_URL}/base/${mgmtVersion}` : `http://mgmt-backend:8084/${mgmtVersion}`
 
 export const mgmtPrivateGRPCHost = `mgmt-backend:3084`
-export const mgmtPublicGRPCHost = apiGatewayMode ? `${__ENV.API_GATEWAY_URL}`: `mgmt-backend:8084`;
+export const mgmtPublicGRPCHost = apiGatewayMode ? `${__ENV.API_GATEWAY_URL}` : `mgmt-backend:8084`
 
 export const restParams = {
   headers: {

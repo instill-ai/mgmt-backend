@@ -279,7 +279,7 @@ export function CheckPublicMetrics() {
     let emptyPipelineTriggerRecordResponse = {
       "pipelineTriggerRecords": [],
       "nextPageToken": "",
-      "totalSize": "0"
+      "totalSize": 0
     }
 
     check(
@@ -322,7 +322,7 @@ export function CheckPublicMetrics() {
     let emptyPipelineTriggerTableRecordResponse = {
       "pipelineTriggerTableRecords": [],
       "nextPageToken": "",
-      "totalSize": "0"
+      "totalSize": 0
     }
 
     check(
@@ -394,7 +394,7 @@ export function CheckPublicMetrics() {
     let emptyConnectorExecuteRecordResponse = {
       "connectorExecuteRecords": [],
       "nextPageToken": "",
-      "totalSize": "0"
+      "totalSize": 0
     }
 
     check(
@@ -437,7 +437,7 @@ export function CheckPublicMetrics() {
     let emptyConnectorExecuteTableRecordResponse = {
       "connectorExecuteTableRecords": [],
       "nextPageToken": "",
-      "totalSize": "0"
+      "totalSize": 0
     }
 
     check(

@@ -381,10 +381,10 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 			if v, match := result.Record().ValueByKey(constant.PipelineReleaseUID).(string); match {
 				tableRecord.PipelineReleaseUid = v
 			}
-			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_COMPLETED.String()).(int64); match {
+			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_COMPLETED.String()).(int32); match {
 				tableRecord.TriggerCountCompleted = v
 			}
-			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_ERRORED.String()).(int64); match {
+			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_ERRORED.String()).(int32); match {
 				tableRecord.TriggerCountErrored = v
 			}
 
@@ -536,7 +536,7 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 					chartRecord.PipelineReleaseUid = v
 				}
 				chartRecord.TimeBuckets = []*timestamppb.Timestamp{}
-				chartRecord.TriggerCounts = []int64{}
+				chartRecord.TriggerCounts = []int32{}
 				chartRecord.ComputeTimeDuration = []float32{}
 				records = append(records, chartRecord)
 				currentTablePosition = result.Record().Table()
@@ -545,7 +545,7 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 			if v, match := result.Record().ValueByKey("_time").(time.Time); match {
 				chartRecord.TimeBuckets = append(chartRecord.TimeBuckets, timestamppb.New(v))
 			}
-			if v, match := result.Record().ValueByKey(constant.TriggerTime).(int64); match {
+			if v, match := result.Record().ValueByKey(constant.TriggerTime).(int32); match {
 				chartRecord.TriggerCounts = append(chartRecord.TriggerCounts, v)
 			}
 			if v, match := result.Record().ValueByKey(constant.ComputeTimeDuration).(float64); match {
@@ -785,10 +785,10 @@ func (i *influxDB) QueryConnectorExecuteTableRecords(ctx context.Context, owner 
 			if v, match := result.Record().ValueByKey(constant.ConnectorUID).(string); match {
 				tableRecord.ConnectorUid = v
 			}
-			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_COMPLETED.String()).(int64); match {
+			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_COMPLETED.String()).(int32); match {
 				tableRecord.ExecuteCountCompleted = v
 			}
-			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_ERRORED.String()).(int64); match {
+			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_ERRORED.String()).(int32); match {
 				tableRecord.ExecuteCountErrored = v
 			}
 
@@ -934,7 +934,7 @@ func (i *influxDB) QueryConnectorExecuteChartRecords(ctx context.Context, owner 
 					chartRecord.ConnectorUid = v
 				}
 				chartRecord.TimeBuckets = []*timestamppb.Timestamp{}
-				chartRecord.ExecuteCounts = []int64{}
+				chartRecord.ExecuteCounts = []int32{}
 				chartRecord.ComputeTimeDuration = []float32{}
 				records = append(records, chartRecord)
 				currentTablePosition = result.Record().Table()
@@ -946,7 +946,7 @@ func (i *influxDB) QueryConnectorExecuteChartRecords(ctx context.Context, owner 
 			if v, match := result.Record().ValueByKey("_time").(time.Time); match {
 				chartRecord.TimeBuckets = append(chartRecord.TimeBuckets, timestamppb.New(v))
 			}
-			if v, match := result.Record().ValueByKey(constant.Executetime).(int64); match {
+			if v, match := result.Record().ValueByKey(constant.Executetime).(int32); match {
 				chartRecord.ExecuteCounts = append(chartRecord.ExecuteCounts, v)
 			}
 			if v, match := result.Record().ValueByKey(constant.ComputeTimeDuration).(float64); match {
