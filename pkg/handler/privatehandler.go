@@ -22,8 +22,8 @@ import (
 	checkfield "github.com/instill-ai/x/checkfield"
 )
 
-const defaultPageSize = int64(10)
-const maxPageSize = int64(100)
+const defaultPageSize = int32(10)
+const maxPageSize = int32(100)
 
 type PrivateHandler struct {
 	mgmtPB.UnimplementedMgmtPrivateServiceServer
@@ -104,7 +104,7 @@ func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUse
 	resp := mgmtPB.ListUsersAdminResponse{
 		Users:         pbUsers,
 		NextPageToken: nextPageToken,
-		TotalSize:     totalSize,
+		TotalSize:     int32(totalSize),
 	}
 	return &resp, nil
 }
