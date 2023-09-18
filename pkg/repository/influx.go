@@ -381,11 +381,11 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 			if v, match := result.Record().ValueByKey(constant.PipelineReleaseUID).(string); match {
 				tableRecord.PipelineReleaseUid = v
 			}
-			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_COMPLETED.String()).(int32); match {
-				tableRecord.TriggerCountCompleted = v
+			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_COMPLETED.String()).(int64); match {
+				tableRecord.TriggerCountCompleted = int32(v)
 			}
-			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_ERRORED.String()).(int32); match {
-				tableRecord.TriggerCountErrored = v
+			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_ERRORED.String()).(int64); match {
+				tableRecord.TriggerCountErrored = int32(v)
 			}
 
 			records = append(records, tableRecord)
@@ -545,8 +545,8 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 			if v, match := result.Record().ValueByKey("_time").(time.Time); match {
 				chartRecord.TimeBuckets = append(chartRecord.TimeBuckets, timestamppb.New(v))
 			}
-			if v, match := result.Record().ValueByKey(constant.TriggerTime).(int32); match {
-				chartRecord.TriggerCounts = append(chartRecord.TriggerCounts, v)
+			if v, match := result.Record().ValueByKey(constant.TriggerTime).(int64); match {
+				chartRecord.TriggerCounts = append(chartRecord.TriggerCounts, int32(v))
 			}
 			if v, match := result.Record().ValueByKey(constant.ComputeTimeDuration).(float64); match {
 				chartRecord.ComputeTimeDuration = append(chartRecord.ComputeTimeDuration, float32(v))
@@ -785,11 +785,11 @@ func (i *influxDB) QueryConnectorExecuteTableRecords(ctx context.Context, owner 
 			if v, match := result.Record().ValueByKey(constant.ConnectorUID).(string); match {
 				tableRecord.ConnectorUid = v
 			}
-			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_COMPLETED.String()).(int32); match {
-				tableRecord.ExecuteCountCompleted = v
+			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_COMPLETED.String()).(int64); match {
+				tableRecord.ExecuteCountCompleted = int32(v)
 			}
-			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_ERRORED.String()).(int32); match {
-				tableRecord.ExecuteCountErrored = v
+			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_ERRORED.String()).(int64); match {
+				tableRecord.ExecuteCountErrored = int32(v)
 			}
 
 			records = append(records, tableRecord)
@@ -946,8 +946,8 @@ func (i *influxDB) QueryConnectorExecuteChartRecords(ctx context.Context, owner 
 			if v, match := result.Record().ValueByKey("_time").(time.Time); match {
 				chartRecord.TimeBuckets = append(chartRecord.TimeBuckets, timestamppb.New(v))
 			}
-			if v, match := result.Record().ValueByKey(constant.Executetime).(int32); match {
-				chartRecord.ExecuteCounts = append(chartRecord.ExecuteCounts, v)
+			if v, match := result.Record().ValueByKey(constant.Executetime).(int64); match {
+				chartRecord.ExecuteCounts = append(chartRecord.ExecuteCounts, int32(v))
 			}
 			if v, match := result.Record().ValueByKey(constant.ComputeTimeDuration).(float64); match {
 				chartRecord.ComputeTimeDuration = append(chartRecord.ComputeTimeDuration, float32(v))
