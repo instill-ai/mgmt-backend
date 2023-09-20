@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"time"
 
@@ -26,6 +27,9 @@ type Repository interface {
 	DeleteUser(ctx context.Context, uid uuid.UUID) error
 	DeleteUserByID(ctx context.Context, id string) error
 	GetAllUsers(ctx context.Context) ([]datamodel.User, error)
+
+	GetUserPasswordHash(ctx context.Context, uid uuid.UUID) (string, time.Time, error)
+	UpdateUserPasswordHash(ctx context.Context, uid uuid.UUID, newPassword string, updateTime time.Time) error
 }
 
 type repository struct {
@@ -155,7 +159,7 @@ func (r *repository) GetUserByID(id string) (*datamodel.User, error) {
 //   - codes.Internal
 func (r *repository) UpdateUser(ctx context.Context, uid uuid.UUID, user *datamodel.User) error {
 	logger, _ := logger.GetZapLogger(ctx)
-	if result := r.db.Select("*").Omit("UID").Model(&datamodel.User{}).Where("uid = ?", uid.String()).Updates(user); result.Error != nil {
+	if result := r.db.Select("*").Omit("UID").Omit("password_hash").Model(&datamodel.User{}).Where("uid = ?", uid.String()).Updates(user); result.Error != nil {
 		logger.Error(result.Error.Error())
 		return status.Errorf(codes.Internal, "error %v", result.Error)
 	}
@@ -201,5 +205,28 @@ func (r *repository) DeleteUserByID(ctx context.Context, id string) error {
 		return status.Errorf(codes.NotFound, "the user with id %s is not found", id)
 	}
 
+	return nil
+}
+
+// GetUserByID gets a user by ID
+// Return error types
+//   - codes.NotFound
+func (r *repository) GetUserPasswordHash(ctx context.Context, uid uuid.UUID) (string, time.Time, error) {
+	var pw datamodel.Password
+	if result := r.db.First(&pw, "uid = ?", uid.String()); result.Error != nil {
+		return "", time.Time{}, status.Error(codes.NotFound, "the user is not found")
+	}
+	return pw.PasswordHash.String, pw.PasswordUpdateTime, nil
+}
+
+func (r *repository) UpdateUserPasswordHash(ctx context.Context, uid uuid.UUID, newPassword string, updateTime time.Time) error {
+	logger, _ := logger.GetZapLogger(ctx)
+	if result := r.db.Select("*").Omit("UID").Model(&datamodel.Password{}).Where("uid = ?", uid.String()).Updates(datamodel.Password{
+		PasswordHash:       sql.NullString{String: newPassword, Valid: true},
+		PasswordUpdateTime: updateTime,
+	}); result.Error != nil {
+		logger.Error(result.Error.Error())
+		return status.Errorf(codes.Internal, "error %v", result.Error)
+	}
 	return nil
 }

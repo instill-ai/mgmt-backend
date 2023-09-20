@@ -22,7 +22,7 @@ export function CheckPublicQueryAuthenticatedUser() {
     });
 
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser', {}, constant.grpcParamsWithJwtSub), {
-      '[with random "jwt-sub" header] base.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser status StatusNotFound': (r) => r && r.status == grpc.StatusNotFound,
+      '[with random "jwt-sub" header] base.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
     });
 
     client.close();
@@ -53,7 +53,7 @@ export function CheckPublicPatchAuthenticatedUser() {
       user: userUpdate,
       update_mask: "email,firstName,lastName,orgName,role,newsletterSubscription,cookieToken"
     }, constant.grpcParamsWithJwtSub), {
-      '[with random "jwt-sub" header] base.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser status StatusNotFound': (r) => r && r.status == grpc.StatusNotFound,
+      '[with random "jwt-sub" header] base.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
     });
   });
 

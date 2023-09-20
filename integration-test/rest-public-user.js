@@ -22,12 +22,12 @@ export function CheckHealth() {
   });
 }
 
-export function CheckPublicQueryAuthenticatedUser() {
+export function CheckPublicQueryAuthenticatedUser(header) {
   group(`Management Public API: Get authenticated user`, () => {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/users/me`
+        `${constant.mgmtPublicHost}/users/me`, null, header
       ),
       {
         [`GET /${constant.mgmtVersion}/users/me response status is 200`]:
@@ -67,7 +67,7 @@ export function CheckPublicQueryAuthenticatedUser() {
   })
 }
 
-export function CheckPublicPatchAuthenticatedUser() {
+export function CheckPublicPatchAuthenticatedUser(header) {
   group(`Management Public API: Update authenticated user`, () => {
     var userUpdate = {
       type: "OWNER_TYPE_ORGANIZATION",
@@ -85,14 +85,16 @@ export function CheckPublicPatchAuthenticatedUser() {
 
     var res = http.request(
       "GET",
-      `${constant.mgmtPublicHost}/users/me`
+      `${constant.mgmtPublicHost}/users/me`,
+      null,
+      header,
     );
 
     check(
       http.request(
         "PATCH",
         `${constant.mgmtPublicHost}/users/me`,
-        JSON.stringify(userUpdate), constant.restParams),
+        JSON.stringify(userUpdate), header),
       {
         [`PATCH /${constant.mgmtVersion}/users/me response 200`]:
           (r) => r.status === 200,
@@ -134,7 +136,8 @@ export function CheckPublicPatchAuthenticatedUser() {
       http.request(
         "PATCH",
         `${constant.mgmtPublicHost}/users/me`,
-        JSON.stringify(constant.defaultUser), constant.restParams),
+        JSON.stringify(constant.defaultUser), header),
+
       {
         [`PATCH /${constant.mgmtVersion}/users/me response status 200`]:
           (r) => r.status === 200,
@@ -143,7 +146,9 @@ export function CheckPublicPatchAuthenticatedUser() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/users/me`
+        `${constant.mgmtPublicHost}/users/me`,
+        null,
+        header,
       ),
       {
         [`GET /${constant.mgmtVersion}/users/me response status 200`]:
@@ -161,7 +166,7 @@ export function CheckPublicPatchAuthenticatedUser() {
       http.request(
         "PATCH",
         `${constant.mgmtPublicHost}/users/me`,
-        JSON.stringify(userUpdate), constant.restParams),
+        JSON.stringify(userUpdate), header),
       {
         [`PATCH /${constant.mgmtVersion}/users/me response status 400`]:
           (r) => r.status === 400,
@@ -177,7 +182,7 @@ export function CheckPublicPatchAuthenticatedUser() {
       http.request(
         "PATCH",
         `${constant.mgmtPublicHost}/users/me`,
-        JSON.stringify(userUpdate), constant.restParams),
+        JSON.stringify(userUpdate), header),
       {
         [`PATCH /${constant.mgmtVersion}/users/me response status 400`]:
           (r) => r.status === 400,
@@ -194,7 +199,7 @@ export function CheckPublicPatchAuthenticatedUser() {
       http.request(
         "PATCH",
         `${constant.mgmtPublicHost}/users/me`,
-        JSON.stringify(userUpdate), constant.restParams),
+        JSON.stringify(userUpdate), header),
       {
         [`PATCH /${constant.mgmtVersion}/users/me response status 400`]:
           (r) => r.status === 400,
@@ -203,14 +208,14 @@ export function CheckPublicPatchAuthenticatedUser() {
   });
 }
 
-export function CheckPublicCreateToken() {
+export function CheckPublicCreateToken(header) {
   group(`Management Public API: Create API token`, () => {
     check(
       http.request(
         "POST",
         `${constant.mgmtPublicHost}/tokens`,
         JSON.stringify(constant.testToken),
-        constant.restParams
+        header,
       ),
       {
         [`POST /${constant.mgmtVersion}/tokens response status 501 [not implemented]`]:
@@ -220,14 +225,14 @@ export function CheckPublicCreateToken() {
   });
 }
 
-export function CheckPublicListTokens() {
+export function CheckPublicListTokens(header) {
   group(`Management Public API: List API tokens`, () => {
     check(
       http.request(
         "GET",
         `${constant.mgmtPublicHost}/tokens`,
         JSON.stringify({}),
-        constant.restParams
+        header,
       ),
       {
         [`GET /${constant.mgmtVersion}/tokens response status 501 [not implemented]`]:
@@ -237,14 +242,14 @@ export function CheckPublicListTokens() {
   });
 }
 
-export function CheckPublicGetToken() {
+export function CheckPublicGetToken(header) {
   group(`Management Public API: Get API token`, () => {
     check(
       http.request(
         "GET",
         `${constant.mgmtPublicHost}/tokens/${constant.testToken.id}`,
         JSON.stringify({}),
-        constant.restParams
+        header,
       ),
       {
         [`GET /${constant.mgmtVersion}/tokens/${constant.testToken.id} response status 501 [not implemented]`]:
@@ -254,14 +259,14 @@ export function CheckPublicGetToken() {
   });
 }
 
-export function CheckPublicDeleteToken() {
+export function CheckPublicDeleteToken(header) {
   group(`Management Public API: Delete API token`, () => {
     check(
       http.request(
         "DELETE",
         `${constant.mgmtPublicHost}/tokens/${constant.testToken.id}`,
         JSON.stringify({}),
-        constant.restParams
+        header,
       ),
       {
         [`DELETE /${constant.mgmtVersion}/tokens/${constant.testToken.id} response status 501 [not implemented]`]:
@@ -271,7 +276,7 @@ export function CheckPublicDeleteToken() {
   });
 }
 
-export function CheckPublicMetrics() {
+export function CheckPublicMetrics(header) {
   group(`Management Public API: List Pipeline Trigger Records`, () => {
 
     let pipeline_id = randomString(10)
@@ -285,7 +290,9 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/triggers`
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/triggers`,
+        null,
+        header,
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response status is 200`]:
@@ -301,7 +308,9 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/triggers?filter=trigger_mode=MODE_SYNC%20AND%20pipeline_id=%22${pipeline_id}%22`
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/triggers?filter=trigger_mode=MODE_SYNC%20AND%20pipeline_id=%22${pipeline_id}%22`,
+        null,
+        header,
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers with filter response status is 200`]:
@@ -328,7 +337,9 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/tables`
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/tables`,
+        null,
+        header,
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables response status is 200`]:
@@ -344,7 +355,9 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/tables?filter=pipeline_id=%22${pipeline_id}%22`
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/tables?filter=pipeline_id=%22${pipeline_id}%22`,
+        null,
+        header,
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables with filter response status is 200`]:
@@ -365,7 +378,9 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/charts`
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/charts`,
+        null,
+        header,
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/charts response status is 200`]:
@@ -377,7 +392,9 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/charts?filter=trigger_mode=MODE_SYNC%20AND%20pipeline_id=%22${pipeline_id}%22`
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/charts?filter=trigger_mode=MODE_SYNC%20AND%20pipeline_id=%22${pipeline_id}%22`,
+        null,
+        header,
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/charts with filter response status is 200`]:
@@ -400,7 +417,9 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/connector/executes`
+        `${constant.mgmtPublicHost}/metrics/vdp/connector/executes`,
+        null,
+        header,
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes response status is 200`]:
@@ -416,7 +435,9 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/connector/executes?filter=status=STATUS_COMPLETED%20AND%20connector_id=%22${connector_id}%22`
+        `${constant.mgmtPublicHost}/metrics/vdp/connector/executes?filter=status=STATUS_COMPLETED%20AND%20connector_id=%22${connector_id}%22`,
+        null,
+        header,
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/connector/executes with filter response status is 200`]:
@@ -443,7 +464,9 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/connector/tables`
+        `${constant.mgmtPublicHost}/metrics/vdp/connector/tables`,
+        null,
+        header,
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/connector/tables response status is 200`]:
@@ -459,7 +482,9 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/connector/tables?filter=connector_id=%22${connector_id}%22`
+        `${constant.mgmtPublicHost}/metrics/vdp/connector/tables?filter=connector_id=%22${connector_id}%22`,
+        null,
+        header,
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/connector/tables with filter response status is 200`]:
@@ -480,7 +505,9 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/connector/charts`
+        `${constant.mgmtPublicHost}/metrics/vdp/connector/charts`,
+        null,
+        header,
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/connector/charts response status is 200`]:
@@ -492,7 +519,9 @@ export function CheckPublicMetrics() {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/connector/charts?filter=status=STATUS_COMPLETED%20AND%20connector_id=%22${connector_id}%22`
+        `${constant.mgmtPublicHost}/metrics/vdp/connector/charts?filter=status=STATUS_COMPLETED%20AND%20connector_id=%22${connector_id}%22`,
+        null,
+        header,
       ),
       {
         [`GET /${constant.mgmtVersion}/metrics/vdp/connector/charts with filter response status is 200`]:

@@ -10,6 +10,7 @@ export
 
 .PHONY: dev
 dev:							## Run dev container
+	@echo $(shell cat $(shell eval echo ${SYSTEM_CONFIG_PATH})/user_uid)
 	@docker compose ls -q | grep -q "instill-base" && true || \
 		(echo "Error: Run \"make latest PROFILE=mgmt ITMODE_ENABLED=true\" in base repository (https://github.com/instill-ai/base) in your local machine first." && exit 1)
 	@docker inspect --type container ${SERVICE_NAME} >/dev/null 2>&1 && echo "A container named ${SERVICE_NAME} is already running." || \
@@ -18,6 +19,7 @@ dev:							## Run dev container
 		-v $(PWD):/${SERVICE_NAME} \
 		-p ${PUBLIC_SERVICE_PORT}:${PUBLIC_SERVICE_PORT} \
 		-p ${PRIVATE_SERVICE_PORT}:${PRIVATE_SERVICE_PORT} \
+		-e CFG_SERVER_DEFAULTUSERUID=$(shell cat $(shell eval echo ${SYSTEM_CONFIG_PATH})/user_uid) \
 		--network instill-network \
 		--name ${SERVICE_NAME} \
 		instill/${SERVICE_NAME}:dev >/dev/null 2>&1

@@ -1,7 +1,8 @@
 package constant
 
 // default user
-const DefaultUserID = "instill-ai"
+const DefaultUserID = "admin"
+const DefaultUserPassword = "password"
 const DefaultUserEmail = "hello@instill.tech"
 const DefaultUserCustomerId = ""
 const DefaultUserOrgName = "Instill AI"
@@ -9,6 +10,9 @@ const DefaultUserFirstName = "Instill"
 const DefaultUserLastName = "AI"
 const DefaultUserRole = "hobbyist"
 const DefaultUserNewsletterSubscription = true
+const DefaultJwtExpiration = 86400 * 7
+const DefaultJwtIssuer = "http://localhost:8080"
+const DefaultJwtAudience = "http://localhost:8080"
 
 // HeaderUserIDKey is the header key for the User ID
 const HeaderUserIDKey = "user-id"

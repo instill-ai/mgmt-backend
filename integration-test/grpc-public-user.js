@@ -33,7 +33,7 @@ export function CheckHealth() {
   });
 }
 
-export function CheckPublicQueryAuthenticatedUser() {
+export function CheckPublicQueryAuthenticatedUser(header) {
 
   group(`Management Public API: Get authenticated user`, () => {
 
@@ -41,8 +41,8 @@ export function CheckPublicQueryAuthenticatedUser() {
       plaintext: true
     });
 
-    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser', {}), {
-      'base.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser status': (r) => r && r.status == grpc.StatusOK,
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser', {}, header), {
+      'base.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser status': (r) => {return r && r.status == grpc.StatusOK},
       'base.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser response name': (r) => r && r.message.user.name !== undefined,
       'base.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser response uid is UUID': (r) => r && helper.isUUID(r.message.user.uid),
       'base.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser response id': (r) => r && r.message.user.id !== undefined,
@@ -64,7 +64,7 @@ export function CheckPublicQueryAuthenticatedUser() {
   })
 }
 
-export function CheckPublicPatchAuthenticatedUser() {
+export function CheckPublicPatchAuthenticatedUser(header) {
 
   client.connect(constant.mgmtPublicGRPCHost, {
     plaintext: true
@@ -84,12 +84,12 @@ export function CheckPublicPatchAuthenticatedUser() {
       cookie_token: "f5730f62-7026-4e11-917a-d890da315d3b",
     };
 
-    var res = client.invoke('base.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser', {})
+    var res = client.invoke('base.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser', {}, header)
 
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser', {
       user: userUpdate,
       update_mask: "email,firstName,lastName,orgName,role,newsletterSubscription,cookieToken"
-    }), {
+    }, header), {
       'base.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser response name unchanged': (r) => r && r.message.user.name === res.message.user.name,
       'base.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser response uid unchanged': (r) => r && r.message.user.uid === res.message.user.uid,
@@ -111,11 +111,11 @@ export function CheckPublicPatchAuthenticatedUser() {
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser', {
       user: constant.defaultUser,
       update_mask: "email,firstName,lastName,orgName,role,newsletterSubscription,cookieToken"
-    }), {
+    }, header), {
       [`[restore the default user] base.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser status`]: (r) => r && r.status == grpc.StatusOK,
     });
 
-    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser', {}), {
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser', {}, header), {
       'base.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser status': (r) => r && r.status == grpc.StatusOK,
     });
   });
@@ -129,7 +129,7 @@ export function CheckPublicPatchAuthenticatedUser() {
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser', {
       user: userUpdate,
       update_mask: "role"
-    }), {
+    }, header), {
       'base.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser nonExistRole StatusInvalidArgument': (r) => r && r.status == grpc.StatusInvalidArgument,
     });
 
@@ -143,7 +143,7 @@ export function CheckPublicPatchAuthenticatedUser() {
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser', {
       user: userUpdate,
       update_mask: "id"
-    }), {
+    }, header), {
       'base.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser update ID StatusInvalidArgument': (r) => r && r.status == grpc.StatusInvalidArgument,
     });
 
@@ -158,7 +158,7 @@ export function CheckPublicPatchAuthenticatedUser() {
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser', {
       user: userUpdate,
       update_mask: "uid"
-    }), {
+    }, header), {
       'base.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser nonExistUID StatusInvalidArgument': (r) => r && r.status == grpc.StatusInvalidArgument,
     });
   });
@@ -166,7 +166,7 @@ export function CheckPublicPatchAuthenticatedUser() {
   client.close();
 }
 
-export function CheckPublicCreateToken() {
+export function CheckPublicCreateToken(header) {
 
   client.connect(constant.mgmtPublicGRPCHost, {
     plaintext: true
@@ -179,7 +179,7 @@ export function CheckPublicCreateToken() {
         id: `${constant.testToken.id}`,
         ttl: 86400
       }
-    }), {
+    }, header), {
       'base.mgmt.v1alpha.MgmtPublicService/CreateToken status StatusUnimplemented': (r) => r && r.status == grpc.StatusUnimplemented,
     });
 
@@ -188,7 +188,7 @@ export function CheckPublicCreateToken() {
   client.close();
 }
 
-export function CheckPublicListTokens() {
+export function CheckPublicListTokens(header) {
 
   client.connect(constant.mgmtPublicGRPCHost, {
     plaintext: true
@@ -196,7 +196,7 @@ export function CheckPublicListTokens() {
 
   group(`Management Public API: List API tokens`, () => {
 
-    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListTokens', {}), {
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListTokens', {}, header), {
       'base.mgmt.v1alpha.MgmtPublicService/ListTokens status StatusUnimplemented': (r) => r && r.status == grpc.StatusUnimplemented,
     });
 
@@ -205,7 +205,7 @@ export function CheckPublicListTokens() {
   client.close();
 }
 
-export function CheckPublicGetToken() {
+export function CheckPublicGetToken(header) {
 
   client.connect(constant.mgmtPublicGRPCHost, {
     plaintext: true
@@ -215,7 +215,7 @@ export function CheckPublicGetToken() {
 
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/GetToken', {
       name: `tokens/${constant.testToken.id}`,
-    }), {
+    }, header), {
       'base.mgmt.v1alpha.MgmtPublicService/GetToken status StatusUnimplemented': (r) => r && r.status == grpc.StatusUnimplemented,
     });
 
@@ -224,7 +224,7 @@ export function CheckPublicGetToken() {
   client.close();
 }
 
-export function CheckPublicDeleteToken() {
+export function CheckPublicDeleteToken(header) {
 
   client.connect(constant.mgmtPublicGRPCHost, {
     plaintext: true
@@ -234,7 +234,7 @@ export function CheckPublicDeleteToken() {
 
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/DeleteToken', {
       name: `tokens/${constant.testToken.id}`,
-    }), {
+    }, header), {
       'base.mgmt.v1alpha.MgmtPublicService/DeleteToken status StatusUnimplemented': (r) => r && r.status == grpc.StatusUnimplemented,
     });
 
@@ -243,7 +243,7 @@ export function CheckPublicDeleteToken() {
   client.close();
 }
 
-export function CheckPublicMetrics() {
+export function CheckPublicMetrics(header) {
 
   let pipeline_id = randomString(10)
   let connector_id = randomString(10)
@@ -260,7 +260,7 @@ export function CheckPublicMetrics() {
       "totalSize": "0"
     }
 
-    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords', {}), {
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords', {}, header), {
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords response has pipelineTriggerRecords': (r) => r && r.message.pipelineTriggerRecords !== undefined,
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords response has total_size': (r) => r && r.message.totalSize !== undefined,
@@ -268,7 +268,7 @@ export function CheckPublicMetrics() {
     });
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords', {
       filter: `pipeline_id="${pipeline_id}" AND trigger_mode=MODE_SYNC`,
-    }), {
+    }, header), {
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords with filter status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords with filter response pipelineTriggerRecords length is 0': (r) => r && r.message.pipelineTriggerRecords.length === 0,
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords with filter response total_size is 0': (r) => r && r.message.totalSize === emptyPipelineTriggerRecordResponse.totalSize,
@@ -285,7 +285,7 @@ export function CheckPublicMetrics() {
       "totalSize": "0"
     }
 
-    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords', {}), {
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords', {}, header), {
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords response has pipelineTriggerTableRecords': (r) => r && r.message.pipelineTriggerTableRecords !== undefined,
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords response has total_size': (r) => r && r.message.totalSize !== undefined,
@@ -293,7 +293,7 @@ export function CheckPublicMetrics() {
     });
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords', {
       filter: `pipeline_id="${pipeline_id}"`,
-    }), {
+    }, header), {
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords with filter status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords with filter response pipelineTriggerTableRecords length is 0': (r) => r && r.message.pipelineTriggerTableRecords.length === 0,
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords with filter response total_size is 0': (r) => r && r.message.totalSize === emptyPipelineTriggerTableRecordResponse.totalSize,
@@ -304,13 +304,13 @@ export function CheckPublicMetrics() {
 
   group(`Management Public API: List Pipeline Trigger Chart Records`, () => {
 
-    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords', {}), {
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords', {}, header), {
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords response has pipelineTriggerChartRecords': (r) => r && r.message.pipelineTriggerChartRecords !== undefined,
     });
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords', {
       filter: `pipeline_id="${pipeline_id}" AND trigger_mode=MODE_SYNC`,
-    }), {
+    }, header), {
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords with filter status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerChartRecords with filter response pipelineTriggerChartRecords lenght is 0': (r) => r && r.message.pipelineTriggerChartRecords.length === 0,
     });
@@ -325,7 +325,7 @@ export function CheckPublicMetrics() {
       "totalSize": "0"
     }
 
-    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords', {}), {
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords', {}, header), {
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords response has connectorExecuteRecords': (r) => r && r.message.connectorExecuteRecords !== undefined,
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords response has total_size': (r) => r && r.message.totalSize !== undefined,
@@ -333,7 +333,7 @@ export function CheckPublicMetrics() {
     });
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords', {
       filter: `connector_id="${connector_id}" AND status=STATUS_COMPLETED`,
-    }), {
+    }, header), {
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords with filter status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords with filter response connectorExecuteRecords length is 0': (r) => r && r.message.connectorExecuteRecords.length === 0,
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords with filter response total_size is 0': (r) => r && r.message.totalSize === emptyConnectorExecuteRecordResponse.totalSize,
@@ -350,7 +350,7 @@ export function CheckPublicMetrics() {
       "totalSize": "0"
     }
 
-    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords', {}), {
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords', {}, header), {
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords response has connectorExecuteTableRecords': (r) => r && r.message.connectorExecuteTableRecords !== undefined,
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords response has total_size': (r) => r && r.message.totalSize !== undefined,
@@ -358,7 +358,7 @@ export function CheckPublicMetrics() {
     });
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords', {
       filter: `connector_id="${connector_id}"`,
-    }), {
+    }, header), {
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords with filter status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords with filter response connectorExecuteTableRecords length is 0': (r) => r && r.message.connectorExecuteTableRecords.length === 0,
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords with filter response total_size is 0': (r) => r && r.message.totalSize === emptyConnectorExecuteTableRecordResponse.totalSize,
@@ -369,13 +369,13 @@ export function CheckPublicMetrics() {
 
   group(`Management Public API: List Connector Execute Chart Records`, () => {
 
-    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords', {}), {
+    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords', {}, header), {
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords response has connectorExecuteChartRecords': (r) => r && r.message.connectorExecuteChartRecords !== undefined,
     });
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords', {
       filter: `connector_id="${connector_id}" AND status=STATUS_COMPLETED`,
-    }), {
+    }, header), {
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords with filter status': (r) => r && r.status == grpc.StatusOK,
       'base.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteChartRecords with filter response connectorExecuteChartRecords lenght is 0': (r) => r && r.message.connectorExecuteChartRecords.length === 0,
     });

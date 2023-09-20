@@ -10,8 +10,8 @@ export function CheckPublicQueryAuthenticatedUser() {
 
     check(http.request("GET", `${constant.mgmtPublicHost}/users/me`, {}, constant.restParamsWithJwtSub),
       {
-        [`[with random "jwt-sub" header] GET /${constant.mgmtVersion}/users/me response status 404`]:
-          (r) => r.status === 404,
+        [`[with random "jwt-sub" header] GET /${constant.mgmtVersion}/users/me response status 401`]:
+          (r) => r.status === 401,
       }
     )
   })
@@ -35,7 +35,7 @@ export function CheckPublicPatchAuthenticatedUser() {
 
     check(http.request("PATCH", `${constant.mgmtPublicHost}/users/me`, JSON.stringify(userUpdate), constant.restParamsWithJwtSub),
       {
-        [`[with random "jwt-sub" header] PATCH /${constant.mgmtVersion}/users/me response status 404`]: (r) => r.status === 404,
+        [`[with random "jwt-sub" header] PATCH /${constant.mgmtVersion}/users/me response status 401`]: (r) => r.status === 401,
       }
     );
   });

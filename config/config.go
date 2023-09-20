@@ -42,7 +42,7 @@ type ServerConfig struct {
 		Port       int    `koanf:"port"`
 	}
 	Debug          bool   `koanf:"debug"`
-	DefualtUserUid string `koanf:"defaultuseruid"`
+	DefaultUserUid string `koanf:"defaultuseruid"`
 }
 
 // ConnectorBackendConfig related to connector-backend

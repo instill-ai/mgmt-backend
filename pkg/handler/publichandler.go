@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/iancoleman/strcase"
 	"go.einride.tech/aip/filtering"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -72,6 +74,85 @@ func (h *PublicHandler) Readiness(ctx context.Context, in *mgmtPB.ReadinessReque
 	}, nil
 }
 
+// AuthTokenIssuer
+func (h *PublicHandler) AuthTokenIssuer(ctx context.Context, in *mgmtPB.AuthTokenIssuerRequest) (*mgmtPB.AuthTokenIssuerResponse, error) {
+
+	user, err := h.Service.GetUserByID(ctx, in.Username)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	passwordHash, _, err := h.Service.GetUserPasswordHash(ctx, user.UID)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(in.Password))
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	jti, _ := uuid.NewV4()
+	exp := int32(time.Now().Unix()) + constant.DefaultJwtExpiration
+	return &mgmtPB.AuthTokenIssuerResponse{
+		AccessToken: &mgmtPB.AuthTokenIssuerResponse_UnsignedAccessToken{
+			Aud: constant.DefaultJwtAudience,
+			Sub: user.UID.String(),
+			Iss: constant.DefaultJwtIssuer,
+			Jti: jti.String(),
+			Exp: exp,
+		},
+	}, nil
+}
+
+func (h *PublicHandler) AuthChangePassword(ctx context.Context, in *mgmtPB.AuthChangePasswordRequest) (*mgmtPB.AuthChangePasswordResponse, error) {
+	userId, _, err := h.Service.GetCtxUser(ctx)
+
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	user, err := h.Service.GetUserByID(ctx, userId)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	passwordHash, _, err := h.Service.GetUserPasswordHash(ctx, user.UID)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(in.OldPassword))
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	passwordBytes, err := bcrypt.GenerateFromPassword([]byte(in.NewPassword), 10)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Update Password Failed")
+	}
+
+	err = h.Service.UpdateUserPasswordHash(ctx, user.UID, string(passwordBytes))
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Update Password Failed")
+	}
+
+	return &mgmtPB.AuthChangePasswordResponse{}, nil
+}
+
+func (h *PublicHandler) AuthLogout(ctx context.Context, in *mgmtPB.AuthLogoutRequest) (*mgmtPB.AuthLogoutResponse, error) {
+	// TODO: implement this
+	return &mgmtPB.AuthLogoutResponse{}, nil
+}
+
+func (h *PublicHandler) AuthLogin(ctx context.Context, in *mgmtPB.AuthLoginRequest) (*mgmtPB.AuthLoginResponse, error) {
+	// This endpoint will be handled by KrakenD. We don't need to implement here
+	return &mgmtPB.AuthLoginResponse{}, nil
+}
+
+func (h *PublicHandler) AuthValidateAccessToken(ctx context.Context, in *mgmtPB.AuthValidateAccessTokenRequest) (*mgmtPB.AuthValidateAccessTokenResponse, error) {
+	// This endpoint will be handled by KrakenD. We don't need to implement here
+	return &mgmtPB.AuthValidateAccessTokenResponse{}, nil
+}
+
 // GetUser returns the authenticated user
 func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
 
@@ -128,40 +209,38 @@ func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
 	} else {
 		// Verify "user-id" in the header if there is no "jwt-sub"
 		headerUserId := middleware.GetRequestSingleHeader(ctx, constant.HeaderUserIDKey)
-		if headerUserId != constant.DefaultUserID {
-			return nil, status.Error(codes.Unauthenticated, "Unauthenticated request")
-		} else {
-			dbUser, err = h.Service.GetUserByID(ctx, headerUserId)
-			if err != nil {
-				sta := status.Convert(err)
-				switch sta.Code() {
-				case codes.InvalidArgument:
-					st, e := sterr.CreateErrorBadRequest(
-						"get user error", []*errdetails.BadRequest_FieldViolation{
-							{
-								Field:       "GetAuthenticatedUser",
-								Description: sta.Message(),
-							},
-						})
-					if e != nil {
-						logger.Error(e.Error())
-					}
-					return nil, st.Err()
-				default:
-					st, e := sterr.CreateErrorResourceInfo(
-						sta.Code(),
-						"get user error",
-						"user",
-						fmt.Sprintf("id %s", headerUserId),
-						"",
-						sta.Message(),
-					)
-					if e != nil {
-						logger.Error(e.Error())
-					}
-					return nil, st.Err()
+
+		dbUser, err = h.Service.GetUserByID(ctx, headerUserId)
+		if err != nil {
+			sta := status.Convert(err)
+			switch sta.Code() {
+			case codes.InvalidArgument:
+				st, e := sterr.CreateErrorBadRequest(
+					"get user error", []*errdetails.BadRequest_FieldViolation{
+						{
+							Field:       "GetAuthenticatedUser",
+							Description: sta.Message(),
+						},
+					})
+				if e != nil {
+					logger.Error(e.Error())
 				}
+				return nil, st.Err()
+			default:
+				st, e := sterr.CreateErrorResourceInfo(
+					sta.Code(),
+					"get user error",
+					"user",
+					fmt.Sprintf("id %s", headerUserId),
+					"",
+					sta.Message(),
+				)
+				if e != nil {
+					logger.Error(e.Error())
+				}
+				return nil, st.Err()
 			}
+
 		}
 	}
 

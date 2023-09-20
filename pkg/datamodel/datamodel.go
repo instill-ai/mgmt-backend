@@ -29,3 +29,13 @@ type User struct {
 	NewsletterSubscription bool `gorm:"default:false"`
 	CookieToken            sql.NullString
 }
+
+type Password struct {
+	Base
+	PasswordHash       sql.NullString
+	PasswordUpdateTime time.Time
+}
+
+func (Password) TableName() string {
+	return "user"
+}
