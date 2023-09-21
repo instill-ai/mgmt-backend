@@ -91,11 +91,11 @@ func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 
 	// Create the default user
 	err = r.CreateUser(ctx, &defaultUser)
-	if err == nil {
+	if err != nil {
 		return err
 	}
 	err = r.UpdateUserPasswordHash(ctx, defaultUserUID, string(passwordBytes), time.Now())
-	if err == nil {
+	if err != nil {
 		return err
 	}
 	return nil
