@@ -1,3 +1,5 @@
+import http from "k6/http";
+import { check } from "k6";
 import * as constant from "./const.js"
 import * as mgmtPrivate from "./rest-private-user.js";
 import * as mgmtPublic from "./rest-public-user.js"
@@ -11,9 +13,27 @@ export let options = {
   },
 };
 
-export function setup() { }
+export function setup() {
+  var loginResp = http.request("POST", `${constant.mgmtPublicHost}/auth/login`, JSON.stringify({
+    "username": constant.defaultUsername,
+    "password": constant.defaultPassword,
+  }))
 
-export default function (data) {
+
+  check(loginResp, {
+    [`POST /${constant.mgmtVersion}/auth/login response status is 200`]: (
+      r
+    ) => r.status === 200,
+  });
+
+  return {
+    "headers": {
+      "Authorization": `Bearer ${loginResp.json().access_token}`
+    }
+  }
+}
+
+export default function (header) {
   /*
    * Management API - API CALLS
    */
@@ -28,20 +48,22 @@ export default function (data) {
     mgmtPrivate.CheckPrivateUpdateUserAdmin();
     mgmtPrivate.CheckPrivateDeleteUserAdmin();
 
+
+  } else {
     // ======== Public API with jwt-sub
     mgmtPublicWithJwt.CheckPublicQueryAuthenticatedUser();
     mgmtPublicWithJwt.CheckPublicPatchAuthenticatedUser();
+    // ======== Public API
+    mgmtPublic.CheckHealth();
+    mgmtPublic.CheckPublicQueryAuthenticatedUser(header);
+    mgmtPublic.CheckPublicPatchAuthenticatedUser(header);
+    mgmtPublic.CheckPublicCreateToken(header);
+    mgmtPublic.CheckPublicListTokens(header);
+    mgmtPublic.CheckPublicGetToken(header);
+    mgmtPublic.CheckPublicDeleteToken(header);
+    mgmtPublic.CheckPublicMetrics(header);
   }
 
-  // ======== Public API
-  mgmtPublic.CheckHealth();
-  mgmtPublic.CheckPublicQueryAuthenticatedUser();
-  mgmtPublic.CheckPublicPatchAuthenticatedUser();
-  mgmtPublic.CheckPublicCreateToken();
-  mgmtPublic.CheckPublicListTokens();
-  mgmtPublic.CheckPublicGetToken();
-  mgmtPublic.CheckPublicDeleteToken();
-  mgmtPublic.CheckPublicMetrics();
 }
 
 export function teardown(data) {

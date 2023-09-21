@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/instill-ai/mgmt-backend/config"
@@ -12,6 +13,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 	"go.opentelemetry.io/otel"
+	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gorm.io/gorm"
@@ -31,8 +33,8 @@ func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 	// Generate a random uid to the user
 	var defaultUserUID uuid.UUID
 	var err error
-	if config.Config.Server.DefualtUserUid != "" {
-		defaultUserUID, err = uuid.FromString(config.Config.Server.DefualtUserUid)
+	if config.Config.Server.DefaultUserUid != "" {
+		defaultUserUID, err = uuid.FromString(config.Config.Server.DefaultUserUid)
 	} else {
 		defaultUserUID, err = uuid.NewV4()
 	}
@@ -41,6 +43,11 @@ func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 	}
 
 	r := repository.NewRepository(db)
+
+	passwordBytes, err := bcrypt.GenerateFromPassword([]byte(constant.DefaultUserPassword), 10)
+	if err != nil {
+		return err
+	}
 
 	defaultUser := datamodel.User{
 		Base:                   datamodel.Base{UID: defaultUserUID},
@@ -56,9 +63,25 @@ func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 		CookieToken:            sql.NullString{String: "", Valid: false},
 	}
 
-	_, err = r.GetUserByID(defaultUser.ID)
+	user, err := r.GetUser(defaultUserUID)
 	// Default user already exists
 	if err == nil {
+		user.ID = constant.DefaultUserID
+		passwordHash, _, err := r.GetUserPasswordHash(ctx, defaultUserUID)
+		if err != nil {
+			return err
+		}
+
+		if passwordHash == "" {
+			err = r.UpdateUserPasswordHash(ctx, defaultUserUID, string(passwordBytes), time.Now())
+			if err != nil {
+				return err
+			}
+		}
+		err = r.UpdateUser(ctx, defaultUserUID, user)
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
@@ -67,7 +90,15 @@ func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 	}
 
 	// Create the default user
-	return r.CreateUser(ctx, &defaultUser)
+	err = r.CreateUser(ctx, &defaultUser)
+	if err != nil {
+		return err
+	}
+	err = r.UpdateUserPasswordHash(ctx, defaultUserUID, string(passwordBytes), time.Now())
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func main() {

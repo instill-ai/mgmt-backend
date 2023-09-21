@@ -3,12 +3,15 @@ package service
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/gofrs/uuid"
 	"go.einride.tech/aip/filtering"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/instill-ai/mgmt-backend/internal/resource"
+	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 
@@ -28,12 +31,17 @@ type Service interface {
 	DeleteUser(ctx context.Context, uid uuid.UUID) error
 	DeleteUserByID(ctx context.Context, id string) error
 
+	GetUserPasswordHash(ctx context.Context, uid uuid.UUID) (string, time.Time, error)
+	UpdateUserPasswordHash(ctx context.Context, uid uuid.UUID, newPassword string) error
+
 	ListPipelineTriggerRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerRecord, int64, string, error)
 	ListPipelineTriggerTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerTableRecord, int64, string, error)
 	ListPipelineTriggerChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerChartRecord, error)
 	ListConnectorExecuteRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteRecord, int64, string, error)
 	ListConnectorExecuteTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteTableRecord, int64, string, error)
 	ListConnectorExecuteChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteChartRecord, error)
+
+	GetCtxUser(ctx context.Context) (string, uuid.UUID, error)
 }
 
 type service struct {
@@ -51,6 +59,27 @@ func NewService(r repository.Repository, i repository.InfluxDB, c connectorPB.Co
 		connectorPublicServiceClient: c,
 		pipelinePublicServiceClient:  p,
 	}
+}
+
+// GetUser returns the api user
+func (s *service) GetCtxUser(ctx context.Context) (string, uuid.UUID, error) {
+	// Verify if "jwt-sub" is in the header
+	headerUserUId := resource.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)
+
+	if headerUserUId != "" {
+		_, err := uuid.FromString(headerUserUId)
+		if err != nil {
+			return "", uuid.Nil, status.Errorf(codes.Unauthenticated, "Unauthorized")
+		}
+		user, err := s.GetUser(ctx, uuid.FromStringOrNil(headerUserUId))
+		if err != nil {
+			return "", uuid.Nil, status.Errorf(codes.Unauthenticated, "Unauthorized")
+		}
+		return user.ID, uuid.FromStringOrNil(headerUserUId), nil
+	}
+
+	return "", uuid.Nil, status.Errorf(codes.Unauthenticated, "Unauthorized")
+
 }
 
 // ListRole lists names of all roles
@@ -170,4 +199,13 @@ func (s *service) DeleteUserByID(ctx context.Context, id string) error {
 	}
 
 	return s.repository.DeleteUserByID(ctx, id)
+}
+
+func (s *service) GetUserPasswordHash(ctx context.Context, uid uuid.UUID) (string, time.Time, error) {
+	return s.repository.GetUserPasswordHash(ctx, uid)
+}
+
+func (s *service) UpdateUserPasswordHash(ctx context.Context, uid uuid.UUID, newPassword string) error {
+
+	return s.repository.UpdateUserPasswordHash(ctx, uid, newPassword, time.Now())
 }

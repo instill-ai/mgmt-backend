@@ -8,8 +8,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"github.com/instill-ai/mgmt-backend/pkg/constant"
-
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 )
@@ -28,9 +26,6 @@ func UnaryAppendMetadataInterceptor(ctx context.Context, req interface{}, info *
 		return nil, status.Error(codes.Internal, "can not extract metadata")
 	}
 
-	// Add "user-id" header, with default value "instill-ai"
-	md.Append(constant.HeaderUserIDKey, constant.DefaultUserID)
-
 	newCtx := metadata.NewIncomingContext(ctx, md)
 	h, err := handler(newCtx, req)
 
@@ -43,9 +38,6 @@ func StreamAppendMetadataInterceptor(srv interface{}, stream grpc.ServerStream, 
 	if !ok {
 		return status.Error(codes.Internal, "can not extract metadata")
 	}
-
-	// Add "user-id" header, with default value "instill-ai"
-	md.Append(constant.HeaderUserIDKey, constant.DefaultUserID)
 
 	newCtx := metadata.NewIncomingContext(stream.Context(), md)
 	wrapped := grpc_middleware.WrapServerStream(stream)

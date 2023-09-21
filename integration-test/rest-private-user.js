@@ -33,7 +33,7 @@ export function CheckPrivateListUsersAdmin() {
       [`GET /${constant.mgmtVersion}/admin/users?page_size=5 response all records size 1`]:
         (r) => r.json().users.length === 1,
       [`GET /${constant.mgmtVersion}/admin/users?page_size=5 response total_size 1`]:
-        (r) => r.json().total_size === "1",
+        (r) => r.json().total_size === 1,
       [`GET /${constant.mgmtVersion}/admin/users?page_size=5 response next_page_token is empty`]:
         (r) => r.json().next_page_token === "",
     });

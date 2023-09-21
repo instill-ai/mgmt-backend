@@ -30,7 +30,7 @@ database:
   host: pg-sql
   port: 5432
   name: mgmt
-  version: 1
+  version: 2
   timezone: Etc/UTC
   pool:
     idleconnections: 5

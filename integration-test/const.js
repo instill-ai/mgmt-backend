@@ -19,6 +19,9 @@ export const mgmtPublicHost = apiGatewayMode ? `${proto}://${__ENV.API_GATEWAY_U
 export const mgmtPrivateGRPCHost = `mgmt-backend:3084`
 export const mgmtPublicGRPCHost = apiGatewayMode ? `${__ENV.API_GATEWAY_URL}` : `mgmt-backend:8084`
 
+export const defaultUsername = "admin"
+export const defaultPassword = "password"
+
 export const restParams = {
   headers: {
     "Content-Type": "application/json",
@@ -40,8 +43,8 @@ export const grpcParamsWithJwtSub = {
 }
 
 export const defaultUser = {
-  name: "users/instill-ai",
-  id: "instill-ai",
+  name: "users/admin",
+  id: "admin",
   type: "OWNER_TYPE_USER",
   email: "hello@instill.tech",
   customer_id: "",
