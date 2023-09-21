@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
-	"gorm.io/gorm"
 
 	mgmtPB "github.com/instill-ai/protogen-go/base/mgmt/v1alpha"
 )
@@ -34,15 +33,6 @@ type Base struct {
 	CreateTime time.Time `gorm:"autoCreateTime:nano;<-:create"`   // allow read and create, but not update
 	UpdateTime time.Time `gorm:"autoUpdateTime:nano"`
 	// TODO: support DeleteTime gorm.DeletedAt `sql:"index"`
-}
-
-func (base *Base) BeforeCreate(db *gorm.DB) error {
-	uuid, err := uuid.NewV4()
-	if err != nil {
-		return err
-	}
-	db.Statement.SetColumn("UID", uuid)
-	return nil
 }
 
 // User defines a user instance in the database
