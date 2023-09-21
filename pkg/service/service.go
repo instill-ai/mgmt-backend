@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/gofrs/uuid"
+	"github.com/redis/go-redis/v9"
 	"go.einride.tech/aip/filtering"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -42,6 +44,12 @@ type Service interface {
 	ListConnectorExecuteChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteChartRecord, error)
 
 	GetCtxUser(ctx context.Context) (string, uuid.UUID, error)
+
+	CreateToken(ctx context.Context, token *datamodel.Token) error
+	ListTokens(ctx context.Context, pageSize int64, pageToken string, owner string) ([]datamodel.Token, int64, string, error)
+	GetToken(ctx context.Context, id string, owner string) (*datamodel.Token, error)
+	DeleteToken(ctx context.Context, id string, owner string) error
+	ValidateToken(accessToken string) (string, error)
 }
 
 type service struct {
@@ -49,15 +57,17 @@ type service struct {
 	influxDB                     repository.InfluxDB
 	connectorPublicServiceClient connectorPB.ConnectorPublicServiceClient
 	pipelinePublicServiceClient  pipelinePB.PipelinePublicServiceClient
+	redisClient                  *redis.Client
 }
 
 // NewService initiates a service instance
-func NewService(r repository.Repository, i repository.InfluxDB, c connectorPB.ConnectorPublicServiceClient, p pipelinePB.PipelinePublicServiceClient) Service {
+func NewService(r repository.Repository, rc *redis.Client, i repository.InfluxDB, c connectorPB.ConnectorPublicServiceClient, p pipelinePB.PipelinePublicServiceClient) Service {
 	return &service{
 		repository:                   r,
 		influxDB:                     i,
 		connectorPublicServiceClient: c,
 		pipelinePublicServiceClient:  p,
+		redisClient:                  rc,
 	}
 }
 
@@ -208,4 +218,49 @@ func (s *service) GetUserPasswordHash(ctx context.Context, uid uuid.UUID) (strin
 func (s *service) UpdateUserPasswordHash(ctx context.Context, uid uuid.UUID, newPassword string) error {
 
 	return s.repository.UpdateUserPasswordHash(ctx, uid, newPassword, time.Now())
+}
+
+func (s *service) CreateToken(ctx context.Context, token *datamodel.Token) error {
+
+	err := s.repository.CreateToken(ctx, token)
+	if err != nil {
+		return err
+	}
+	// TODO: should be more robust
+	s.redisClient.Set(context.Background(), fmt.Sprintf(constant.AccessTokenKeyFormat, token.AccessToken), token.Owner, 0)
+	s.redisClient.ExpireAt(context.Background(), fmt.Sprintf(constant.AccessTokenKeyFormat, token.AccessToken), token.ExpireTime)
+
+	return nil
+}
+func (s *service) ListTokens(ctx context.Context, pageSize int64, pageToken string, owner string) ([]datamodel.Token, int64, string, error) {
+	return s.repository.ListTokens(ctx, pageSize, pageToken, owner)
+
+}
+func (s *service) GetToken(ctx context.Context, id string, owner string) (*datamodel.Token, error) {
+	return s.repository.GetToken(ctx, id, owner)
+
+}
+func (s *service) DeleteToken(ctx context.Context, id string, owner string) error {
+
+	token, err := s.GetToken(ctx, id, owner)
+	if err != nil {
+		return err
+	}
+	accessToken := token.AccessToken
+
+	// TODO: should be more robust
+	s.redisClient.Del(context.Background(), fmt.Sprintf(constant.AccessTokenKeyFormat, accessToken))
+	delErr := s.repository.DeleteToken(ctx, id, owner)
+	if delErr != nil {
+		return delErr
+	}
+
+	return nil
+}
+func (s *service) ValidateToken(accessToken string) (string, error) {
+	ownerPermalink, err := s.redisClient.Get(context.Background(), fmt.Sprintf(constant.AccessTokenKeyFormat, accessToken)).Result()
+	if err != nil {
+		return "", err
+	}
+	return strings.Split(ownerPermalink, "/")[1], nil
 }

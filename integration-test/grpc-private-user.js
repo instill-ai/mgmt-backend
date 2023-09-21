@@ -318,7 +318,7 @@ export function CheckPrivateCreateUserAdmin() {
         email: "test-user@instill.tech"
       }
     }), {
-      'base.mgmt.v1alpha.MgmtPrivateService/CreateUserAdmin status StatusUnimplemented': (r) => r && r.status == grpc.StatusUnimplemented,
+      'base.mgmt.v1alpha.MgmtPrivateService/CreateUserAdmin status StatusOK': (r) => r && r.status == grpc.StatusOK,
     });
 
   });
@@ -337,7 +337,7 @@ export function CheckPrivateDeleteUserAdmin() {
     check(client.invoke('base.mgmt.v1alpha.MgmtPrivateService/DeleteUserAdmin', {
       name: `users/${constant.defaultUser.id}`,
     }), {
-      'base.mgmt.v1alpha.MgmtPrivateService/DeleteUserAdmin status StatusUnimplemented': (r) => r && r.status == grpc.StatusUnimplemented,
+      'base.mgmt.v1alpha.MgmtPrivateService/DeleteUserAdmin status StatusOK': (r) => r && r.status == grpc.StatusOK,
     });
 
   });

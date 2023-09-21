@@ -11,6 +11,7 @@ import (
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
+	"github.com/redis/go-redis/v9"
 )
 
 // Config - Global variable to export
@@ -20,6 +21,7 @@ var Config AppConfig
 type AppConfig struct {
 	Server           ServerConfig           `koanf:"server"`
 	Database         DatabaseConfig         `koanf:"database"`
+	Cache            CacheConfig            `koanf:"cache"`
 	Log              LogConfig              `koanf:"log"`
 	InfluxDB         InfluxDBConfig         `koanf:"influxdb"`
 	ConnectorBackend ConnectorBackendConfig `koanf:"connectorbackend"`
@@ -52,6 +54,13 @@ type ConnectorBackendConfig struct {
 	HTTPS      struct {
 		Cert string `koanf:"cert"`
 		Key  string `koanf:"key"`
+	}
+}
+
+// CacheConfig related to Redis
+type CacheConfig struct {
+	Redis struct {
+		RedisOptions redis.Options `koanf:"redisoptions"`
 	}
 }
 

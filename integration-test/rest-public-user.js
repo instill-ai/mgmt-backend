@@ -218,8 +218,8 @@ export function CheckPublicCreateToken(header) {
         header,
       ),
       {
-        [`POST /${constant.mgmtVersion}/tokens response status 501 [not implemented]`]:
-          (r) => r.status === 501,
+        [`POST /${constant.mgmtVersion}/tokens response status 201`]:
+          (r) => r.status === 201,
       }
     );
   });
@@ -235,8 +235,8 @@ export function CheckPublicListTokens(header) {
         header,
       ),
       {
-        [`GET /${constant.mgmtVersion}/tokens response status 501 [not implemented]`]:
-          (r) => r.status === 501,
+        [`GET /${constant.mgmtVersion}/tokens response status 200`]:
+          (r) => r.status === 200,
       }
     );
   });
@@ -252,8 +252,8 @@ export function CheckPublicGetToken(header) {
         header,
       ),
       {
-        [`GET /${constant.mgmtVersion}/tokens/${constant.testToken.id} response status 501 [not implemented]`]:
-          (r) => r.status === 501,
+        [`GET /${constant.mgmtVersion}/tokens/${constant.testToken.id} response status 200`]:
+          (r) => r.status === 200,
       }
     );
   });
@@ -269,8 +269,8 @@ export function CheckPublicDeleteToken(header) {
         header,
       ),
       {
-        [`DELETE /${constant.mgmtVersion}/tokens/${constant.testToken.id} response status 501 [not implemented]`]:
-          (r) => r.status === 501,
+        [`DELETE /${constant.mgmtVersion}/tokens/${constant.testToken.id} response status 204`]:
+          (r) => r.status === 204,
       }
     );
   });
