@@ -15,6 +15,8 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/x/paginate"
+
+	mgmtPB "github.com/instill-ai/protogen-go/base/mgmt/v1alpha"
 )
 
 // Repository interface
@@ -30,6 +32,14 @@ type Repository interface {
 
 	GetUserPasswordHash(ctx context.Context, uid uuid.UUID) (string, time.Time, error)
 	UpdateUserPasswordHash(ctx context.Context, uid uuid.UUID, newPassword string, updateTime time.Time) error
+
+	CreateToken(ctx context.Context, token *datamodel.Token) error
+	ListTokens(ctx context.Context, pageSize int64, pageToken string, owner string) ([]datamodel.Token, int64, string, error)
+	GetToken(ctx context.Context, id string, owner string) (*datamodel.Token, error)
+	UpdateToken(ctx context.Context, id string, ownerPermalink string, token *datamodel.Token) error
+	DeleteToken(ctx context.Context, id string, owner string) error
+
+	ListAllValidTokens(ctx context.Context) ([]datamodel.Token, error)
 }
 
 type repository struct {
@@ -228,5 +238,137 @@ func (r *repository) UpdateUserPasswordHash(ctx context.Context, uid uuid.UUID, 
 		logger.Error(result.Error.Error())
 		return status.Errorf(codes.Internal, "error %v", result.Error)
 	}
+	return nil
+}
+
+// TODO: use general filter
+func (r *repository) ListAllValidTokens(ctx context.Context) (tokens []datamodel.Token, err error) {
+
+	queryBuilder := r.db.Model(&datamodel.Token{}).Where("state = ?", datamodel.TokenState(mgmtPB.ApiToken_STATE_ACTIVE))
+	queryBuilder.Where("expire_time >= ?", time.Now())
+	rows, err := queryBuilder.Rows()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var item datamodel.Token
+		if err = r.db.ScanRows(rows, &item); err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		// createTime = item.CreateTime
+		tokens = append(tokens, item)
+	}
+
+	return tokens, nil
+}
+
+func (r *repository) ListTokens(ctx context.Context, pageSize int64, pageToken string, owner string) (tokens []datamodel.Token, totalSize int64, nextPageToken string, err error) {
+
+	if result := r.db.Model(&datamodel.Token{}).Where("owner = ?", owner).Count(&totalSize); result.Error != nil {
+		return nil, 0, "", status.Errorf(codes.Internal, result.Error.Error())
+	}
+
+	queryBuilder := r.db.Model(&datamodel.Token{}).Order("create_time DESC, uid DESC").Where("owner = ?", owner)
+
+	if pageSize == 0 {
+		pageSize = DefaultPageSize
+	} else if pageSize > MaxPageSize {
+		pageSize = MaxPageSize
+	}
+
+	queryBuilder = queryBuilder.Limit(int(pageSize))
+
+	if pageToken != "" {
+		createTime, uid, err := paginate.DecodeToken(pageToken)
+		if err != nil {
+			return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid page token: %s", err.Error())
+		}
+		queryBuilder = queryBuilder.Where("(create_time,uid) < (?::timestamp, ?)", createTime, uid)
+	}
+
+	var createTime time.Time
+	rows, err := queryBuilder.Rows()
+	if err != nil {
+		return nil, 0, "", status.Errorf(codes.Internal, err.Error())
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var item datamodel.Token
+		if err = r.db.ScanRows(rows, &item); err != nil {
+			return nil, 0, "", status.Error(codes.Internal, err.Error())
+		}
+		createTime = item.CreateTime
+		tokens = append(tokens, item)
+	}
+
+	if len(tokens) > 0 {
+		lastUID := (tokens)[len(tokens)-1].UID
+		lastItem := &datamodel.Token{}
+		if result := r.db.Model(&datamodel.Token{}).
+			Where("owner = ?", owner).
+			Order("create_time ASC, uid ASC").
+			Limit(1).Find(lastItem); result.Error != nil {
+			return nil, 0, "", status.Errorf(codes.Internal, result.Error.Error())
+		}
+		if lastItem.UID.String() == lastUID.String() {
+			nextPageToken = ""
+		} else {
+			nextPageToken = paginate.EncodeToken(createTime, lastUID.String())
+		}
+	}
+
+	return tokens, totalSize, nextPageToken, nil
+}
+
+func (r *repository) CreateToken(ctx context.Context, token *datamodel.Token) error {
+	logger, _ := logger.GetZapLogger(ctx)
+	if result := r.db.Model(&datamodel.Token{}).Create(token); result.Error != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(result.Error, &pgErr) {
+			if pgErr.Code == "23505" {
+				return status.Errorf(codes.AlreadyExists, pgErr.Message)
+			}
+		}
+		logger.Error(result.Error.Error())
+		return status.Errorf(codes.Internal, "error %v", result.Error)
+	}
+	return nil
+}
+
+func (r *repository) UpdateToken(ctx context.Context, id string, ownerPermalink string, token *datamodel.Token) error {
+
+	if result := r.db.Model(&datamodel.Token{}).
+		Where("id = ? AND owner = ?", id, ownerPermalink).
+		Updates(token); result.Error != nil {
+		return status.Errorf(codes.NotFound, "[db] update connector error: %s", result.Error.Error())
+	} else if result.RowsAffected == 0 {
+		return status.Errorf(codes.NotFound, "[db] update connector error: not found")
+	}
+	return nil
+}
+
+func (r *repository) GetToken(ctx context.Context, id string, owner string) (*datamodel.Token, error) {
+	queryBuilder := r.db.Model(&datamodel.Token{}).Where("id = ? AND owner = ?", id, owner)
+	var token datamodel.Token
+	if result := queryBuilder.First(&token); result.Error != nil {
+		return nil, status.Errorf(codes.NotFound, "[GetTokenByID] The token id %s you specified is not found", id)
+	}
+	return &token, nil
+}
+
+func (r *repository) DeleteToken(ctx context.Context, id string, owner string) error {
+	result := r.db.Model(&datamodel.Token{}).
+		Where("id = ? AND owner = ?", id, owner).
+		Delete(&datamodel.Token{})
+
+	if result.Error != nil {
+		return status.Error(codes.Internal, result.Error.Error())
+	}
+
+	if result.RowsAffected == 0 {
+		return status.Errorf(codes.NotFound, "[DeleteToken] The token id %s you specified is not found", id)
+	}
+
 	return nil
 }

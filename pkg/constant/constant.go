@@ -23,6 +23,10 @@ const HeaderUserUIDKey = "jwt-sub"
 // MaxApiKeyNum is the maximum number of API keys
 const MaxApiKeyNum = 10
 
+const DefaultTokenType = "Bearer"
+const AccessTokenKeyFormat = "access_token:%s:owner_permalink"
+const HeaderAuthorization = "Authorization"
+
 // Filter enum
 const (
 	Start              string = "start"

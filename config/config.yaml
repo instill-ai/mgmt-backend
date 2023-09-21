@@ -36,6 +36,10 @@ database:
     idleconnections: 5
     maxconnections: 10
     connlifetime: 30m # In minutes, e.g., '60m'
+cache:
+  redis:
+    redisoptions:
+      addr: redis:6379
 influxdb:
   url: http://influxdb:8086
   token: i-love-instill-ai

@@ -57,10 +57,6 @@ export const defaultUser = {
 };
 
 export const testToken = {
-  name: "tokens/test-token",
   id: "test-token",
-  access_token: "at_123456",
-  state: "STATE_ACTIVE",
-  token_type: "Bearer",
-  lifetime: 86400
+  ttl: -1,
 };

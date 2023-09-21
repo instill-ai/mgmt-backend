@@ -3,6 +3,8 @@ package handler
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,11 +15,14 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
 	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 
+	"github.com/instill-ai/mgmt-backend/internal/resource"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
@@ -37,6 +42,9 @@ import (
 var createRequiredFields = []string{"id", "email", "newsletter_subscription"}
 var outputOnlyFields = []string{"name", "type", "create_time", "update_time", "customer_id"}
 var immutableFields = []string{"uid", "id"}
+
+var createRequiredFieldsForToken = []string{"id"}
+var outputOnlyFieldsForToken = []string{"name", "uid", "state", "token_type", "access_token", "create_time", "update_time"}
 
 type PublicHandler struct {
 	mgmtPB.UnimplementedMgmtPublicServiceServer
@@ -626,74 +634,250 @@ func (h *PublicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUser
 
 // CreateToken creates an API token for triggering pipelines. This endpoint is not supported yet.
 func (h *PublicHandler) CreateToken(ctx context.Context, req *mgmtPB.CreateTokenRequest) (*mgmtPB.CreateTokenResponse, error) {
+
+	eventName := "CreateToken"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
 	logger, _ := logger.GetZapLogger(ctx)
 
-	st, err := sterr.CreateErrorResourceInfo(
-		codes.Unimplemented,
-		"create token not implemented error",
-		"endpoint",
-		"/tokens",
-		"",
-		"not implemented",
-	)
-	if err != nil {
-		logger.Error(err.Error())
+	// Set all OUTPUT_ONLY fields to zero value on the requested payload token resource
+	if err := checkfield.CheckCreateOutputOnlyFields(req.Token, outputOnlyFieldsForToken); err != nil {
+		return &mgmtPB.CreateTokenResponse{}, status.Errorf(codes.InvalidArgument, err.Error())
 	}
-	return &mgmtPB.CreateTokenResponse{}, st.Err()
+
+	// Return error if REQUIRED fields are not provided in the requested payload token resource
+	if err := checkfield.CheckRequiredFields(req.Token, createRequiredFieldsForToken); err != nil {
+		return &mgmtPB.CreateTokenResponse{}, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+
+	// Return error if resource ID does not follow RFC-1034
+	if err := checkfield.CheckResourceID(req.Token.GetId()); err != nil {
+		return &mgmtPB.CreateTokenResponse{}, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+
+	// Return error if expiration is not provided
+	if req.Token.GetExpiration() == nil {
+		return &mgmtPB.CreateTokenResponse{}, status.Errorf(codes.InvalidArgument, "no expiration info")
+	}
+
+	owner, err := h.GetUser(ctx)
+	if err != nil {
+		return &mgmtPB.CreateTokenResponse{}, status.Errorf(codes.Unauthenticated, "Unauthorized")
+	}
+	ownerPermalink := "users/" + owner.GetUid()
+
+	_, err = h.Service.GetToken(ctx, req.Token.Id, ownerPermalink)
+	if err == nil {
+		return &mgmtPB.CreateTokenResponse{}, status.Errorf(codes.AlreadyExists, "Token ID already existed")
+	}
+
+	dbToken := datamodel.PBToken2DBToken(ctx, req.Token)
+	dbToken.AccessToken = datamodel.GenerateToken()
+	dbToken.Owner = ownerPermalink
+	curTime := time.Now()
+	dbToken.CreateTime = curTime
+	dbToken.UpdateTime = curTime
+	dbToken.State = datamodel.TokenState(mgmtPB.ApiToken_STATE_ACTIVE)
+
+	switch req.Token.GetExpiration().(type) {
+	case *mgmtPB.ApiToken_Ttl:
+		if req.Token.GetTtl() >= 0 {
+			dbToken.ExpireTime = curTime.Add(time.Second * time.Duration(req.Token.GetTtl()))
+		} else if req.Token.GetTtl() == -1 {
+			dbToken.ExpireTime = time.Date(2099, 12, 31, 0, 0, 0, 0, time.Now().UTC().Location())
+		} else {
+			return &mgmtPB.CreateTokenResponse{}, status.Errorf(codes.InvalidArgument, "ttl should >= -1")
+		}
+	case *mgmtPB.ApiToken_ExpireTime:
+		dbToken.ExpireTime = req.Token.GetExpireTime().AsTime()
+	}
+
+	dbToken.TokenType = constant.DefaultTokenType
+	createErr := h.Service.CreateToken(ctx, dbToken)
+	if createErr != nil {
+		return &mgmtPB.CreateTokenResponse{}, status.Errorf(codes.AlreadyExists, createErr.Error())
+	}
+
+	dbCreatedToken, err := h.Service.GetToken(ctx, req.Token.Id, ownerPermalink)
+	if createErr != nil {
+		return &mgmtPB.CreateTokenResponse{}, status.Errorf(codes.AlreadyExists, err.Error())
+	}
+
+	resp := &mgmtPB.CreateTokenResponse{
+		Token: datamodel.DBToken2PBToken(dbCreatedToken),
+	}
+
+	// Manually set the custom header to have a StatusCreated http response for REST endpoint
+	if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", strconv.Itoa(http.StatusCreated))); err != nil {
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		owner,
+		eventName,
+		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v", dbToken)),
+	)))
+
+	return resp, nil
 }
 
 // ListTokens lists all the API tokens of the authenticated user. This endpoint is not supported yet.
 func (h *PublicHandler) ListTokens(ctx context.Context, req *mgmtPB.ListTokensRequest) (*mgmtPB.ListTokensResponse, error) {
+
+	eventName := "ListTokens"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
 	logger, _ := logger.GetZapLogger(ctx)
 
-	st, err := sterr.CreateErrorResourceInfo(
-		codes.Unimplemented,
-		"list tokens not implemented error",
-		"endpoint",
-		"/tokens",
-		"",
-		"not implemented",
-	)
+	owner, err := h.GetUser(ctx)
 	if err != nil {
-		logger.Error(err.Error())
+		return &mgmtPB.ListTokensResponse{}, err
 	}
-	return &mgmtPB.ListTokensResponse{}, st.Err()
+
+	ownerPermalink := "users/" + owner.GetUid()
+
+	dbTokens, totalSize, nextPageToken, err := h.Service.ListTokens(ctx, int64(req.GetPageSize()), req.GetPageToken(), ownerPermalink)
+	if err != nil {
+		return &mgmtPB.ListTokensResponse{}, err
+	}
+
+	pbTokens := []*mgmtPB.ApiToken{}
+	for _, dbToken := range dbTokens {
+		pbTokens = append(pbTokens, datamodel.DBToken2PBToken(&dbToken))
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		owner,
+		eventName,
+	)))
+
+	resp := &mgmtPB.ListTokensResponse{
+		Tokens:        pbTokens,
+		NextPageToken: nextPageToken,
+		TotalSize:     int32(totalSize),
+	}
+	return resp, nil
 }
 
 // GetToken gets an API token of the authenticated user. This endpoint is not supported yet.
 func (h *PublicHandler) GetToken(ctx context.Context, req *mgmtPB.GetTokenRequest) (*mgmtPB.GetTokenResponse, error) {
+
+	eventName := "GetToken"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
 	logger, _ := logger.GetZapLogger(ctx)
 
-	st, err := sterr.CreateErrorResourceInfo(
-		codes.Unimplemented,
-		"get token not implemented error",
-		"endpoint",
-		"/tokens/{token}",
-		"",
-		"not implemented",
-	)
+	owner, err := h.GetUser(ctx)
 	if err != nil {
-		logger.Error(err.Error())
+		return &mgmtPB.GetTokenResponse{}, err
 	}
-	return &mgmtPB.GetTokenResponse{}, st.Err()
+
+	ownerPermalink := "users/" + owner.GetUid()
+	id, err := resource.GetRscNameID(req.GetName())
+	if err != nil {
+		return &mgmtPB.GetTokenResponse{}, err
+	}
+
+	dbToken, err := h.Service.GetToken(ctx, id, ownerPermalink)
+	if err != nil {
+		return &mgmtPB.GetTokenResponse{}, err
+	}
+
+	pbToken := datamodel.DBToken2PBToken(dbToken)
+
+	resp := &mgmtPB.GetTokenResponse{
+		Token: pbToken,
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		owner,
+		eventName,
+		custom_otel.SetEventResource(dbToken),
+	)))
+
+	return resp, nil
 }
 
 // DeleteToken deletes an API token of the authenticated user. This endpoint is not supported yet.
 func (h *PublicHandler) DeleteToken(ctx context.Context, req *mgmtPB.DeleteTokenRequest) (*mgmtPB.DeleteTokenResponse, error) {
+
+	eventName := "DeleteToken"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
 	logger, _ := logger.GetZapLogger(ctx)
 
-	st, err := sterr.CreateErrorResourceInfo(
-		codes.Unimplemented,
-		"delete token not implemented error",
-		"endpoint",
-		"/tokens/{token}",
-		"",
-		"not implemented",
-	)
+	owner, err := h.GetUser(ctx)
 	if err != nil {
-		logger.Error(err.Error())
+		return &mgmtPB.DeleteTokenResponse{}, err
 	}
-	return &mgmtPB.DeleteTokenResponse{}, st.Err()
+	ownerPermalink := "users/" + owner.GetUid()
+
+	existToken, err := h.GetToken(ctx, &mgmtPB.GetTokenRequest{Name: req.GetName()})
+	if err != nil {
+		return &mgmtPB.DeleteTokenResponse{}, err
+	}
+
+	if err := h.Service.DeleteToken(ctx, existToken.Token.GetId(), ownerPermalink); err != nil {
+		return &mgmtPB.DeleteTokenResponse{}, err
+	}
+
+	// We need to manually set the custom header to have a StatusCreated http response for REST endpoint
+	if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", strconv.Itoa(http.StatusNoContent))); err != nil {
+		return &mgmtPB.DeleteTokenResponse{}, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		owner,
+		eventName,
+		custom_otel.SetEventResource(existToken.GetToken()),
+	)))
+
+	return &mgmtPB.DeleteTokenResponse{}, nil
+}
+
+// ValidateToken validate the token
+func (h *PublicHandler) ValidateToken(ctx context.Context, req *mgmtPB.ValidateTokenRequest) (*mgmtPB.ValidateTokenResponse, error) {
+
+	eventName := "ValidateToken"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	authorization := resource.GetRequestSingleHeader(ctx, constant.HeaderAuthorization)
+	apiToken := strings.Replace(authorization, "Bearer ", "", 1)
+
+	userUid, err := h.Service.ValidateToken(apiToken)
+
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	return &mgmtPB.ValidateTokenResponse{UserUid: userUid}, nil
 }
 
 func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgmtPB.ListPipelineTriggerRecordsRequest) (*mgmtPB.ListPipelineTriggerRecordsResponse, error) {

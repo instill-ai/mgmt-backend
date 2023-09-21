@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
@@ -150,9 +151,12 @@ func main() {
 	influxDBClient, influxDBQueryAPI := external.InitInfluxDBServiceClientV2(ctx, &config.Config)
 	defer influxDBClient.Close()
 
+	redisClient := redis.NewClient(&config.Config.Cache.Redis.RedisOptions)
+	defer redisClient.Close()
+
 	influxDB := repository.NewInfluxDB(influxDBQueryAPI, config.Config.InfluxDB.Bucket)
 	repository := repository.NewRepository(db)
-	service := service.NewService(repository, influxDB, connectorPublicServiceClient, pipelinePublicServiceClient)
+	service := service.NewService(repository, redisClient, influxDB, connectorPublicServiceClient, pipelinePublicServiceClient)
 
 	// Start usage reporter
 	var usg usage.Usage

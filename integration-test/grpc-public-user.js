@@ -180,7 +180,7 @@ export function CheckPublicCreateToken(header) {
         ttl: 86400
       }
     }, header), {
-      'base.mgmt.v1alpha.MgmtPublicService/CreateToken status StatusUnimplemented': (r) => r && r.status == grpc.StatusUnimplemented,
+      'base.mgmt.v1alpha.MgmtPublicService/CreateToken status StatusOK': (r) => r && r.status == grpc.StatusOK,
     });
 
   });
@@ -197,7 +197,7 @@ export function CheckPublicListTokens(header) {
   group(`Management Public API: List API tokens`, () => {
 
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/ListTokens', {}, header), {
-      'base.mgmt.v1alpha.MgmtPublicService/ListTokens status StatusUnimplemented': (r) => r && r.status == grpc.StatusUnimplemented,
+      'base.mgmt.v1alpha.MgmtPublicService/ListTokens status StatusOK': (r) => r && r.status == grpc.StatusOK,
     });
 
   });
@@ -216,7 +216,7 @@ export function CheckPublicGetToken(header) {
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/GetToken', {
       name: `tokens/${constant.testToken.id}`,
     }, header), {
-      'base.mgmt.v1alpha.MgmtPublicService/GetToken status StatusUnimplemented': (r) => r && r.status == grpc.StatusUnimplemented,
+      'base.mgmt.v1alpha.MgmtPublicService/GetToken status StatusOK': (r) => r && r.status == grpc.StatusOK,
     });
 
   });
@@ -235,7 +235,7 @@ export function CheckPublicDeleteToken(header) {
     check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/DeleteToken', {
       name: `tokens/${constant.testToken.id}`,
     }, header), {
-      'base.mgmt.v1alpha.MgmtPublicService/DeleteToken status StatusUnimplemented': (r) => r && r.status == grpc.StatusUnimplemented,
+      'base.mgmt.v1alpha.MgmtPublicService/DeleteToken status StatusOK': (r) => r && r.status == grpc.StatusOK,
     });
 
   });
