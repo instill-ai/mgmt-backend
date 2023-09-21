@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
+	"gorm.io/gorm"
 
 	mgmtPB "github.com/instill-ai/protogen-go/base/mgmt/v1alpha"
 )
@@ -70,6 +71,15 @@ type Token struct {
 	TokenType   string
 	LastUseTime time.Time
 	ExpireTime  time.Time
+}
+
+func (token *Token) BeforeCreate(db *gorm.DB) error {
+	uuid, err := uuid.NewV4()
+	if err != nil {
+		return err
+	}
+	db.Statement.SetColumn("UID", uuid)
+	return nil
 }
 
 // Scan function for custom GORM type PipelineMode
