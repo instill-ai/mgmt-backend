@@ -23,4 +23,6 @@ CREATE TABLE IF NOT EXISTS public.token(
 );
 CREATE UNIQUE INDEX unique_owner_id_delete_time ON public.token (owner, id);
 
+UPDATE public.user SET id = 'admin' WHERE id = 'instill-ai';
+
 COMMIT;
