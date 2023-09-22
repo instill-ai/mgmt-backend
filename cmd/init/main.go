@@ -63,24 +63,19 @@ func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 		CookieToken:            sql.NullString{String: "", Valid: false},
 	}
 
-	user, err := r.GetUser(defaultUserUID)
+	user, err := r.GetUserByID(constant.DefaultUserID)
 	// Default user already exists
 	if err == nil {
-		user.ID = constant.DefaultUserID
-		passwordHash, _, err := r.GetUserPasswordHash(ctx, defaultUserUID)
+		passwordHash, _, err := r.GetUserPasswordHash(ctx, user.UID)
 		if err != nil {
 			return err
 		}
 
 		if passwordHash == "" {
-			err = r.UpdateUserPasswordHash(ctx, defaultUserUID, string(passwordBytes), time.Now())
+			err = r.UpdateUserPasswordHash(ctx, user.UID, string(passwordBytes), time.Now())
 			if err != nil {
 				return err
 			}
-		}
-		err = r.UpdateUser(ctx, defaultUserUID, user)
-		if err != nil {
-			return err
 		}
 		return nil
 	}
@@ -94,7 +89,7 @@ func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 	if err != nil {
 		return err
 	}
-	err = r.UpdateUserPasswordHash(ctx, defaultUserUID, string(passwordBytes), time.Now())
+	err = r.UpdateUserPasswordHash(ctx, defaultUser.UID, string(passwordBytes), time.Now())
 	if err != nil {
 		return err
 	}
