@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.6.0-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.5.0-alpha...v0.6.0-alpha) (2023-09-30)
+
+
+### Features
+
+* **auth:** implement authentication apis ([#126](https://github.com/instill-ai/mgmt-backend/issues/126)) ([4ae7e73](https://github.com/instill-ai/mgmt-backend/commit/4ae7e735b1de67269e4e123b0e8ec1d1f6748a42))
+* **auth:** support `api_token` authentication ([#128](https://github.com/instill-ai/mgmt-backend/issues/128)) ([73c113c](https://github.com/instill-ai/mgmt-backend/commit/73c113c538d97a41912595b974de26f6858cbb55))
+
+
+### Bug Fixes
+
+* **init:** fix default user creation bug ([#130](https://github.com/instill-ai/mgmt-backend/issues/130)) ([1ede4d8](https://github.com/instill-ai/mgmt-backend/commit/1ede4d836cceb0ac66cb55178daac039f193ab68))
+
+
+### Miscellaneous Chores
+
+* **release:** release v0.6.0-alpha ([ef65c9e](https://github.com/instill-ai/mgmt-backend/commit/ef65c9e372da98eff29075ba34123ba7859d989d))
+
 ## [0.5.0-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.4.0-alpha...v0.5.0-alpha) (2023-09-13)
 
 
