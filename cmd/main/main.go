@@ -88,7 +88,9 @@ func main() {
 		// can't handle the error due to https://github.com/uber-go/zap/issues/880
 		_ = logger.Sync()
 	}()
-	grpc_zap.ReplaceGrpcLoggerV2(logger)
+
+	// verbosity 3 will avoid [transport] from emitting
+	grpc_zap.ReplaceGrpcLoggerV2WithVerbosity(logger, 3)
 
 	db := database.GetConnection(&config.Config.Database)
 	defer database.Close(db)
@@ -98,7 +100,8 @@ func main() {
 		grpc_zap.WithDecider(func(fullMethodName string, err error) bool {
 			// will not log gRPC calls if it was a call to liveness or readiness and no error was raised
 			if err == nil {
-				if match, _ := regexp.MatchString("base.mgmt.v1alpha.MgmtPrivateService/.*ness$", fullMethodName); match {
+				// stop logging sucessful private function calls
+				if match, _ := regexp.MatchString("base.mgmt.v1alpha.MgmtPrivateService/.*(?:Admin|ness)$", fullMethodName); match {
 					return false
 				}
 				if match, _ := regexp.MatchString("base.mgmt.v1alpha.MgmtPublicService/.*ness$", fullMethodName); match {
