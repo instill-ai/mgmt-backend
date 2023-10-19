@@ -19,7 +19,6 @@ export function setup() {
     "password": constant.defaultPassword,
   }))
 
-
   check(loginResp, {
     [`POST /${constant.mgmtVersion}/auth/login response status is 200`]: (
       r

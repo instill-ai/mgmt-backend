@@ -22,7 +22,7 @@ import (
 
 	database "github.com/instill-ai/mgmt-backend/pkg/db"
 	custom_otel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
-	mgmtPB "github.com/instill-ai/protogen-go/base/mgmt/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1alpha"
 )
 
 // CreateDefaultUser creates a default user in the database

@@ -18,7 +18,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/x/paginate"
 
-	mgmtPB "github.com/instill-ai/protogen-go/base/mgmt/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1alpha"
 )
 
 // DefaultPageSize is the default pagination page size when page size is not assigned
@@ -587,7 +587,7 @@ func (i *influxDB) QueryConnectorExecuteRecords(ctx context.Context, owner strin
 
 			record := &mgmtPB.ConnectorExecuteRecord{}
 
-			if v, match := result.Record().ValueByKey(constant.Executetime).(string); match {
+			if v, match := result.Record().ValueByKey(constant.ExecuteTime).(string); match {
 				executeTime, err := time.Parse(time.RFC3339Nano, v)
 				if err != nil {
 					return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid parse key: %s", err.Error())
@@ -946,7 +946,7 @@ func (i *influxDB) QueryConnectorExecuteChartRecords(ctx context.Context, owner 
 			if v, match := result.Record().ValueByKey("_time").(time.Time); match {
 				chartRecord.TimeBuckets = append(chartRecord.TimeBuckets, timestamppb.New(v))
 			}
-			if v, match := result.Record().ValueByKey(constant.Executetime).(int64); match {
+			if v, match := result.Record().ValueByKey(constant.ExecuteTime).(int64); match {
 				chartRecord.ExecuteCounts = append(chartRecord.ExecuteCounts, int32(v))
 			}
 			if v, match := result.Record().ValueByKey(constant.ComputeTimeDuration).(float64); match {

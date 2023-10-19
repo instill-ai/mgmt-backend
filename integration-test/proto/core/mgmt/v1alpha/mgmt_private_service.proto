@@ -1,12 +1,12 @@
 syntax = "proto3";
 
-package base.mgmt.v1alpha;
+package core.mgmt.v1alpha;
 
 // Google API
 import "google/api/annotations.proto";
 import "google/api/client.proto";
 
-import "../../../base/mgmt/v1alpha/mgmt.proto";
+import "../../../core/mgmt/v1alpha/mgmt.proto";
 
 // Mgmt service responds to internal access
 service MgmtPrivateService {

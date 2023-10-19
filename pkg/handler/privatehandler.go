@@ -18,7 +18,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 	"github.com/instill-ai/x/sterr"
 
-	mgmtPB "github.com/instill-ai/protogen-go/base/mgmt/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1alpha"
 	checkfield "github.com/instill-ai/x/checkfield"
 )
 

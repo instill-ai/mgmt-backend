@@ -21,11 +21,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        component:
-          [
-            mgmt-backend,
-          ]
-    uses: instill-ai/base/.github/workflows/integration-test-backend.yml@main
+        component: [mgmt-backend]
+    uses: instill-ai/core/.github/workflows/integration-test-backend.yml@main
     with:
       component: ${{ matrix.component }}
       target: latest
@@ -33,7 +30,7 @@ jobs:
     needs: build-push-image
     if: github.ref == 'refs/heads/main'
     name: Console
-    uses: instill-ai/base/.github/workflows/integration-test-console.yml@main
+    uses: instill-ai/core/.github/workflows/integration-test-console.yml@main
     with:
       target: latest
 
@@ -99,12 +96,12 @@ jobs:
             GOLANG_VERSION=${{ env.GOLANG_VERSION }}
           tags: instill/mgmt-backend:latest
 
-      - name: Checkout (base)
+      - name: Checkout (core)
         uses: actions/checkout@v3
         with:
-          repository: instill-ai/base
+          repository: instill-ai/core
 
-      - name: Launch Instill Base
+      - name: Launch Instill Core
         run: |
           COMPOSE_PROFILES=all \
           EDITION=local-ce:test \

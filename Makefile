@@ -10,8 +10,8 @@ export
 
 .PHONY: dev
 dev:							## Run dev container
-	@docker compose ls -q | grep -q "instill-base" && true || \
-		(echo "Error: Run \"make latest PROFILE=mgmt ITMODE_ENABLED=true\" in base repository (https://github.com/instill-ai/base) in your local machine first." && exit 1)
+	@docker compose ls -q | grep -q "instill-core" && true || \
+		(echo "Error: Run \"make latest PROFILE=mgmt ITMODE_ENABLED=true\" in core repository (https://github.com/instill-ai/core) in your local machine first." && exit 1)
 	@docker inspect --type container ${SERVICE_NAME} >/dev/null 2>&1 && echo "A container named ${SERVICE_NAME} is already running." || \
 		echo "Run dev container ${SERVICE_NAME}. To stop it, run \"make stop\"."
 	@docker run -d --rm \
@@ -30,6 +30,10 @@ logs:					## Tail service container logs with -n 10
 .PHONY: stop
 stop:							## Stop container
 	@docker stop -t 1 ${SERVICE_NAME}
+
+.PHONY: rm
+rm:								## Remove container
+	@docker rm -f ${SERVICE_NAME}
 
 .PHONY: top
 top:							## Display all running service processes

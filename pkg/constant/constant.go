@@ -51,7 +51,7 @@ const (
 	ConnectorExecuteID          string = "connector_execute_id"
 	ConnectorDefinitionUID      string = "connector_definition_uid"
 	TriggerTime                 string = "trigger_time"
-	Executetime                 string = "execute_time"
+	ExecuteTime                 string = "execute_time"
 	ComputeTimeDuration         string = "compute_time_duration"
 	Completed                   string = "completed"
 	Errored                     string = "errored"

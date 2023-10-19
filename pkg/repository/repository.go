@@ -16,7 +16,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/x/paginate"
 
-	mgmtPB "github.com/instill-ai/protogen-go/base/mgmt/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1alpha"
 )
 
 // Repository interface

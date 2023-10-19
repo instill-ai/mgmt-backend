@@ -15,7 +15,7 @@ Before delving into the details to come up with your first PR, please familiaris
 
 ### Prerequisites
 
-- [Instill Base](https://github.com/instill-ai/base)
+- [Instill Core](https://github.com/instill-ai/core)
 
 ### Pre-commit hooks
 
@@ -23,11 +23,11 @@ check out `.pre-commit-config.yaml` for the set of hooks that we used
 
 ## Local development
 
-On the local machine, clone `base` repository in your workspace, move to the repository folder, and launch all dependent microservices:
+On the local machine, clone `core` repository in your workspace, move to the repository folder, and launch all dependent microservices:
 ```
 $ cd <your-workspace>
-$ git clone https://github.com/instill-ai/base.git
-$ cd base
+$ git clone https://github.com/instill-ai/core.git
+$ cd core
 $ make latest PROFILE=mgmt
 ```
 
@@ -85,6 +85,12 @@ $ make integration-test
 
 ```bash
 $ make stop
+```
+
+### Remove the dev container
+
+```bash
+$ make rm
 ```
 
 ### Sending PRs

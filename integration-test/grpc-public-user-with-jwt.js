@@ -10,8 +10,8 @@ import * as constant from "./const.js";
 import * as helper from "./helper.js";
 
 const client = new grpc.Client();
-client.load(['proto/base/mgmt/v1alpha'], 'mgmt.proto');
-client.load(['proto/base/mgmt/v1alpha'], 'mgmt_public_service.proto');
+client.load(['proto/core/mgmt/v1alpha'], 'mgmt.proto');
+client.load(['proto/core/mgmt/v1alpha'], 'mgmt_public_service.proto');
 
 export function CheckPublicQueryAuthenticatedUser() {
 
@@ -21,8 +21,8 @@ export function CheckPublicQueryAuthenticatedUser() {
       plaintext: true
     });
 
-    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser', {}, constant.grpcParamsWithJwtSub), {
-      '[with random "jwt-sub" header] base.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
+    check(client.invoke('core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser', {}, constant.grpcParamsWithJwtSub), {
+      '[with random "jwt-sub" header] core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
     });
 
     client.close();
@@ -49,11 +49,11 @@ export function CheckPublicPatchAuthenticatedUser() {
       cookie_token: "f5730f62-7026-4e11-917a-d890da315d3b",
     };
 
-    check(client.invoke('base.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser', {
+    check(client.invoke('core.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser', {
       user: userUpdate,
       update_mask: "email,firstName,lastName,orgName,role,newsletterSubscription,cookieToken"
     }, constant.grpcParamsWithJwtSub), {
-      '[with random "jwt-sub" header] base.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
+      '[with random "jwt-sub" header] core.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
     });
   });
 

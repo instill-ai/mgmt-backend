@@ -18,7 +18,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 
-	usagePB "github.com/instill-ai/protogen-go/base/usage/v1alpha"
+	usagePB "github.com/instill-ai/protogen-go/core/usage/v1alpha"
 	connectorPB "github.com/instill-ai/protogen-go/vdp/connector/v1alpha"
 	pipelinePB "github.com/instill-ai/protogen-go/vdp/pipeline/v1alpha"
 )
