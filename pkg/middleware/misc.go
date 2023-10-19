@@ -19,7 +19,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 
-	mgmtPB "github.com/instill-ai/protogen-go/base/mgmt/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1alpha"
 )
 
 // GetRequestSingleHeader get a request header, the header has to be single-value HTTP header

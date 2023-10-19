@@ -10,7 +10,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/middleware"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 
-	mgmtPB "github.com/instill-ai/protogen-go/base/mgmt/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1alpha"
 	connectorPB "github.com/instill-ai/protogen-go/vdp/connector/v1alpha"
 	pipelinePB "github.com/instill-ai/protogen-go/vdp/pipeline/v1alpha"
 )

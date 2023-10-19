@@ -8,7 +8,7 @@ import (
 	"github.com/gofrs/uuid"
 	"gorm.io/gorm"
 
-	mgmtPB "github.com/instill-ai/protogen-go/base/mgmt/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1alpha"
 )
 
 type TokenState int32
