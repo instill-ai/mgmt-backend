@@ -54,7 +54,7 @@ func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 		return err
 	}
 
-	defaultUser := datamodel.User{
+	defaultUser := datamodel.Owner{
 		Base:                   datamodel.Base{UID: defaultUserUID},
 		ID:                     constant.DefaultUserID,
 		OwnerType:              sql.NullString{String: service.PBUserType2DBUserType[mgmtPB.OwnerType_OWNER_TYPE_USER], Valid: true},

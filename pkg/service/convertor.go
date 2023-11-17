@@ -32,7 +32,7 @@ var (
 )
 
 // DBUser2PBUser converts a database user instance to proto user
-func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.User) (*mgmtPB.User, error) {
+func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*mgmtPB.User, error) {
 	if dbUser == nil {
 		return nil, status.Error(codes.Internal, "can't convert a nil user")
 	}
@@ -58,7 +58,7 @@ func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.User) (*m
 }
 
 // PBUser2DBUser converts a proto user instance to database user
-func (s *service) PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.User, error) {
+func (s *service) PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.Owner, error) {
 	if pbUser == nil {
 		return nil, status.Error(codes.Internal, "can't convert a nil user")
 	}
@@ -77,7 +77,7 @@ func (s *service) PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.User, error) {
 	role := pbUser.GetRole()
 	cookieToken := pbUser.GetCookieToken()
 
-	return &datamodel.User{
+	return &datamodel.Owner{
 		Base: datamodel.Base{
 			UID: uid,
 		},
@@ -112,7 +112,7 @@ func (s *service) PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.User, error) {
 	}, nil
 }
 
-func (s *service) DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.User) ([]*mgmtPB.User, error) {
+func (s *service) DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtPB.User, error) {
 	var err error
 	pbUsers := make([]*mgmtPB.User, len(dbUsers))
 	for idx := range dbUsers {

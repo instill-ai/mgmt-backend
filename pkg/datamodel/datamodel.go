@@ -37,7 +37,7 @@ type Base struct {
 }
 
 // User defines a user instance in the database
-type User struct {
+type Owner struct {
 	Base
 	ID                     string `gorm:"unique;not null;"`
 	OwnerType              sql.NullString
@@ -58,7 +58,7 @@ type Password struct {
 }
 
 func (Password) TableName() string {
-	return "user"
+	return "owner"
 }
 
 // Token defines a api token instance in the database

@@ -53,9 +53,9 @@ type Service interface {
 	ListConnectorExecuteTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteTableRecord, int64, string, error)
 	ListConnectorExecuteChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteChartRecord, error)
 
-	DBUser2PBUser(ctx context.Context, dbUser *datamodel.User) (*mgmtPB.User, error)
-	DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.User) ([]*mgmtPB.User, error)
-	PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.User, error)
+	DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*mgmtPB.User, error)
+	DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtPB.User, error)
+	PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.Owner, error)
 
 	DBToken2PBToken(ctx context.Context, dbToken *datamodel.Token) (*mgmtPB.ApiToken, error)
 	DBTokens2PBTokens(ctx context.Context, dbTokens []*datamodel.Token) ([]*mgmtPB.ApiToken, error)

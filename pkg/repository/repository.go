@@ -22,14 +22,14 @@ import (
 
 // Repository interface
 type Repository interface {
-	ListUsers(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*datamodel.User, int64, string, error)
-	CreateUser(ctx context.Context, user *datamodel.User) error
-	GetUser(ctx context.Context, id string) (*datamodel.User, error)
-	GetUserByUID(ctx context.Context, uid uuid.UUID) (*datamodel.User, error)
-	UpdateUser(ctx context.Context, id string, user *datamodel.User) error
+	ListUsers(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*datamodel.Owner, int64, string, error)
+	CreateUser(ctx context.Context, user *datamodel.Owner) error
+	GetUser(ctx context.Context, id string) (*datamodel.Owner, error)
+	GetUserByUID(ctx context.Context, uid uuid.UUID) (*datamodel.Owner, error)
+	UpdateUser(ctx context.Context, id string, user *datamodel.Owner) error
 	DeleteUser(ctx context.Context, id string) error
 
-	GetAllUsers(ctx context.Context) ([]*datamodel.User, error)
+	GetAllUsers(ctx context.Context) ([]*datamodel.Owner, error)
 
 	GetUserPasswordHash(ctx context.Context, uid uuid.UUID) (string, time.Time, error)
 	UpdateUserPasswordHash(ctx context.Context, uid uuid.UUID, newPassword string, updateTime time.Time) error
@@ -57,15 +57,15 @@ func NewRepository(db *gorm.DB) Repository {
 // Return error types
 //   - codes.InvalidArgument
 //   - codes.Internal
-func (r *repository) ListUsers(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*datamodel.User, int64, string, error) {
+func (r *repository) ListUsers(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*datamodel.Owner, int64, string, error) {
 	logger, _ := logger.GetZapLogger(ctx)
 	totalSize := int64(0)
-	if result := r.db.Model(&datamodel.User{}).Where("owner_type = 'user'").Count(&totalSize); result.Error != nil {
+	if result := r.db.Model(&datamodel.Owner{}).Where("owner_type = 'user'").Count(&totalSize); result.Error != nil {
 		logger.Error(result.Error.Error())
 		return nil, totalSize, "", status.Errorf(codes.Internal, "error %v", result.Error)
 	}
 
-	queryBuilder := r.db.Model(&datamodel.User{}).Order("create_time DESC, id DESC")
+	queryBuilder := r.db.Model(&datamodel.Owner{}).Order("create_time DESC, id DESC")
 	queryBuilder = queryBuilder.Where("owner_type = 'user'")
 
 	if pageSize > 0 {
@@ -80,7 +80,7 @@ func (r *repository) ListUsers(ctx context.Context, pageSize int, pageToken stri
 		queryBuilder = queryBuilder.Where("(create_time,uid) < (?::timestamp, ?)", createTime, uid)
 	}
 
-	var users []*datamodel.User
+	var users []*datamodel.Owner
 	var createTime time.Time
 
 	rows, err := queryBuilder.Rows()
@@ -90,7 +90,7 @@ func (r *repository) ListUsers(ctx context.Context, pageSize int, pageToken stri
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var item datamodel.User
+		var item datamodel.Owner
 		if err = r.db.ScanRows(rows, &item); err != nil {
 			logger.Error(err.Error())
 			return nil, totalSize, "", status.Errorf(codes.Internal, "error %v", err.Error())
@@ -118,9 +118,9 @@ func (r *repository) ListUsers(ctx context.Context, pageSize int, pageToken stri
 // CreateUser creates a new user
 // Return error types
 //   - codes.Internal
-func (r *repository) CreateUser(ctx context.Context, user *datamodel.User) error {
+func (r *repository) CreateUser(ctx context.Context, user *datamodel.Owner) error {
 	logger, _ := logger.GetZapLogger(ctx)
-	if result := r.db.Model(&datamodel.User{}).Create(user); result.Error != nil {
+	if result := r.db.Model(&datamodel.Owner{}).Create(user); result.Error != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(result.Error, &pgErr) {
 			if pgErr.Code == "23505" {
@@ -136,9 +136,9 @@ func (r *repository) CreateUser(ctx context.Context, user *datamodel.User) error
 // GetAllUsers gets all users in the database
 // Return error types
 //   - codes.Internal
-func (r *repository) GetAllUsers(ctx context.Context) ([]*datamodel.User, error) {
+func (r *repository) GetAllUsers(ctx context.Context) ([]*datamodel.Owner, error) {
 	logger, _ := logger.GetZapLogger(ctx)
-	var users []*datamodel.User
+	var users []*datamodel.Owner
 	if result := r.db.Find(users).Where("owner_type = 'user'"); result.Error != nil {
 		logger.Error(result.Error.Error())
 		return users, status.Errorf(codes.Internal, "error %v", result.Error)
@@ -149,9 +149,9 @@ func (r *repository) GetAllUsers(ctx context.Context) ([]*datamodel.User, error)
 // GetUser gets a user by ID
 // Return error types
 //   - codes.NotFound
-func (r *repository) GetUser(ctx context.Context, id string) (*datamodel.User, error) {
-	var user datamodel.User
-	if result := r.db.Model(&datamodel.User{}).Where("owner_type = 'user'").Where("id = ?", id).First(&user); result.Error != nil {
+func (r *repository) GetUser(ctx context.Context, id string) (*datamodel.Owner, error) {
+	var user datamodel.Owner
+	if result := r.db.Model(&datamodel.Owner{}).Where("owner_type = 'user'").Where("id = ?", id).First(&user); result.Error != nil {
 		return nil, status.Error(codes.NotFound, "the user is not found")
 	}
 	return &user, nil
@@ -160,9 +160,9 @@ func (r *repository) GetUser(ctx context.Context, id string) (*datamodel.User, e
 // GetUser gets a user by UID
 // Return error types
 //   - codes.NotFound
-func (r *repository) GetUserByUID(ctx context.Context, uid uuid.UUID) (*datamodel.User, error) {
-	var user datamodel.User
-	if result := r.db.Model(&datamodel.User{}).Where("owner_type = 'user'").Where("uid = ?", uid.String()).First(&user); result.Error != nil {
+func (r *repository) GetUserByUID(ctx context.Context, uid uuid.UUID) (*datamodel.Owner, error) {
+	var user datamodel.Owner
+	if result := r.db.Model(&datamodel.Owner{}).Where("owner_type = 'user'").Where("uid = ?", uid.String()).First(&user); result.Error != nil {
 		return nil, status.Error(codes.NotFound, "the user is not found")
 	}
 	return &user, nil
@@ -171,9 +171,9 @@ func (r *repository) GetUserByUID(ctx context.Context, uid uuid.UUID) (*datamode
 // UpdateUser updates a user by ID
 // Return error types
 //   - codes.Internal
-func (r *repository) UpdateUser(ctx context.Context, id string, user *datamodel.User) error {
+func (r *repository) UpdateUser(ctx context.Context, id string, user *datamodel.Owner) error {
 	logger, _ := logger.GetZapLogger(ctx)
-	if result := r.db.Select("*").Omit("UID").Omit("password_hash").Model(&datamodel.User{}).Where("owner_type = 'user'").Where("id = ?", id).Updates(user); result.Error != nil {
+	if result := r.db.Select("*").Omit("UID").Omit("password_hash").Model(&datamodel.Owner{}).Where("owner_type = 'user'").Where("id = ?", id).Updates(user); result.Error != nil {
 		logger.Error(result.Error.Error())
 		return status.Errorf(codes.Internal, "error %v", result.Error)
 	}
@@ -186,10 +186,10 @@ func (r *repository) UpdateUser(ctx context.Context, id string, user *datamodel.
 //   - codes.Internal
 func (r *repository) DeleteUser(ctx context.Context, id string) error {
 	logger, _ := logger.GetZapLogger(ctx)
-	result := r.db.Model(&datamodel.User{}).
+	result := r.db.Model(&datamodel.Owner{}).
 		Where("owner_type = 'user'").
 		Where("id = ?", id).
-		Delete(&datamodel.User{})
+		Delete(&datamodel.Owner{})
 
 	if result.Error != nil {
 		logger.Error(result.Error.Error())
