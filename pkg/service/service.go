@@ -37,6 +37,12 @@ type Service interface {
 	GetUserAdmin(ctx context.Context, id string) (*mgmtPB.User, error)
 	GetUserByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtPB.User, error)
 
+	CreateOrganization(ctx context.Context, userUID uuid.UUID, org *mgmtPB.Organization) (*mgmtPB.Organization, error)
+	ListOrganizations(ctx context.Context, userUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.Organization, int64, string, error)
+	GetOrganization(ctx context.Context, userUID uuid.UUID, id string) (*mgmtPB.Organization, error)
+	UpdateOrganization(ctx context.Context, userUID uuid.UUID, id string, org *mgmtPB.Organization) (*mgmtPB.Organization, error)
+	DeleteOrganization(ctx context.Context, userUID uuid.UUID, id string) error
+
 	CreateToken(ctx context.Context, userUID uuid.UUID, token *mgmtPB.ApiToken) error
 	ListTokens(ctx context.Context, userUID uuid.UUID, pageSize int64, pageToken string) ([]*mgmtPB.ApiToken, int64, string, error)
 	GetToken(ctx context.Context, userUID uuid.UUID, id string) (*mgmtPB.ApiToken, error)
@@ -239,6 +245,84 @@ func (s *service) DeleteUser(ctx context.Context, userUID uuid.UUID, id string) 
 	}
 
 	return s.repository.DeleteUser(ctx, id)
+}
+
+func (s *service) ListOrganizations(ctx context.Context, userUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.Organization, int64, string, error) {
+	dbOrgs, totalSize, nextPageToken, err := s.repository.ListOrganizations(ctx, pageSize, pageToken, filter)
+	if err != nil {
+		return nil, 0, "", err
+	}
+	pbOrgs, err := s.DBOrgs2PBOrgs(ctx, dbOrgs)
+	return pbOrgs, totalSize, nextPageToken, err
+}
+
+func (s *service) CreateOrganization(ctx context.Context, userUID uuid.UUID, org *mgmtPB.Organization) (*mgmtPB.Organization, error) {
+
+	uid, _ := uuid.NewV4()
+	uidStr := uid.String()
+	org.Uid = &uidStr
+	dbOrg, err := s.PBOrg2DBOrg(org)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.repository.CreateOrganization(ctx, dbOrg); err != nil {
+		return nil, err
+	}
+
+	dbCreatedOrg, err := s.repository.GetOrganization(ctx, dbOrg.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.DBOrg2PBOrg(ctx, dbCreatedOrg)
+}
+
+func (s *service) GetOrganization(ctx context.Context, userUID uuid.UUID, id string) (*mgmtPB.Organization, error) {
+	// Validation: Required field
+	if id == "" {
+		return nil, status.Error(codes.InvalidArgument, "the required field `id` is not specified")
+	}
+
+	dbOrg, err := s.repository.GetOrganization(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return s.DBOrg2PBOrg(ctx, dbOrg)
+}
+
+func (s *service) UpdateOrganization(ctx context.Context, userUID uuid.UUID, id string, org *mgmtPB.Organization) (*mgmtPB.Organization, error) {
+
+	// Check if the org exists
+	if _, err := s.repository.GetOrganization(ctx, id); err != nil {
+		return nil, err
+	}
+
+	// Update the user
+	dbOrg, err := s.PBOrg2DBOrg(org)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.repository.UpdateOrganization(ctx, id, dbOrg); err != nil {
+		return nil, err
+	}
+
+	dbOrgUpdated, err := s.repository.GetOrganization(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return s.DBOrg2PBOrg(ctx, dbOrgUpdated)
+
+}
+
+func (s *service) DeleteOrganization(ctx context.Context, userUID uuid.UUID, id string) error {
+	// Validation: Required field
+	if id == "" {
+		return status.Error(codes.InvalidArgument, "the required field `id` is not specified")
+	}
+
+	return s.repository.DeleteOrganization(ctx, id)
 }
 
 func (s *service) GetUserPasswordHash(ctx context.Context, uid uuid.UUID) (string, time.Time, error) {

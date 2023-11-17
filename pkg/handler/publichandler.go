@@ -44,6 +44,9 @@ var immutableFields = []string{"uid", "id"}
 var createRequiredFieldsForToken = []string{"id"}
 var outputOnlyFieldsForToken = []string{"name", "uid", "state", "token_type", "access_token", "create_time", "update_time"}
 
+var createRequiredFieldsForOrganization = []string{"id"}
+var outputOnlyFieldsForOrganization = []string{"name", "uid", "create_time", "update_time"}
+
 type PublicHandler struct {
 	mgmtPB.UnimplementedMgmtPublicServiceServer
 	Service      service.Service
@@ -504,6 +507,149 @@ func (h *PublicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUser
 		Exists: true,
 	}
 	return &resp, nil
+}
+
+func (h *PublicHandler) CreateOrganization(ctx context.Context, req *mgmtPB.CreateOrganizationRequest) (*mgmtPB.CreateOrganizationResponse, error) {
+
+	eventName := "CreateOrganization"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	// Set all OUTPUT_ONLY fields to zero value on the requested payload organization resource
+	if err := checkfield.CheckCreateOutputOnlyFields(req.Organization, outputOnlyFieldsForOrganization); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+
+	// Return error if REQUIRED fields are not provided in the requested payload organization resource
+	if err := checkfield.CheckRequiredFields(req.Organization, createRequiredFieldsForOrganization); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+
+	// Return error if resource ID does not follow RFC-1034
+	if err := checkfield.CheckResourceID(req.Organization.GetId()); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+
+	_, ctxUserUID, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	_, err = h.Service.GetOrganization(ctx, ctxUserUID, req.Organization.Id)
+	if err == nil {
+		return nil, status.Errorf(codes.AlreadyExists, "Organization ID already existed")
+	}
+
+	_, createErr := h.Service.CreateOrganization(ctx, ctxUserUID, req.Organization)
+	if createErr != nil {
+		return nil, status.Errorf(codes.AlreadyExists, createErr.Error())
+	}
+
+	pbCreatedOrg, err := h.Service.GetOrganization(ctx, ctxUserUID, req.Organization.Id)
+	if createErr != nil {
+		return nil, status.Errorf(codes.AlreadyExists, err.Error())
+	}
+
+	resp := &mgmtPB.CreateOrganizationResponse{
+		Organization: pbCreatedOrg,
+	}
+
+	// Manually set the custom header to have a StatusCreated http response for REST endpoint
+	if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", strconv.Itoa(http.StatusCreated))); err != nil {
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		ctxUserUID,
+		eventName,
+		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v", pbCreatedOrg)),
+	)))
+
+	return resp, nil
+}
+
+func (h *PublicHandler) ListOrganizations(ctx context.Context, req *mgmtPB.ListOrganizationsRequest) (*mgmtPB.ListOrganizationsResponse, error) {
+
+	eventName := "ListOrganizations"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, ctxUserUID, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	pbOrgs, totalSize, nextPageToken, err := h.Service.ListOrganizations(ctx, ctxUserUID, int(req.GetPageSize()), req.GetPageToken(), filtering.Filter{})
+	if err != nil {
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		ctxUserUID,
+		eventName,
+	)))
+
+	resp := &mgmtPB.ListOrganizationsResponse{
+		Organizations: pbOrgs,
+		NextPageToken: nextPageToken,
+		TotalSize:     int32(totalSize),
+	}
+	return resp, nil
+}
+
+func (h *PublicHandler) GetOrganization(ctx context.Context, req *mgmtPB.GetOrganizationRequest) (*mgmtPB.GetOrganizationResponse, error) {
+
+	eventName := "GetOrganization"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, ctxUserUID, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	id, err := resource.GetRscNameID(req.GetName())
+	if err != nil {
+		return nil, err
+	}
+
+	pbOrg, err := h.Service.GetOrganization(ctx, ctxUserUID, id)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &mgmtPB.GetOrganizationResponse{
+		Organization: pbOrg,
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		ctxUserUID,
+		eventName,
+		custom_otel.SetEventResource(pbOrg),
+	)))
+
+	return resp, nil
 }
 
 // CreateToken creates an API token for triggering pipelines. This endpoint is not supported yet.

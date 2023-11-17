@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/gofrs/uuid"
@@ -22,6 +23,8 @@ import (
 
 // Repository interface
 type Repository interface {
+	GetAllUsers(ctx context.Context) ([]*datamodel.Owner, error)
+
 	ListUsers(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*datamodel.Owner, int64, string, error)
 	CreateUser(ctx context.Context, user *datamodel.Owner) error
 	GetUser(ctx context.Context, id string) (*datamodel.Owner, error)
@@ -29,7 +32,19 @@ type Repository interface {
 	UpdateUser(ctx context.Context, id string, user *datamodel.Owner) error
 	DeleteUser(ctx context.Context, id string) error
 
-	GetAllUsers(ctx context.Context) ([]*datamodel.Owner, error)
+	ListOrganizations(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*datamodel.Owner, int64, string, error)
+	CreateOrganization(ctx context.Context, user *datamodel.Owner) error
+	GetOrganization(ctx context.Context, id string) (*datamodel.Owner, error)
+	GetOrganizationByUID(ctx context.Context, uid uuid.UUID) (*datamodel.Owner, error)
+	UpdateOrganization(ctx context.Context, id string, user *datamodel.Owner) error
+	DeleteOrganization(ctx context.Context, id string) error
+
+	listOwners(ctx context.Context, ownerType string, pageSize int, pageToken string, filter filtering.Filter) ([]*datamodel.Owner, int64, string, error)
+	createOwner(ctx context.Context, ownerType string, user *datamodel.Owner) error
+	getOwner(ctx context.Context, ownerType string, id string) (*datamodel.Owner, error)
+	getOwnerByUID(ctx context.Context, ownerType string, uid uuid.UUID) (*datamodel.Owner, error)
+	updateOwner(ctx context.Context, ownerType string, id string, user *datamodel.Owner) error
+	deleteOwner(ctx context.Context, ownerType string, id string) error
 
 	GetUserPasswordHash(ctx context.Context, uid uuid.UUID) (string, time.Time, error)
 	UpdateUserPasswordHash(ctx context.Context, uid uuid.UUID, newPassword string, updateTime time.Time) error
@@ -53,20 +68,65 @@ func NewRepository(db *gorm.DB) Repository {
 	}
 }
 
-// ListUser lists users
-// Return error types
-//   - codes.InvalidArgument
-//   - codes.Internal
 func (r *repository) ListUsers(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*datamodel.Owner, int64, string, error) {
+	return r.listOwners(ctx, "user", pageSize, pageToken, filter)
+}
+func (r *repository) CreateUser(ctx context.Context, user *datamodel.Owner) error {
+	return r.createOwner(ctx, "user", user)
+}
+func (r *repository) GetUser(ctx context.Context, id string) (*datamodel.Owner, error) {
+	return r.getOwner(ctx, "user", id)
+}
+func (r *repository) GetUserByUID(ctx context.Context, uid uuid.UUID) (*datamodel.Owner, error) {
+	return r.getOwnerByUID(ctx, "user", uid)
+}
+func (r *repository) UpdateUser(ctx context.Context, id string, user *datamodel.Owner) error {
+	return r.updateOwner(ctx, "user", id, user)
+}
+func (r *repository) DeleteUser(ctx context.Context, id string) error {
+	return r.deleteOwner(ctx, "user", id)
+}
+
+func (r *repository) ListOrganizations(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*datamodel.Owner, int64, string, error) {
+	return r.listOwners(ctx, "organization", pageSize, pageToken, filter)
+}
+func (r *repository) CreateOrganization(ctx context.Context, org *datamodel.Owner) error {
+	return r.createOwner(ctx, "organization", org)
+}
+func (r *repository) GetOrganization(ctx context.Context, id string) (*datamodel.Owner, error) {
+	return r.getOwner(ctx, "organization", id)
+}
+func (r *repository) GetOrganizationByUID(ctx context.Context, uid uuid.UUID) (*datamodel.Owner, error) {
+	return r.getOwnerByUID(ctx, "organization", uid)
+}
+func (r *repository) UpdateOrganization(ctx context.Context, id string, org *datamodel.Owner) error {
+	return r.updateOwner(ctx, "organization", id, org)
+}
+func (r *repository) DeleteOrganization(ctx context.Context, id string) error {
+	return r.deleteOwner(ctx, "organization", id)
+}
+
+func (r *repository) GetAllUsers(ctx context.Context) ([]*datamodel.Owner, error) {
+	logger, _ := logger.GetZapLogger(ctx)
+	var users []*datamodel.Owner
+	if result := r.db.Find(users).Where("owner_type = 'user'"); result.Error != nil {
+		logger.Error(result.Error.Error())
+		return users, status.Errorf(codes.Internal, "error %v", result.Error)
+	}
+	return users, nil
+}
+
+func (r *repository) listOwners(ctx context.Context, ownerType string, pageSize int, pageToken string, filter filtering.Filter) ([]*datamodel.Owner, int64, string, error) {
+
 	logger, _ := logger.GetZapLogger(ctx)
 	totalSize := int64(0)
-	if result := r.db.Model(&datamodel.Owner{}).Where("owner_type = 'user'").Count(&totalSize); result.Error != nil {
+	if result := r.db.Model(&datamodel.Owner{}).Where("owner_type = ?", ownerType).Count(&totalSize); result.Error != nil {
 		logger.Error(result.Error.Error())
 		return nil, totalSize, "", status.Errorf(codes.Internal, "error %v", result.Error)
 	}
 
 	queryBuilder := r.db.Model(&datamodel.Owner{}).Order("create_time DESC, id DESC")
-	queryBuilder = queryBuilder.Where("owner_type = 'user'")
+	queryBuilder = queryBuilder.Where("owner_type = ?", ownerType)
 
 	if pageSize > 0 {
 		queryBuilder = queryBuilder.Limit(pageSize)
@@ -80,7 +140,7 @@ func (r *repository) ListUsers(ctx context.Context, pageSize int, pageToken stri
 		queryBuilder = queryBuilder.Where("(create_time,uid) < (?::timestamp, ?)", createTime, uid)
 	}
 
-	var users []*datamodel.Owner
+	var owners []*datamodel.Owner
 	var createTime time.Time
 
 	rows, err := queryBuilder.Rows()
@@ -97,30 +157,40 @@ func (r *repository) ListUsers(ctx context.Context, pageSize int, pageToken stri
 		}
 		createTime = item.CreateTime
 
-		users = append(users, &item)
+		owners = append(owners, &item)
 	}
 
-	if len(users) > 0 {
+	nextPageToken := ""
+	if len(owners) > 0 {
 
-		// Last page
-		if (len(users) < pageSize) || (len(users) == pageSize && int64(len(users)) == totalSize) {
-			return users, totalSize, "", nil
+		lastUID := (owners)[len(owners)-1].UID
+		lastItem := &datamodel.Owner{}
+		if result := r.db.Model(&datamodel.Owner{}).
+			Where("owner_type = ?", ownerType).
+			Order("create_time ASC, uid ASC").
+			Limit(1).Find(lastItem); result.Error != nil {
+			return nil, 0, "", status.Errorf(codes.Internal, result.Error.Error())
 		}
-		// Not last page
-		nextPageToken := paginate.EncodeToken(createTime, (users)[len(users)-1].UID.String())
+		if lastItem.UID.String() == lastUID.String() {
+			nextPageToken = ""
+		} else {
+			nextPageToken = paginate.EncodeToken(createTime, lastUID.String())
+		}
 
-		return users, totalSize, nextPageToken, nil
+		return owners, totalSize, nextPageToken, nil
 	}
 
-	return users, totalSize, "", nil
+	return owners, totalSize, "", nil
 }
 
-// CreateUser creates a new user
-// Return error types
-//   - codes.Internal
-func (r *repository) CreateUser(ctx context.Context, user *datamodel.Owner) error {
+func (r *repository) createOwner(ctx context.Context, ownerType string, owner *datamodel.Owner) error {
+
+	if ownerType != owner.OwnerType.String {
+		return fmt.Errorf("wrong ownerType")
+	}
+
 	logger, _ := logger.GetZapLogger(ctx)
-	if result := r.db.Model(&datamodel.Owner{}).Create(user); result.Error != nil {
+	if result := r.db.Model(&datamodel.Owner{}).Create(owner); result.Error != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(result.Error, &pgErr) {
 			if pgErr.Code == "23505" {
@@ -133,61 +203,35 @@ func (r *repository) CreateUser(ctx context.Context, user *datamodel.Owner) erro
 	return nil
 }
 
-// GetAllUsers gets all users in the database
-// Return error types
-//   - codes.Internal
-func (r *repository) GetAllUsers(ctx context.Context) ([]*datamodel.Owner, error) {
+func (r *repository) getOwner(ctx context.Context, ownerType string, id string) (*datamodel.Owner, error) {
+	var owner datamodel.Owner
+	if result := r.db.Model(&datamodel.Owner{}).Where("owner_type = ?", ownerType).Where("id = ?", id).First(&owner); result.Error != nil {
+		return nil, status.Error(codes.NotFound, "the owner is not found")
+	}
+	return &owner, nil
+}
+
+func (r *repository) getOwnerByUID(ctx context.Context, ownerType string, uid uuid.UUID) (*datamodel.Owner, error) {
+	var owner datamodel.Owner
+	if result := r.db.Model(&datamodel.Owner{}).Where("owner_type = ?", ownerType).Where("uid = ?", uid.String()).First(&owner); result.Error != nil {
+		return nil, status.Error(codes.NotFound, "the owner is not found")
+	}
+	return &owner, nil
+}
+
+func (r *repository) updateOwner(ctx context.Context, ownerType string, id string, owner *datamodel.Owner) error {
 	logger, _ := logger.GetZapLogger(ctx)
-	var users []*datamodel.Owner
-	if result := r.db.Find(users).Where("owner_type = 'user'"); result.Error != nil {
-		logger.Error(result.Error.Error())
-		return users, status.Errorf(codes.Internal, "error %v", result.Error)
-	}
-	return users, nil
-}
-
-// GetUser gets a user by ID
-// Return error types
-//   - codes.NotFound
-func (r *repository) GetUser(ctx context.Context, id string) (*datamodel.Owner, error) {
-	var user datamodel.Owner
-	if result := r.db.Model(&datamodel.Owner{}).Where("owner_type = 'user'").Where("id = ?", id).First(&user); result.Error != nil {
-		return nil, status.Error(codes.NotFound, "the user is not found")
-	}
-	return &user, nil
-}
-
-// GetUser gets a user by UID
-// Return error types
-//   - codes.NotFound
-func (r *repository) GetUserByUID(ctx context.Context, uid uuid.UUID) (*datamodel.Owner, error) {
-	var user datamodel.Owner
-	if result := r.db.Model(&datamodel.Owner{}).Where("owner_type = 'user'").Where("uid = ?", uid.String()).First(&user); result.Error != nil {
-		return nil, status.Error(codes.NotFound, "the user is not found")
-	}
-	return &user, nil
-}
-
-// UpdateUser updates a user by ID
-// Return error types
-//   - codes.Internal
-func (r *repository) UpdateUser(ctx context.Context, id string, user *datamodel.Owner) error {
-	logger, _ := logger.GetZapLogger(ctx)
-	if result := r.db.Select("*").Omit("UID").Omit("password_hash").Model(&datamodel.Owner{}).Where("owner_type = 'user'").Where("id = ?", id).Updates(user); result.Error != nil {
+	if result := r.db.Select("*").Omit("UID").Omit("password_hash").Model(&datamodel.Owner{}).Where("owner_type = ?", ownerType).Where("id = ?", id).Updates(owner); result.Error != nil {
 		logger.Error(result.Error.Error())
 		return status.Errorf(codes.Internal, "error %v", result.Error)
 	}
 	return nil
 }
 
-// DeleteUser deletes a user by ID
-// Return error types
-//   - codes.NotFound
-//   - codes.Internal
-func (r *repository) DeleteUser(ctx context.Context, id string) error {
+func (r *repository) deleteOwner(ctx context.Context, ownerType string, id string) error {
 	logger, _ := logger.GetZapLogger(ctx)
 	result := r.db.Model(&datamodel.Owner{}).
-		Where("owner_type = 'user'").
+		Where("owner_type = ?", ownerType).
 		Where("id = ?", id).
 		Delete(&datamodel.Owner{})
 
@@ -197,7 +241,7 @@ func (r *repository) DeleteUser(ctx context.Context, id string) error {
 	}
 
 	if result.RowsAffected == 0 {
-		return status.Errorf(codes.NotFound, "the user with id %s is not found", id)
+		return status.Errorf(codes.NotFound, "the owner with id %s is not found", id)
 	}
 
 	return nil

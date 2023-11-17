@@ -128,6 +128,74 @@ func (s *service) DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.Owne
 	return pbUsers, nil
 }
 
+// DBUser2PBUser converts a database user instance to proto user
+func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgmtPB.Organization, error) {
+	if dbOrg == nil {
+		return nil, status.Error(codes.Internal, "can't convert a nil organization")
+	}
+
+	id := dbOrg.ID
+	uid := dbOrg.Base.UID.String()
+
+	return &mgmtPB.Organization{
+		Name:       fmt.Sprintf("organizations/%s", id),
+		Uid:        &uid,
+		Id:         id,
+		CreateTime: timestamppb.New(dbOrg.Base.CreateTime),
+		UpdateTime: timestamppb.New(dbOrg.Base.UpdateTime),
+		CustomerId: dbOrg.CustomerId,
+		OrgName:    &dbOrg.OrgName.String,
+	}, nil
+}
+
+// PBUser2DBUser converts a proto user instance to database user
+func (s *service) PBOrg2DBOrg(pbOrg *mgmtPB.Organization) (*datamodel.Owner, error) {
+	if pbOrg == nil {
+		return nil, status.Error(codes.Internal, "can't convert a nil organization")
+	}
+
+	uid, err := uuid.FromString(pbOrg.GetUid())
+	if err != nil {
+		return nil, err
+	}
+
+	userType := "organization"
+	customerId := pbOrg.GetCustomerId()
+	orgName := pbOrg.GetOrgName()
+
+	return &datamodel.Owner{
+		Base: datamodel.Base{
+			UID: uid,
+		},
+		ID: pbOrg.GetId(),
+		OwnerType: sql.NullString{
+			String: userType,
+			Valid:  len(userType) > 0,
+		},
+		CustomerId: customerId,
+		OrgName: sql.NullString{
+			String: orgName,
+			Valid:  len(orgName) > 0,
+		},
+	}, nil
+}
+
+func (s *service) DBOrgs2PBOrgs(ctx context.Context, dbOrgs []*datamodel.Owner) ([]*mgmtPB.Organization, error) {
+	var err error
+	pbOrgs := make([]*mgmtPB.Organization, len(dbOrgs))
+	for idx := range dbOrgs {
+		pbOrgs[idx], err = s.DBOrg2PBOrg(
+			ctx,
+			dbOrgs[idx],
+		)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+	return pbOrgs, nil
+}
+
 // DBToken2PBToken converts a database user instance to proto user
 func (s *service) DBToken2PBToken(ctx context.Context, dbToken *datamodel.Token) (*mgmtPB.ApiToken, error) {
 	id := dbToken.ID
