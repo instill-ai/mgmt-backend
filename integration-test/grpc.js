@@ -41,19 +41,16 @@ export default function (header) {
 
     // ======== Private API
     mgmtPrivate.CheckPrivateListUsersAdmin();
-    mgmtPrivate.CheckPrivateCreateUserAdmin();
     mgmtPrivate.CheckPrivateGetUserAdmin();
     mgmtPrivate.CheckPrivateLookUpUserAdmin();
-    mgmtPrivate.CheckPrivateUpdateUserAdmin();
-    mgmtPrivate.CheckPrivateDeleteUserAdmin();
 
   } else {
     // ======== Public API with jwt-sub
-    mgmtPublicWithJwt.CheckPublicQueryAuthenticatedUser();
+    mgmtPublicWithJwt.CheckPublicGetUser();
     mgmtPublicWithJwt.CheckPublicPatchAuthenticatedUser();
     // ======== Public API
     mgmtPublic.CheckHealth();
-    mgmtPublic.CheckPublicQueryAuthenticatedUser(header);
+    mgmtPublic.CheckPublicGetUser(header);
     mgmtPublic.CheckPublicPatchAuthenticatedUser(header);
     mgmtPublic.CheckPublicCreateToken(header);
     mgmtPublic.CheckPublicListTokens(header);

@@ -26,6 +26,7 @@ type AppConfig struct {
 	InfluxDB         InfluxDBConfig         `koanf:"influxdb"`
 	ConnectorBackend ConnectorBackendConfig `koanf:"connectorbackend"`
 	PipelineBackend  PipelineBackendConfig  `koanf:"pipelinebackend"`
+	OpenFGA          OpenFGAConfig          `koanf:"openfga"`
 }
 
 // ServerConfig defines HTTP server configurations
@@ -55,6 +56,12 @@ type ConnectorBackendConfig struct {
 		Cert string `koanf:"cert"`
 		Key  string `koanf:"key"`
 	}
+}
+
+// OpenFGA config
+type OpenFGAConfig struct {
+	Host string `koanf:"host"`
+	Port int    `koanf:"port"`
 }
 
 // CacheConfig related to Redis

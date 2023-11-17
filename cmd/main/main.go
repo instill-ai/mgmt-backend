@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gofrs/uuid"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/contrib/propagators/b3"
@@ -29,8 +30,10 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	openfgaClient "github.com/openfga/go-sdk/client"
 
 	"github.com/instill-ai/mgmt-backend/config"
+	"github.com/instill-ai/mgmt-backend/pkg/acl"
 	"github.com/instill-ai/mgmt-backend/pkg/external"
 	"github.com/instill-ai/mgmt-backend/pkg/handler"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
@@ -130,6 +133,42 @@ func main() {
 	var creds credentials.TransportCredentials
 	var tlsConfig *tls.Config
 	var err error
+
+	fgaClient, err := openfgaClient.NewSdkClient(&openfgaClient.ClientConfiguration{
+		ApiScheme: "http",
+		ApiHost:   fmt.Sprintf("%s:%d", config.Config.OpenFGA.Host, config.Config.OpenFGA.Port),
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	var aclClient acl.ACLClient
+	if stores, err := fgaClient.ListStores(context.Background()).Execute(); err == nil {
+		fgaClient.SetStoreId(*(*stores.Stores)[0].Id)
+		if models, err := fgaClient.ReadAuthorizationModels(context.Background()).Execute(); err == nil {
+			aclClient = acl.NewACLClient(fgaClient, (*models.AuthorizationModels)[0].Id)
+		}
+		if err != nil {
+			panic(err)
+		}
+
+	} else {
+		panic(err)
+	}
+
+	u1, _ := uuid.NewV4()
+	u2, _ := uuid.NewV4()
+	u3, _ := uuid.NewV4()
+	err = aclClient.SetOrganizationUserMembership(u1, u2)
+	if err != nil {
+		panic(err)
+	}
+	err = aclClient.SetOrganizationUserMembership(u3, u2)
+	if err != nil {
+		panic(err)
+	}
+
 	if config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "" {
 		tlsConfig = &tls.Config{
 			ClientAuth: tls.RequireAndVerifyClientCert,
@@ -170,7 +209,7 @@ func main() {
 			logger.Info("try to start usage reporter")
 			go func() {
 				for {
-					usg = usage.NewUsage(ctx, repository, usageServiceClient, config.Config.Server.Edition)
+					usg = usage.NewUsage(ctx, service, usageServiceClient, config.Config.Server.Edition)
 					if usg != nil {
 						usg.StartReporter(ctx)
 						logger.Info("usage reporter started")

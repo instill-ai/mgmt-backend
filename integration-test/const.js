@@ -45,7 +45,6 @@ export const grpcParamsWithJwtSub = {
 export const defaultUser = {
   name: "users/admin",
   id: "admin",
-  type: "OWNER_TYPE_USER",
   email: "hello@instill.tech",
   customer_id: "",
   first_name: "Instill",

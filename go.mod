@@ -1,6 +1,8 @@
 module github.com/instill-ai/mgmt-backend
 
-go 1.21
+go 1.21.1
+
+toolchain go1.21.3
 
 retract v0.3.2 // Published accidentally.
 
@@ -18,6 +20,7 @@ require (
 	github.com/jackc/pgx/v5 v5.2.0
 	github.com/knadh/koanf v1.4.4
 	github.com/mennanov/fieldmask-utils v0.5.0
+	github.com/openfga/go-sdk v0.2.3
 	github.com/redis/go-redis/v9 v9.2.0
 	go.einride.tech/aip v0.60.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.17.0
@@ -96,6 +99,7 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/mod v0.8.0 // indirect
+	golang.org/x/sync v0.4.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/tools v0.6.0 // indirect

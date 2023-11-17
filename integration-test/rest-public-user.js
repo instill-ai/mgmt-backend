@@ -22,7 +22,7 @@ export function CheckHealth() {
   });
 }
 
-export function CheckPublicQueryAuthenticatedUser(header) {
+export function CheckPublicGetUser(header) {
   group(`Management Public API: Get authenticated user`, () => {
     check(
       http.request(
@@ -40,8 +40,6 @@ export function CheckPublicQueryAuthenticatedUser(header) {
           (r) => r.json().user.id !== undefined,
         [`GET /${constant.mgmtVersion}/users/me response id`]:
           (r) => r.json().user.id === constant.defaultUser.id,
-        [`GET /${constant.mgmtVersion}/users/me response type`]:
-          (r) => r.json().user.type === "OWNER_TYPE_USER",
         [`GET /${constant.mgmtVersion}/users/me response email`]:
           (r) => r.json().user.email !== undefined,
         [`GET /${constant.mgmtVersion}/users/me response customer_id`]:
@@ -70,7 +68,6 @@ export function CheckPublicQueryAuthenticatedUser(header) {
 export function CheckPublicPatchAuthenticatedUser(header) {
   group(`Management Public API: Update authenticated user`, () => {
     var userUpdate = {
-      type: "OWNER_TYPE_ORGANIZATION",
       email: "test@foo.bar",
       customer_id: "new_customer_id",
       first_name: "test",
@@ -104,8 +101,6 @@ export function CheckPublicPatchAuthenticatedUser(header) {
           (r) => r.json().user.uid === res.json().user.uid,
         [`PATCH /${constant.mgmtVersion}/users/me response id unchanged`]:
           (r) => r.json().user.id === res.json().user.id,
-        [`PATCH /${constant.mgmtVersion}/users/me response type unchanged`]:
-          (r) => r.json().user.type === res.json().user.type,
         [`PATCH /${constant.mgmtVersion}/users/me response email updated`]:
           (r) => r.json().user.email === userUpdate.email,
         [`PATCH /${constant.mgmtVersion}/users/me response customer_id unchanged`]:

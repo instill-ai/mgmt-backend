@@ -3,15 +3,19 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/instill-ai/mgmt-backend/config"
+	"github.com/instill-ai/mgmt-backend/pkg/acl"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
+	"github.com/instill-ai/mgmt-backend/pkg/service"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
@@ -19,6 +23,7 @@ import (
 	"gorm.io/gorm"
 
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	openfga "github.com/openfga/go-sdk/client"
 
 	database "github.com/instill-ai/mgmt-backend/pkg/db"
 	custom_otel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
@@ -52,7 +57,7 @@ func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 	defaultUser := datamodel.User{
 		Base:                   datamodel.Base{UID: defaultUserUID},
 		ID:                     constant.DefaultUserID,
-		OwnerType:              sql.NullString{String: datamodel.PBUserType2DBUserType[mgmtPB.OwnerType_OWNER_TYPE_USER], Valid: true},
+		OwnerType:              sql.NullString{String: service.PBUserType2DBUserType[mgmtPB.OwnerType_OWNER_TYPE_USER], Valid: true},
 		Email:                  constant.DefaultUserEmail,
 		CustomerId:             constant.DefaultUserCustomerId,
 		FirstName:              sql.NullString{String: constant.DefaultUserFirstName, Valid: true},
@@ -63,7 +68,7 @@ func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 		CookieToken:            sql.NullString{String: "", Valid: false},
 	}
 
-	user, err := r.GetUserByID(constant.DefaultUserID)
+	user, err := r.GetUser(context.Background(), constant.DefaultUserID)
 	// Default user already exists
 	if err == nil {
 		passwordHash, _, err := r.GetUserPasswordHash(ctx, user.UID)
@@ -131,6 +136,49 @@ func main() {
 	// Create a default user
 	if err := createDefaultUser(ctx, db); err != nil {
 		logger.Fatal(err.Error())
+	}
+
+	fgaClient, err := openfga.NewSdkClient(&openfga.ClientConfiguration{
+		ApiScheme: "http",
+		ApiHost:   fmt.Sprintf("%s:%d", config.Config.OpenFGA.Host, config.Config.OpenFGA.Port),
+	})
+
+	if err != nil {
+		panic(err)
+		// .. Handle error
+	}
+
+	stores, err := fgaClient.ListStores(context.Background()).Execute()
+	if err != nil {
+		panic(err)
+	}
+	storeId := ""
+	if len(*stores.Stores) == 0 {
+		data, err := fgaClient.CreateStore(context.Background()).Body(openfga.ClientCreateStoreRequest{Name: "instill"}).Execute()
+		if err != nil {
+			panic(err)
+		}
+		storeId = *data.Id
+	} else {
+		storeId = *(*stores.Stores)[0].Id
+	}
+
+	fgaClient.SetStoreId(storeId)
+
+	models, err := fgaClient.ReadAuthorizationModels(context.Background()).Execute()
+	if err != nil {
+		panic(err)
+	}
+	if len(*models.AuthorizationModels) == 0 {
+		var body openfga.ClientWriteAuthorizationModelRequest
+		if err := json.Unmarshal([]byte(acl.ACLModel), &body); err != nil {
+			panic(err)
+		}
+
+		_, err = fgaClient.WriteAuthorizationModel(context.Background()).Body(body).Execute()
+		if err != nil {
+			panic(err)
+		}
 	}
 
 }

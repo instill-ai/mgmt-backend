@@ -30,7 +30,7 @@ database:
   host: pg-sql
   port: 5432
   name: mgmt
-  version: 2
+  version: 3
   timezone: Etc/UTC
   pool:
     idleconnections: 5
@@ -54,3 +54,6 @@ log:
   otelcollector:
     host: otel-collector
     port: 8095
+openfga:
+  host: openfga
+  port: 8080

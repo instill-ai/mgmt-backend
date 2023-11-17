@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
-	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
-	"github.com/instill-ai/mgmt-backend/pkg/repository"
+	"github.com/instill-ai/mgmt-backend/pkg/service"
 	"github.com/instill-ai/x/repo"
+	"go.einride.tech/aip/filtering"
 
 	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1alpha"
 	usagePB "github.com/instill-ai/protogen-go/core/usage/v1alpha"
@@ -25,14 +25,14 @@ type Usage interface {
 }
 
 type usage struct {
-	repository repository.Repository
-	reporter   usageReporter.Reporter
-	edition    string
-	version    string
+	service  service.Service
+	reporter usageReporter.Reporter
+	edition  string
+	version  string
 }
 
 // NewUsage initiates a usage instance
-func NewUsage(ctx context.Context, r repository.Repository, usc usagePB.UsageServiceClient, edition string) Usage {
+func NewUsage(ctx context.Context, s service.Service, usc usagePB.UsageServiceClient, edition string) Usage {
 	logger, _ := logger.GetZapLogger(ctx)
 
 	version, err := repo.ReadReleaseManifest("release-please/manifest.json")
@@ -42,8 +42,8 @@ func NewUsage(ctx context.Context, r repository.Repository, usc usagePB.UsageSer
 	}
 
 	var defaultOwnerUID string
-	if user, err := r.GetUserByID(constant.DefaultUserID); err == nil {
-		defaultOwnerUID = user.UID.String()
+	if user, err := s.GetUserAdmin(ctx, constant.DefaultUserID); err == nil {
+		defaultOwnerUID = *user.Uid
 	} else {
 		logger.Error(err.Error())
 	}
@@ -55,10 +55,10 @@ func NewUsage(ctx context.Context, r repository.Repository, usc usagePB.UsageSer
 	}
 
 	return &usage{
-		repository: r,
-		reporter:   reporter,
-		edition:    edition,
-		version:    version,
+		service:  s,
+		reporter: reporter,
+		edition:  edition,
+		version:  version,
 	}
 }
 
@@ -68,27 +68,29 @@ func (u *usage) RetrieveUsageData() interface{} {
 	logger, _ := logger.GetZapLogger(ctx)
 	logger.Debug("[mgmt-backend] retrieve usage data...")
 
-	dbUsers, err := u.repository.GetAllUsers(ctx)
-	if err != nil {
-		logger.Error(fmt.Sprintf("%s", err))
-	}
-
-	pbUsers := []*mgmtPB.User{}
-	for idx := range dbUsers {
-		pbUser, err := datamodel.DBUser2PBUser(&dbUsers[idx])
+	allUsers := []*mgmtPB.User{}
+	pageToken := ""
+	for {
+		users, _, token, err := u.service.ListUsersAdmin(ctx, 100, pageToken, filtering.Filter{})
 		if err != nil {
 			logger.Error(fmt.Sprintf("%s", err))
+			break
 		}
-		pbUsers = append(pbUsers, pbUser)
+
+		pageToken = token
+		allUsers = append(allUsers, users...)
+		if token == "" {
+			break
+		}
 	}
 
-	logger.Debug(fmt.Sprintf("[mgmt-backend] usage data length: %v", len(pbUsers)))
+	logger.Debug(fmt.Sprintf("[mgmt-backend] usage data length: %v", len(allUsers)))
 
 	logger.Debug("[mgmt-backend] send usage data...")
 
 	return &usagePB.SessionReport_MgmtUsageData{
 		MgmtUsageData: &usagePB.MgmtUsageData{
-			Usages: pbUsers,
+			Usages: allUsers,
 		},
 	}
 }
@@ -101,8 +103,8 @@ func (u *usage) StartReporter(ctx context.Context) {
 	logger, _ := logger.GetZapLogger(ctx)
 
 	var defaultOwnerUID string
-	if user, err := u.repository.GetUserByID(constant.DefaultUserID); err == nil {
-		defaultOwnerUID = user.UID.String()
+	if user, err := u.service.GetUserAdmin(ctx, constant.DefaultUserID); err == nil {
+		defaultOwnerUID = *user.Uid
 	} else {
 		logger.Error(err.Error())
 	}
@@ -124,8 +126,8 @@ func (u *usage) TriggerSingleReporter(ctx context.Context) {
 	logger, _ := logger.GetZapLogger(ctx)
 
 	var defaultOwnerUID string
-	if user, err := u.repository.GetUserByID(constant.DefaultUserID); err == nil {
-		defaultOwnerUID = user.UID.String()
+	if user, err := u.service.GetUserAdmin(ctx, constant.DefaultUserID); err == nil {
+		defaultOwnerUID = *user.Uid
 	} else {
 		logger.Error(err.Error())
 	}

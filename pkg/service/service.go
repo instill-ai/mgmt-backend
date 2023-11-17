@@ -24,14 +24,24 @@ import (
 
 // Service interface
 type Service interface {
+	GetCtxUser(ctx context.Context) (string, uuid.UUID, error)
+
 	ListRole() []string
-	ListUser(ctx context.Context, pageSize int, pageToken string) ([]datamodel.User, string, int64, error)
-	CreateUser(ctx context.Context, user *datamodel.User) (*datamodel.User, error)
-	GetUser(ctx context.Context, uid uuid.UUID) (*datamodel.User, error)
-	GetUserByID(ctx context.Context, id string) (*datamodel.User, error)
-	UpdateUser(ctx context.Context, uid uuid.UUID, user *datamodel.User) (*datamodel.User, error)
-	DeleteUser(ctx context.Context, uid uuid.UUID) error
-	DeleteUserByID(ctx context.Context, id string) error
+	CreateUser(ctx context.Context, userUID uuid.UUID, user *mgmtPB.User) (*mgmtPB.User, error)
+	ListUsers(ctx context.Context, userUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.User, int64, string, error)
+	GetUser(ctx context.Context, userUID uuid.UUID, id string) (*mgmtPB.User, error)
+	UpdateUser(ctx context.Context, userUID uuid.UUID, id string, user *mgmtPB.User) (*mgmtPB.User, error)
+	DeleteUser(ctx context.Context, userUID uuid.UUID, id string) error
+
+	ListUsersAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.User, int64, string, error)
+	GetUserAdmin(ctx context.Context, id string) (*mgmtPB.User, error)
+	GetUserByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtPB.User, error)
+
+	CreateToken(ctx context.Context, userUID uuid.UUID, token *mgmtPB.ApiToken) error
+	ListTokens(ctx context.Context, userUID uuid.UUID, pageSize int64, pageToken string) ([]*mgmtPB.ApiToken, int64, string, error)
+	GetToken(ctx context.Context, userUID uuid.UUID, id string) (*mgmtPB.ApiToken, error)
+	DeleteToken(ctx context.Context, userUID uuid.UUID, id string) error
+	ValidateToken(accessToken string) (string, error)
 
 	GetUserPasswordHash(ctx context.Context, uid uuid.UUID) (string, time.Time, error)
 	UpdateUserPasswordHash(ctx context.Context, uid uuid.UUID, newPassword string) error
@@ -43,13 +53,13 @@ type Service interface {
 	ListConnectorExecuteTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteTableRecord, int64, string, error)
 	ListConnectorExecuteChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteChartRecord, error)
 
-	GetCtxUser(ctx context.Context) (string, uuid.UUID, error)
+	DBUser2PBUser(ctx context.Context, dbUser *datamodel.User) (*mgmtPB.User, error)
+	DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.User) ([]*mgmtPB.User, error)
+	PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.User, error)
 
-	CreateToken(ctx context.Context, token *datamodel.Token) error
-	ListTokens(ctx context.Context, pageSize int64, pageToken string, owner string) ([]datamodel.Token, int64, string, error)
-	GetToken(ctx context.Context, id string, owner string) (*datamodel.Token, error)
-	DeleteToken(ctx context.Context, id string, owner string) error
-	ValidateToken(accessToken string) (string, error)
+	DBToken2PBToken(ctx context.Context, dbToken *datamodel.Token) (*mgmtPB.ApiToken, error)
+	DBTokens2PBTokens(ctx context.Context, dbTokens []*datamodel.Token) ([]*mgmtPB.ApiToken, error)
+	PBToken2DBToken(ctx context.Context, pbToken *mgmtPB.ApiToken) (*datamodel.Token, error)
 }
 
 type service struct {
@@ -81,7 +91,7 @@ func (s *service) GetCtxUser(ctx context.Context) (string, uuid.UUID, error) {
 		if err != nil {
 			return "", uuid.Nil, status.Errorf(codes.Unauthenticated, "Unauthorized")
 		}
-		user, err := s.GetUser(ctx, uuid.FromStringOrNil(headerUserUId))
+		user, err := s.repository.GetUserByUID(ctx, uuid.FromStringOrNil(headerUserUId))
 		if err != nil {
 			return "", uuid.Nil, status.Errorf(codes.Unauthenticated, "Unauthorized")
 		}
@@ -101,8 +111,13 @@ func (s *service) ListRole() []string {
 // Return error types
 //   - codes.InvalidArgument
 //   - codes.Internal
-func (s *service) ListUser(ctx context.Context, pageSize int, pageToken string) ([]datamodel.User, string, int64, error) {
-	return s.repository.ListUser(ctx, pageSize, pageToken)
+func (s *service) ListUsers(ctx context.Context, userUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.User, int64, string, error) {
+	dbUsers, totalSize, nextPageToken, err := s.repository.ListUsers(ctx, pageSize, pageToken, filter)
+	if err != nil {
+		return nil, 0, "", err
+	}
+	pbUsers, err := s.DBUsers2PBUsers(ctx, dbUsers)
+	return pbUsers, totalSize, nextPageToken, err
 }
 
 // CreateUser creates an user instance
@@ -110,46 +125,71 @@ func (s *service) ListUser(ctx context.Context, pageSize int, pageToken string) 
 //   - codes.InvalidArgument
 //   - codes.NotFound
 //   - codes.Internal
-func (s *service) CreateUser(ctx context.Context, user *datamodel.User) (*datamodel.User, error) {
-	//TODO: validate spec JSON schema
+func (s *service) CreateUser(ctx context.Context, userUID uuid.UUID, user *mgmtPB.User) (*mgmtPB.User, error) {
 
-	//Validation: role field
-	if user.Role.Valid {
-		if r := Role(user.Role.String); !ValidateRole(r) {
+	dbUser, err := s.PBUser2DBUser(user)
+	if err != nil {
+		return nil, err
+	}
+	if dbUser.Role.Valid {
+		if r := Role(dbUser.Role.String); !ValidateRole(r) {
 			return nil, status.Errorf(codes.InvalidArgument, "`role` %s in the body is not valid. Please choose from: [ %v ]", r.GetName(), strings.Join(s.ListRole(), ", "))
 		}
 	}
-
-	if err := s.repository.CreateUser(ctx, user); err != nil {
+	if err := s.repository.CreateUser(ctx, dbUser); err != nil {
 		return nil, err
 	}
 
-	return s.repository.GetUserByID(user.ID)
+	dbCreatedUser, err := s.repository.GetUser(ctx, dbUser.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.DBUser2PBUser(ctx, dbCreatedUser)
 }
 
-// GetUserByID gets a user by ID
+// GetUser gets a user by ID
 // Return error types
 //   - codes.InvalidArgument
 //   - codes.NotFound
-func (s *service) GetUserByID(ctx context.Context, id string) (*datamodel.User, error) {
+func (s *service) GetUser(ctx context.Context, userUID uuid.UUID, id string) (*mgmtPB.User, error) {
 	// Validation: Required field
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "the required field `id` is not specified")
 	}
 
-	return s.repository.GetUserByID(id)
+	dbUser, err := s.repository.GetUser(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return s.DBUser2PBUser(ctx, dbUser)
 }
 
-// GetUser gets a user by UUID
-// Return error types
-//   - codes.InvalidArgument
-//   - codes.NotFound
-func (s *service) GetUser(ctx context.Context, uid uuid.UUID) (*datamodel.User, error) {
-	// Validation: Required field
-	if uid.IsNil() {
-		return nil, status.Error(codes.InvalidArgument, "the required field `uid` is not specified")
+func (s *service) GetUserAdmin(ctx context.Context, id string) (*mgmtPB.User, error) {
+
+	dbUser, err := s.repository.GetUser(ctx, id)
+	if err != nil {
+		return nil, err
 	}
-	return s.repository.GetUser(uid)
+	return s.DBUser2PBUser(ctx, dbUser)
+}
+
+func (s *service) GetUserByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtPB.User, error) {
+
+	dbUser, err := s.repository.GetUserByUID(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+	return s.DBUser2PBUser(ctx, dbUser)
+}
+
+func (s *service) ListUsersAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.User, int64, string, error) {
+	dbUsers, totalSize, nextPageToken, err := s.repository.ListUsers(ctx, pageSize, pageToken, filter)
+	if err != nil {
+		return nil, 0, "", err
+	}
+	pbUsers, err := s.DBUsers2PBUsers(ctx, dbUsers)
+	return pbUsers, totalSize, nextPageToken, err
 }
 
 // UpdateUser updates a user by UUID
@@ -157,58 +197,48 @@ func (s *service) GetUser(ctx context.Context, uid uuid.UUID) (*datamodel.User, 
 //   - codes.InvalidArgument
 //   - codes.NotFound
 //   - codes.Internal
-func (s *service) UpdateUser(ctx context.Context, uid uuid.UUID, user *datamodel.User) (*datamodel.User, error) {
-	// Validation: Required field
-	if uid.IsNil() {
-		return nil, status.Error(codes.InvalidArgument, "the required field `uid` is not specified")
-	}
-
-	//Validation: role field
-	if user.Role.Valid {
-		if r := Role(user.Role.String); !ValidateRole(r) {
-			return nil, status.Errorf(codes.InvalidArgument, "`role` %s in the body is not valid. Please choose from: [ %v ]", r.GetName(), strings.Join(s.ListRole(), ", "))
-		}
-	}
+func (s *service) UpdateUser(ctx context.Context, userUID uuid.UUID, id string, user *mgmtPB.User) (*mgmtPB.User, error) {
 
 	// Check if the user exists
-	if _, err := s.repository.GetUser(uid); err != nil {
+	if _, err := s.repository.GetUser(ctx, id); err != nil {
 		return nil, err
 	}
 
 	// Update the user
-	if err := s.repository.UpdateUser(ctx, uid, user); err != nil {
+	dbUser, err := s.PBUser2DBUser(user)
+	if err != nil {
+		return nil, err
+	}
+	//Validation: role field
+	if dbUser.Role.Valid {
+		if r := Role(dbUser.Role.String); !ValidateRole(r) {
+			return nil, status.Errorf(codes.InvalidArgument, "`role` %s in the body is not valid. Please choose from: [ %v ]", r.GetName(), strings.Join(s.ListRole(), ", "))
+		}
+	}
+	if err := s.repository.UpdateUser(ctx, id, dbUser); err != nil {
 		return nil, err
 	}
 
-	// Get the updated user
-	return s.repository.GetUser(uid)
-}
-
-// DeleteUser deletes a user by UUID
-// Return error types
-//   - codes.InvalidArgument
-//   - codes.NotFound
-//   - codes.Internal
-func (s *service) DeleteUser(ctx context.Context, uid uuid.UUID) error {
-	// Validation: Required field
-	if uid.IsNil() {
-		return status.Error(codes.InvalidArgument, "the required field `uid` is not specified")
+	dbUserUpdated, err := s.repository.GetUser(ctx, id)
+	if err != nil {
+		return nil, err
 	}
-	return s.repository.DeleteUser(ctx, uid)
+	return s.DBUser2PBUser(ctx, dbUserUpdated)
+
 }
 
-// DeleteUserByID deletes a user by ID
+// DeleteUser deletes a user by ID
 // Return error types
 //   - codes.InvalidArgument
 //   - codes.NotFound
 //   - codes.Internal
-func (s *service) DeleteUserByID(ctx context.Context, id string) error {
+func (s *service) DeleteUser(ctx context.Context, userUID uuid.UUID, id string) error {
 	// Validation: Required field
 	if id == "" {
 		return status.Error(codes.InvalidArgument, "the required field `id` is not specified")
 	}
 
-	return s.repository.DeleteUserByID(ctx, id)
+	return s.repository.DeleteUser(ctx, id)
 }
 
 func (s *service) GetUserPasswordHash(ctx context.Context, uid uuid.UUID) (string, time.Time, error) {
@@ -220,29 +250,71 @@ func (s *service) UpdateUserPasswordHash(ctx context.Context, uid uuid.UUID, new
 	return s.repository.UpdateUserPasswordHash(ctx, uid, newPassword, time.Now())
 }
 
-func (s *service) CreateToken(ctx context.Context, token *datamodel.Token) error {
+func (s *service) CreateToken(ctx context.Context, userUID uuid.UUID, token *mgmtPB.ApiToken) error {
 
-	err := s.repository.CreateToken(ctx, token)
+	dbToken, err := s.PBToken2DBToken(ctx, token)
+	if err != nil {
+		return err
+	}
+
+	dbToken.AccessToken = datamodel.GenerateToken()
+	dbToken.Owner = fmt.Sprintf("users/%s", userUID)
+	curTime := time.Now()
+	dbToken.CreateTime = curTime
+	dbToken.UpdateTime = curTime
+	dbToken.State = datamodel.TokenState(mgmtPB.ApiToken_STATE_ACTIVE)
+
+	switch token.GetExpiration().(type) {
+	case *mgmtPB.ApiToken_Ttl:
+		if token.GetTtl() >= 0 {
+			dbToken.ExpireTime = curTime.Add(time.Second * time.Duration(token.GetTtl()))
+		} else if token.GetTtl() == -1 {
+			dbToken.ExpireTime = time.Date(2099, 12, 31, 0, 0, 0, 0, time.Now().UTC().Location())
+		} else {
+			return status.Errorf(codes.InvalidArgument, "ttl should >= -1")
+		}
+	case *mgmtPB.ApiToken_ExpireTime:
+		dbToken.ExpireTime = token.GetExpireTime().AsTime()
+	}
+
+	dbToken.TokenType = constant.DefaultTokenType
+
+	err = s.repository.CreateToken(ctx, dbToken)
 	if err != nil {
 		return err
 	}
 	// TODO: should be more robust
-	s.redisClient.Set(context.Background(), fmt.Sprintf(constant.AccessTokenKeyFormat, token.AccessToken), token.Owner, 0)
-	s.redisClient.ExpireAt(context.Background(), fmt.Sprintf(constant.AccessTokenKeyFormat, token.AccessToken), token.ExpireTime)
+	s.redisClient.Set(context.Background(), fmt.Sprintf(constant.AccessTokenKeyFormat, dbToken.AccessToken), dbToken.Owner, 0)
+	s.redisClient.ExpireAt(context.Background(), fmt.Sprintf(constant.AccessTokenKeyFormat, dbToken.AccessToken), dbToken.ExpireTime)
 
 	return nil
 }
-func (s *service) ListTokens(ctx context.Context, pageSize int64, pageToken string, owner string) ([]datamodel.Token, int64, string, error) {
-	return s.repository.ListTokens(ctx, pageSize, pageToken, owner)
+func (s *service) ListTokens(ctx context.Context, userUID uuid.UUID, pageSize int64, pageToken string) ([]*mgmtPB.ApiToken, int64, string, error) {
+	ownerPermlink := fmt.Sprintf("users/%s", userUID.String())
+	dbTokens, pageSize, pageToken, err := s.repository.ListTokens(ctx, ownerPermlink, pageSize, pageToken)
+	if err != nil {
+		return nil, 0, "", err
+	}
+
+	pbTokens, err := s.DBTokens2PBTokens(ctx, dbTokens)
+	return pbTokens, pageSize, pageToken, err
 
 }
-func (s *service) GetToken(ctx context.Context, id string, owner string) (*datamodel.Token, error) {
-	return s.repository.GetToken(ctx, id, owner)
+func (s *service) GetToken(ctx context.Context, userUID uuid.UUID, id string) (*mgmtPB.ApiToken, error) {
+
+	ownerPermlink := fmt.Sprintf("users/%s", userUID.String())
+	dbToken, err := s.repository.GetToken(ctx, ownerPermlink, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.DBToken2PBToken(ctx, dbToken)
 
 }
-func (s *service) DeleteToken(ctx context.Context, id string, owner string) error {
+func (s *service) DeleteToken(ctx context.Context, userUID uuid.UUID, id string) error {
 
-	token, err := s.GetToken(ctx, id, owner)
+	ownerPermlink := fmt.Sprintf("users/%s", userUID.String())
+	token, err := s.repository.GetToken(ctx, ownerPermlink, id)
 	if err != nil {
 		return err
 	}
@@ -250,7 +322,7 @@ func (s *service) DeleteToken(ctx context.Context, id string, owner string) erro
 
 	// TODO: should be more robust
 	s.redisClient.Del(context.Background(), fmt.Sprintf(constant.AccessTokenKeyFormat, accessToken))
-	delErr := s.repository.DeleteToken(ctx, id, owner)
+	delErr := s.repository.DeleteToken(ctx, ownerPermlink, id)
 	if delErr != nil {
 		return delErr
 	}

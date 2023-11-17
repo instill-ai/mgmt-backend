@@ -5,7 +5,7 @@ import * as constant from "./const.js";
 import * as helper from "./helper.js";
 
 
-export function CheckPublicQueryAuthenticatedUser() {
+export function CheckPublicGetUser() {
   group(`Management Public API: Get authenticated user [with random "jwt-sub" header]`, () => {
 
     check(http.request("GET", `${constant.mgmtPublicHost}/users/me`, {}, constant.restParamsWithJwtSub),
@@ -20,7 +20,6 @@ export function CheckPublicQueryAuthenticatedUser() {
 export function CheckPublicPatchAuthenticatedUser() {
   group(`Management Public API: Update authenticated user [with random "jwt-sub" header]`, () => {
     var userUpdate = {
-      type: "OWNER_TYPE_ORGANIZATION",
       email: "test@foo.bar",
       customer_id: "new_customer_id",
       first_name: "test",
