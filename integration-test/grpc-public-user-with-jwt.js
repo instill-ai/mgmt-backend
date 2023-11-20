@@ -13,7 +13,7 @@ const client = new grpc.Client();
 client.load(['proto/core/mgmt/v1alpha'], 'mgmt.proto');
 client.load(['proto/core/mgmt/v1alpha'], 'mgmt_public_service.proto');
 
-export function CheckPublicQueryAuthenticatedUser() {
+export function CheckPublicGetUser() {
 
   group(`Management Public API: Get authenticated user [with random "jwt-sub" header]`, () => {
 
@@ -21,8 +21,8 @@ export function CheckPublicQueryAuthenticatedUser() {
       plaintext: true
     });
 
-    check(client.invoke('core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser', {}, constant.grpcParamsWithJwtSub), {
-      '[with random "jwt-sub" header] core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
+    check(client.invoke('core.mgmt.v1alpha.MgmtPublicService/GetUser', {name: "users/me"}, constant.grpcParamsWithJwtSub), {
+      '[with random "jwt-sub" header] core.mgmt.v1alpha.MgmtPublicService/GetUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
     });
 
     client.close();
@@ -38,7 +38,6 @@ export function CheckPublicPatchAuthenticatedUser() {
   group(`Management Public API: Update authenticated user [with random "jwt-sub" header]`, () => {
     var userUpdate = {
       name: `users/${constant.defaultUser.id}`,
-      type: "OWNER_TYPE_ORGANIZATION",
       email: "test@foo.bar",
       customer_id: "new_customer_id",
       first_name: "test",

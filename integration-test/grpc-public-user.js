@@ -33,7 +33,7 @@ export function CheckHealth() {
   });
 }
 
-export function CheckPublicQueryAuthenticatedUser(header) {
+export function CheckPublicGetUser(header) {
 
   group(`Management Public API: Get authenticated user`, () => {
 
@@ -41,23 +41,22 @@ export function CheckPublicQueryAuthenticatedUser(header) {
       plaintext: true
     });
 
-    check(client.invoke('core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser', {}, header), {
-      'core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser status': (r) => { return r && r.status == grpc.StatusOK },
-      'core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser response name': (r) => r && r.message.user.name !== undefined,
-      'core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser response uid is UUID': (r) => r && helper.isUUID(r.message.user.uid),
-      'core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser response id': (r) => r && r.message.user.id !== undefined,
-      'core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser response id': (r) => r && r.message.user.id === constant.defaultUser.id,
-      'core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser response type': (r) => r && r.message.user.type === "OWNER_TYPE_USER",
-      'core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser response email': (r) => r && r.message.user.email !== undefined,
-      'core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser response customerId': (r) => r && r.message.user.customerId !== undefined,
-      'core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser response firstName': (r) => r && r.message.user.firstName !== undefined,
-      'core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser response lastName': (r) => r && r.message.user.lastName !== undefined,
-      'core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser response orgName': (r) => r && r.message.user.orgName !== undefined,
-      'core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser response role': (r) => r && r.message.user.role !== undefined,
-      'core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser response newsletterSubscription': (r) => r && r.message.user.newsletterSubscription !== undefined,
-      'core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser response cookieToken': (r) => r && r.message.user.cookieToken !== undefined,
-      'core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser response createTime': (r) => r && r.message.user.createTime !== undefined,
-      'core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser response updateTime': (r) => r && r.message.user.updateTime !== undefined,
+    check(client.invoke('core.mgmt.v1alpha.MgmtPublicService/GetUser', {name: "users/me"}, header), {
+      'core.mgmt.v1alpha.MgmtPublicService/GetUser status': (r) => { return r && r.status == grpc.StatusOK },
+      'core.mgmt.v1alpha.MgmtPublicService/GetUser response name': (r) => r && r.message.user.name !== undefined,
+      'core.mgmt.v1alpha.MgmtPublicService/GetUser response uid is UUID': (r) => r && helper.isUUID(r.message.user.uid),
+      'core.mgmt.v1alpha.MgmtPublicService/GetUser response id': (r) => r && r.message.user.id !== undefined,
+      'core.mgmt.v1alpha.MgmtPublicService/GetUser response id': (r) => r && r.message.user.id === constant.defaultUser.id,
+      'core.mgmt.v1alpha.MgmtPublicService/GetUser response email': (r) => r && r.message.user.email !== undefined,
+      'core.mgmt.v1alpha.MgmtPublicService/GetUser response customerId': (r) => r && r.message.user.customerId !== undefined,
+      'core.mgmt.v1alpha.MgmtPublicService/GetUser response firstName': (r) => r && r.message.user.firstName !== undefined,
+      'core.mgmt.v1alpha.MgmtPublicService/GetUser response lastName': (r) => r && r.message.user.lastName !== undefined,
+      'core.mgmt.v1alpha.MgmtPublicService/GetUser response orgName': (r) => r && r.message.user.orgName !== undefined,
+      'core.mgmt.v1alpha.MgmtPublicService/GetUser response role': (r) => r && r.message.user.role !== undefined,
+      'core.mgmt.v1alpha.MgmtPublicService/GetUser response newsletterSubscription': (r) => r && r.message.user.newsletterSubscription !== undefined,
+      'core.mgmt.v1alpha.MgmtPublicService/GetUser response cookieToken': (r) => r && r.message.user.cookieToken !== undefined,
+      'core.mgmt.v1alpha.MgmtPublicService/GetUser response createTime': (r) => r && r.message.user.createTime !== undefined,
+      'core.mgmt.v1alpha.MgmtPublicService/GetUser response updateTime': (r) => r && r.message.user.updateTime !== undefined,
     });
 
     client.close();
@@ -73,7 +72,6 @@ export function CheckPublicPatchAuthenticatedUser(header) {
   group(`Management Public API: Update authenticated user`, () => {
     var userUpdate = {
       name: `users/${constant.defaultUser.id}`,
-      type: "OWNER_TYPE_ORGANIZATION",
       email: "test@foo.bar",
       customer_id: "new_customer_id",
       first_name: "test",
@@ -84,7 +82,7 @@ export function CheckPublicPatchAuthenticatedUser(header) {
       cookie_token: "f5730f62-7026-4e11-917a-d890da315d3b",
     };
 
-    var res = client.invoke('core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser', {}, header)
+    var res = client.invoke('core.mgmt.v1alpha.MgmtPublicService/GetUser', {name: "users/me"}, header)
 
     check(client.invoke('core.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser', {
       user: userUpdate,
@@ -94,7 +92,6 @@ export function CheckPublicPatchAuthenticatedUser(header) {
       'core.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser response name unchanged': (r) => r && r.message.user.name === res.message.user.name,
       'core.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser response uid unchanged': (r) => r && r.message.user.uid === res.message.user.uid,
       'core.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser response id unchanged': (r) => r && r.message.user.id === res.message.user.id,
-      'core.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser response type unchanged': (r) => r && r.message.user.type === res.message.user.type,
       'core.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser response email updated': (r) => r && r.message.user.email === userUpdate.email,
       'core.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser response customerId unchanged': (r) => r && r.message.user.customerId === res.message.user.customerId,
       'core.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser response firstName updated': (r) => r && r.message.user.firstName === userUpdate.first_name,
@@ -115,8 +112,8 @@ export function CheckPublicPatchAuthenticatedUser(header) {
       [`[restore the default user] core.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser status`]: (r) => r && r.status == grpc.StatusOK,
     });
 
-    check(client.invoke('core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser', {}, header), {
-      'core.mgmt.v1alpha.MgmtPublicService/QueryAuthenticatedUser status': (r) => r && r.status == grpc.StatusOK,
+    check(client.invoke('core.mgmt.v1alpha.MgmtPublicService/GetUser', {name: "users/me"}, header), {
+      'core.mgmt.v1alpha.MgmtPublicService/GetUser status': (r) => r && r.status == grpc.StatusOK,
     });
   });
 
@@ -130,7 +127,7 @@ export function CheckPublicPatchAuthenticatedUser(header) {
       user: userUpdate,
       update_mask: "role"
     }, header), {
-      'core.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser nonExistRole StatusInvalidArgument': (r) => r && r.status == grpc.StatusInvalidArgument,
+      'core.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser nonExistRole StatusInvalidArgument': (r) => {console.log(r); return r && r.status == grpc.StatusInvalidArgument},
     });
 
   });

@@ -6,14 +6,11 @@ import (
 	"strings"
 
 	"github.com/gofrs/uuid"
-	"github.com/iancoleman/strcase"
+	"go.einride.tech/aip/filtering"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	fieldmask_utils "github.com/mennanov/fieldmask-utils"
-
-	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 	"github.com/instill-ai/x/sterr"
@@ -48,7 +45,7 @@ func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUse
 		pageSize = maxPageSize
 	}
 
-	dbUsers, nextPageToken, totalSize, err := h.Service.ListUser(ctx, int(pageSize), req.GetPageToken())
+	pbUsers, totalSize, nextPageToken, err := h.Service.ListUsersAdmin(ctx, int(pageSize), req.GetPageToken(), filtering.Filter{})
 	if err != nil {
 		sta := status.Convert(err)
 		switch sta.Code() {
@@ -78,27 +75,6 @@ func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUse
 			}
 			return &mgmtPB.ListUsersAdminResponse{}, st.Err()
 		}
-	}
-
-	pbUsers := []*mgmtPB.User{}
-	for idx := range dbUsers {
-		pbUser, err := datamodel.DBUser2PBUser(&dbUsers[idx])
-		if err != nil {
-			logger.Error(err.Error())
-			st, e := sterr.CreateErrorResourceInfo(
-				codes.Internal,
-				"list user error",
-				"user",
-				fmt.Sprintf("id %s", dbUsers[idx].ID),
-				"",
-				err.Error(),
-			)
-			if e != nil {
-				logger.Error(e.Error())
-			}
-			return &mgmtPB.ListUsersAdminResponse{}, st.Err()
-		}
-		pbUsers = append(pbUsers, pbUser)
 	}
 
 	resp := mgmtPB.ListUsersAdminResponse{
@@ -170,7 +146,7 @@ func (h *PrivateHandler) GetUserAdmin(ctx context.Context, req *mgmtPB.GetUserAd
 
 	id := strings.TrimPrefix(req.GetName(), "users/")
 
-	dbUser, err := h.Service.GetUserByID(ctx, id)
+	pbUser, err := h.Service.GetUserAdmin(ctx, id)
 	if err != nil {
 		sta := status.Convert(err)
 		switch sta.Code() {
@@ -202,23 +178,6 @@ func (h *PrivateHandler) GetUserAdmin(ctx context.Context, req *mgmtPB.GetUserAd
 		}
 	}
 
-	pbUser, err := datamodel.DBUser2PBUser(dbUser)
-	if err != nil {
-		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfo(
-			codes.Internal,
-			"get user error",
-			"user",
-			fmt.Sprintf("id %s", dbUser.ID),
-			"",
-			err.Error(),
-		)
-		if e != nil {
-			logger.Error(e.Error())
-		}
-		return &mgmtPB.GetUserAdminResponse{}, st.Err()
-	}
-
 	resp := mgmtPB.GetUserAdminResponse{
 		User: pbUser,
 	}
@@ -247,7 +206,7 @@ func (h *PrivateHandler) LookUpUserAdmin(ctx context.Context, req *mgmtPB.LookUp
 		return &mgmtPB.LookUpUserAdminResponse{}, st.Err()
 	}
 
-	dbUser, err := h.Service.GetUser(ctx, uid)
+	pbUser, err := h.Service.GetUserByUIDAdmin(ctx, uid)
 	if err != nil {
 		sta := status.Convert(err)
 		switch sta.Code() {
@@ -279,236 +238,8 @@ func (h *PrivateHandler) LookUpUserAdmin(ctx context.Context, req *mgmtPB.LookUp
 		}
 	}
 
-	pbUser, err := datamodel.DBUser2PBUser(dbUser)
-	if err != nil {
-		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfo(
-			codes.Internal,
-			"look up user error",
-			"user",
-			fmt.Sprintf("uid %s", dbUser.UID),
-			"",
-			err.Error(),
-		)
-		if e != nil {
-			logger.Error(e.Error())
-		}
-		return &mgmtPB.LookUpUserAdminResponse{}, st.Err()
-	}
 	resp := mgmtPB.LookUpUserAdminResponse{
 		User: pbUser,
 	}
 	return &resp, nil
-}
-
-// UpdateUserAdmin updates an existing user
-func (h *PrivateHandler) UpdateUserAdmin(ctx context.Context, req *mgmtPB.UpdateUserAdminRequest) (*mgmtPB.UpdateUserAdminResponse, error) {
-	logger, _ := logger.GetZapLogger(ctx)
-
-	reqUser := req.GetUser()
-
-	// Validate the field mask
-	if !req.GetUpdateMask().IsValid(reqUser) {
-		st, e := sterr.CreateErrorBadRequest(
-			"update user invalid fieldmask error", []*errdetails.BadRequest_FieldViolation{
-				{
-					Field:       "UpdateUserAdminRequest.update_mask",
-					Description: "invalid",
-				},
-			},
-		)
-		if e != nil {
-			logger.Error(e.Error())
-		}
-		return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
-	}
-
-	reqFieldMask, err := checkfield.CheckUpdateOutputOnlyFields(req.GetUpdateMask(), outputOnlyFields)
-	if err != nil {
-		st, e := sterr.CreateErrorBadRequest(
-			"update user update OUTPUT_ONLY fields error", []*errdetails.BadRequest_FieldViolation{
-				{
-					Field:       "UpdateUserAdminRequest OUTPUT_ONLY fields",
-					Description: err.Error(),
-				},
-			},
-		)
-		if e != nil {
-			logger.Error(e.Error())
-		}
-		return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
-	}
-
-	mask, err := fieldmask_utils.MaskFromProtoFieldMask(reqFieldMask, strcase.ToCamel)
-	if err != nil {
-		logger.Error(err.Error())
-		st, e := sterr.CreateErrorBadRequest(
-			"update user update mask error", []*errdetails.BadRequest_FieldViolation{
-				{
-					Field:       "UpdateUserAdminRequest.update_mask",
-					Description: err.Error(),
-				},
-			},
-		)
-		if e != nil {
-			logger.Error(e.Error())
-		}
-
-		return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
-	}
-
-	// Get current user
-	GResp, err := h.GetUserAdmin(ctx, &mgmtPB.GetUserAdminRequest{Name: reqUser.GetName()})
-	if err != nil {
-		return &mgmtPB.UpdateUserAdminResponse{}, err
-	}
-	pbUserToUpdate := GResp.GetUser()
-
-	if mask.IsEmpty() {
-		// return the un-changed user `pbUserToUpdate`
-		resp := mgmtPB.UpdateUserAdminResponse{
-			User: pbUserToUpdate,
-		}
-		return &resp, nil
-	}
-
-	// the current user `pbUserToUpdate`: a struct to copy to
-	uid, err := uuid.FromString(pbUserToUpdate.GetUid())
-	if err != nil {
-		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfo(
-			codes.Internal,
-			"update user error",
-			"user",
-			fmt.Sprintf("user %v", pbUserToUpdate),
-			"",
-			err.Error(),
-		)
-		if e != nil {
-			logger.Error(e.Error())
-		}
-		return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
-	}
-
-	// Handle immutable fields from the update mask
-	err = checkfield.CheckUpdateImmutableFields(reqUser, pbUserToUpdate, immutableFields)
-	if err != nil {
-		st, e := sterr.CreateErrorBadRequest(
-			"update user update IMMUTABLE fields error", []*errdetails.BadRequest_FieldViolation{
-				{
-					Field:       "UpdateUserAdminRequest IMMUTABLE fields",
-					Description: err.Error(),
-				},
-			},
-		)
-		if e != nil {
-			logger.Error(e.Error())
-		}
-		return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
-	}
-
-	// Only the fields mentioned in the field mask will be copied to `pbUserToUpdate`, other fields are left intact
-	err = fieldmask_utils.StructToStruct(mask, reqUser, pbUserToUpdate)
-	if err != nil {
-		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfo(
-			codes.Internal,
-			"update user error", "user", fmt.Sprintf("uid %s", *reqUser.Uid),
-			"",
-			err.Error(),
-		)
-		if e != nil {
-			logger.Error(e.Error())
-		}
-		return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
-	}
-
-	dbUserToUpd, err := datamodel.PBUser2DBUser(pbUserToUpdate)
-	if err != nil {
-		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfo(
-			codes.Internal,
-			"update user error",
-			"user",
-			fmt.Sprintf("id %s", pbUserToUpdate.GetId()),
-			"",
-			err.Error(),
-		)
-		if e != nil {
-			logger.Error(e.Error())
-		}
-		return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
-	}
-
-	dbUserUpdated, err := h.Service.UpdateUser(ctx, uid, dbUserToUpd)
-	if err != nil {
-		sta := status.Convert(err)
-		switch sta.Code() {
-		case codes.InvalidArgument:
-			st, e := sterr.CreateErrorBadRequest(
-				"update user error", []*errdetails.BadRequest_FieldViolation{
-					{
-						Field:       "UpdateUserAdminRequest",
-						Description: sta.Message(),
-					},
-				})
-			if e != nil {
-				logger.Error(e.Error())
-			}
-			return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
-		default:
-			st, e := sterr.CreateErrorResourceInfo(
-				sta.Code(),
-				"update user error",
-				"user",
-				fmt.Sprintf("uid %s", uid.String()),
-				"",
-				sta.Message(),
-			)
-			if e != nil {
-				logger.Error(e.Error())
-			}
-			return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
-		}
-	}
-
-	pbUserUpdated, err := datamodel.DBUser2PBUser(dbUserUpdated)
-	if err != nil {
-		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfo(
-			codes.Internal,
-			"get user error",
-			"user",
-			fmt.Sprintf("uid %s", dbUserUpdated.UID),
-			"",
-			err.Error(),
-		)
-		if e != nil {
-			logger.Error(e.Error())
-		}
-		return &mgmtPB.UpdateUserAdminResponse{}, st.Err()
-	}
-	resp := mgmtPB.UpdateUserAdminResponse{
-		User: pbUserUpdated,
-	}
-
-	return &resp, nil
-}
-
-// DeleteUserAdmin deletes a user. This endpoint is not supported yet.
-func (h *PrivateHandler) DeleteUserAdmin(ctx context.Context, req *mgmtPB.DeleteUserAdminRequest) (*mgmtPB.DeleteUserAdminResponse, error) {
-	logger, _ := logger.GetZapLogger(ctx)
-
-	st, err := sterr.CreateErrorResourceInfo(
-		codes.Unimplemented,
-		"delete user not implemented error",
-		"endpoint",
-		"/users/{user}",
-		"",
-		"not implemented",
-	)
-	if err != nil {
-		logger.Error(err.Error())
-	}
-	return &mgmtPB.DeleteUserAdminResponse{}, st.Err()
 }

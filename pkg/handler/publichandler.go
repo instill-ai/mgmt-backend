@@ -24,9 +24,7 @@ import (
 
 	"github.com/instill-ai/mgmt-backend/internal/resource"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
-	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
-	"github.com/instill-ai/mgmt-backend/pkg/middleware"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 	"github.com/instill-ai/mgmt-backend/pkg/usage"
 	"github.com/instill-ai/x/sterr"
@@ -45,6 +43,15 @@ var immutableFields = []string{"uid", "id"}
 
 var createRequiredFieldsForToken = []string{"id"}
 var outputOnlyFieldsForToken = []string{"name", "uid", "state", "token_type", "access_token", "create_time", "update_time"}
+
+var createRequiredFieldsForOrganization = []string{"id"}
+var outputOnlyFieldsForOrganization = []string{"name", "uid", "create_time", "update_time"}
+
+var requiredFieldsForOrganizationMembership = []string{"role"}
+var outputOnlyFieldsForOrganizationMembership = []string{"name", "state", "user", "organization"}
+
+var requiredFieldsForUserMembership = []string{"state"}
+var outputOnlyFieldsForUserMembership = []string{"name", "role", "user", "organization"}
 
 type PublicHandler struct {
 	mgmtPB.UnimplementedMgmtPublicServiceServer
@@ -85,12 +92,12 @@ func (h *PublicHandler) Readiness(ctx context.Context, in *mgmtPB.ReadinessReque
 // AuthTokenIssuer
 func (h *PublicHandler) AuthTokenIssuer(ctx context.Context, in *mgmtPB.AuthTokenIssuerRequest) (*mgmtPB.AuthTokenIssuerResponse, error) {
 
-	user, err := h.Service.GetUserByID(ctx, in.Username)
+	user, err := h.Service.GetUserAdmin(ctx, in.Username)
 	if err != nil {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
 	}
 
-	passwordHash, _, err := h.Service.GetUserPasswordHash(ctx, user.UID)
+	passwordHash, _, err := h.Service.GetUserPasswordHash(ctx, uuid.FromStringOrNil(*user.Uid))
 	if err != nil {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
 	}
@@ -104,7 +111,7 @@ func (h *PublicHandler) AuthTokenIssuer(ctx context.Context, in *mgmtPB.AuthToke
 	return &mgmtPB.AuthTokenIssuerResponse{
 		AccessToken: &mgmtPB.AuthTokenIssuerResponse_UnsignedAccessToken{
 			Aud: constant.DefaultJwtAudience,
-			Sub: user.UID.String(),
+			Sub: *user.Uid,
 			Iss: constant.DefaultJwtIssuer,
 			Jti: jti.String(),
 			Exp: exp,
@@ -113,18 +120,17 @@ func (h *PublicHandler) AuthTokenIssuer(ctx context.Context, in *mgmtPB.AuthToke
 }
 
 func (h *PublicHandler) AuthChangePassword(ctx context.Context, in *mgmtPB.AuthChangePasswordRequest) (*mgmtPB.AuthChangePasswordResponse, error) {
-	userId, _, err := h.Service.GetCtxUser(ctx)
 
+	userId, userUid, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+	user, err := h.Service.GetUser(ctx, userUid, userId)
 	if err != nil {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
 	}
 
-	user, err := h.Service.GetUserByID(ctx, userId)
-	if err != nil {
-		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
-	}
-
-	passwordHash, _, err := h.Service.GetUserPasswordHash(ctx, user.UID)
+	passwordHash, _, err := h.Service.GetUserPasswordHash(ctx, uuid.FromStringOrNil(*user.Uid))
 	if err != nil {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
 	}
@@ -138,7 +144,7 @@ func (h *PublicHandler) AuthChangePassword(ctx context.Context, in *mgmtPB.AuthC
 		return nil, status.Errorf(codes.Unauthenticated, "Update Password Failed")
 	}
 
-	err = h.Service.UpdateUserPasswordHash(ctx, user.UID, string(passwordBytes))
+	err = h.Service.UpdateUserPasswordHash(ctx, uuid.FromStringOrNil(*user.Uid), string(passwordBytes))
 	if err != nil {
 		return nil, status.Errorf(codes.Unauthenticated, "Update Password Failed")
 	}
@@ -161,8 +167,49 @@ func (h *PublicHandler) AuthValidateAccessToken(ctx context.Context, in *mgmtPB.
 	return &mgmtPB.AuthValidateAccessTokenResponse{}, nil
 }
 
-// GetUser returns the authenticated user
-func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
+func (h *PublicHandler) ListUsers(ctx context.Context, req *mgmtPB.ListUsersRequest) (*mgmtPB.ListUsersResponse, error) {
+
+	eventName := "ListUsers"
+
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, userUid, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	pbUsers, totalSize, nextPageToken, err := h.Service.ListUsers(ctx, userUid, int(req.GetPageSize()), req.GetPageToken(), filtering.Filter{})
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		userUid,
+		eventName,
+	)))
+
+	resp := mgmtPB.ListUsersResponse{
+		Users:         pbUsers,
+		NextPageToken: nextPageToken,
+		TotalSize:     int32(totalSize),
+	}
+
+	return &resp, nil
+}
+
+// GetUser gets the user.
+// Note: this endpoint assumes the ID of the authenticated user is the default user.
+func (h *PublicHandler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (*mgmtPB.GetUserResponse, error) {
 
 	eventName := "GetUser"
 	ctx, span := tracer.Start(ctx, eventName,
@@ -173,93 +220,24 @@ func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	var dbUser *datamodel.User
-	var err error
-
-	// Verify if "jwt-sub" is in the header
-	headerUserUId := middleware.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)
-	if headerUserUId != "" {
-		uid, err := uuid.FromString(headerUserUId)
-		if err != nil {
-			return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
-		}
-		dbUser, err = h.Service.GetUser(ctx, uid)
-		if err != nil {
-			sta := status.Convert(err)
-			switch sta.Code() {
-			case codes.InvalidArgument:
-				st, e := sterr.CreateErrorBadRequest(
-					"get user error", []*errdetails.BadRequest_FieldViolation{
-						{
-							Field:       "GetAuthenticatedUser",
-							Description: sta.Message(),
-						},
-					})
-				if e != nil {
-					logger.Error(e.Error())
-				}
-				return nil, st.Err()
-			default:
-				st, e := sterr.CreateErrorResourceInfo(
-					sta.Code(),
-					"get user error",
-					"user",
-					fmt.Sprintf("uid %s", headerUserUId),
-					"",
-					sta.Message(),
-				)
-				if e != nil {
-					logger.Error(e.Error())
-				}
-				return nil, st.Err()
-			}
-		}
-	} else {
-		// Verify "user-id" in the header if there is no "jwt-sub"
-		headerUserId := middleware.GetRequestSingleHeader(ctx, constant.HeaderUserIDKey)
-
-		dbUser, err = h.Service.GetUserByID(ctx, headerUserId)
-		if err != nil {
-			sta := status.Convert(err)
-			switch sta.Code() {
-			case codes.InvalidArgument:
-				st, e := sterr.CreateErrorBadRequest(
-					"get user error", []*errdetails.BadRequest_FieldViolation{
-						{
-							Field:       "GetAuthenticatedUser",
-							Description: sta.Message(),
-						},
-					})
-				if e != nil {
-					logger.Error(e.Error())
-				}
-				return nil, st.Err()
-			default:
-				st, e := sterr.CreateErrorResourceInfo(
-					sta.Code(),
-					"get user error",
-					"user",
-					fmt.Sprintf("id %s", headerUserId),
-					"",
-					sta.Message(),
-				)
-				if e != nil {
-					logger.Error(e.Error())
-				}
-				return nil, st.Err()
-			}
-
-		}
+	ctxUserId, ctxUserUID, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+	userId := strings.Split(req.Name, "/")[1]
+	if userId == "me" {
+		userId = ctxUserId
 	}
 
-	pbUser, err := datamodel.DBUser2PBUser(dbUser)
+	pbUser, err := h.Service.GetUser(ctx, ctxUserUID, userId)
+
 	if err != nil {
 		logger.Error(err.Error())
 		st, e := sterr.CreateErrorResourceInfo(
-			codes.Internal,
+			codes.NotFound,
 			"get user error",
 			"user",
-			fmt.Sprintf("id %s", dbUser.ID),
+			fmt.Sprintf("id %s", userId),
 			"",
 			err.Error(),
 		)
@@ -272,41 +250,12 @@ func (h *PublicHandler) GetUser(ctx context.Context) (*mgmtPB.User, error) {
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
 		logUUID.String(),
-		pbUser,
-		eventName,
-		custom_otel.SetEventResource(dbUser),
-	)))
-
-	return pbUser, nil
-}
-
-// QueryAuthenticatedUser gets the authenticated user.
-// Note: this endpoint assumes the ID of the authenticated user is the default user.
-func (h *PublicHandler) QueryAuthenticatedUser(ctx context.Context, req *mgmtPB.QueryAuthenticatedUserRequest) (*mgmtPB.QueryAuthenticatedUserResponse, error) {
-
-	eventName := "QueryAuthenticatedUser"
-	ctx, span := tracer.Start(ctx, eventName,
-		trace.WithSpanKind(trace.SpanKindServer))
-	defer span.End()
-
-	logUUID, _ := uuid.NewV4()
-
-	logger, _ := logger.GetZapLogger(ctx)
-
-	pbUser, err := h.GetUser(ctx)
-	if err != nil {
-		return &mgmtPB.QueryAuthenticatedUserResponse{}, err
-	}
-
-	logger.Info(string(custom_otel.NewLogMessage(
-		span,
-		logUUID.String(),
-		pbUser,
+		ctxUserUID,
 		eventName,
 		custom_otel.SetEventResource(pbUser),
 	)))
 
-	resp := mgmtPB.QueryAuthenticatedUserResponse{
+	resp := mgmtPB.GetUserResponse{
 		User: pbUser,
 	}
 	return &resp, nil
@@ -377,13 +326,15 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 		return &mgmtPB.PatchAuthenticatedUserResponse{}, st.Err()
 	}
 
-	// Get current authenticated user
-	GResp, err := h.QueryAuthenticatedUser(ctx, &mgmtPB.QueryAuthenticatedUserRequest{})
-
+	ctxUserId, ctxUserUID, err := h.Service.GetCtxUser(ctx)
 	if err != nil {
-		return &mgmtPB.PatchAuthenticatedUserResponse{}, err
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
 	}
-	pbUserToUpdate := GResp.GetUser()
+
+	pbUserToUpdate, err := h.Service.GetUser(ctx, ctxUserUID, ctxUserId)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
 
 	if mask.IsEmpty() {
 		// return the un-changed user `pbUserToUpdate`
@@ -391,24 +342,6 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 			User: pbUserToUpdate,
 		}
 		return &resp, nil
-	}
-
-	// the current user `pbUserToUpdate`: a struct to copy to
-	uid, err := uuid.FromString(pbUserToUpdate.GetUid())
-	if err != nil {
-		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfo(
-			codes.Internal,
-			"update authenticated user error",
-			"user",
-			fmt.Sprintf("user %v", pbUserToUpdate),
-			"",
-			err.Error(),
-		)
-		if e != nil {
-			logger.Error(e.Error())
-		}
-		return &mgmtPB.PatchAuthenticatedUserResponse{}, st.Err()
 	}
 
 	// Handle immutable fields from the update mask
@@ -444,24 +377,7 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 		return &mgmtPB.PatchAuthenticatedUserResponse{}, st.Err()
 	}
 
-	dbUserToUpd, err := datamodel.PBUser2DBUser(pbUserToUpdate)
-	if err != nil {
-		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfo(
-			codes.Internal,
-			"update authenticated user error",
-			"user",
-			fmt.Sprintf("id %s", pbUserToUpdate.GetId()),
-			"",
-			err.Error(),
-		)
-		if e != nil {
-			logger.Error(e.Error())
-		}
-		return &mgmtPB.PatchAuthenticatedUserResponse{}, st.Err()
-	}
-
-	dbUserUpdated, err := h.Service.UpdateUser(ctx, uid, dbUserToUpd)
+	pbUserUpdated, err := h.Service.UpdateUser(ctx, ctxUserUID, ctxUserId, pbUserToUpdate)
 	if err != nil {
 		sta := status.Convert(err)
 		switch sta.Code() {
@@ -482,7 +398,7 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 				sta.Code(),
 				"update authenticated user error",
 				"user",
-				fmt.Sprintf("uid %s", uid.String()),
+				fmt.Sprintf("uid %s", ctxUserUID.String()),
 				"",
 				sta.Message(),
 			)
@@ -493,22 +409,6 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 		}
 	}
 
-	pbUserUpdated, err := datamodel.DBUser2PBUser(dbUserUpdated)
-	if err != nil {
-		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfo(
-			codes.Internal,
-			"get authenticated user error",
-			"user",
-			fmt.Sprintf("uid %s", dbUserUpdated.UID),
-			"",
-			err.Error(),
-		)
-		if e != nil {
-			logger.Error(e.Error())
-		}
-		return &mgmtPB.PatchAuthenticatedUserResponse{}, st.Err()
-	}
 	resp := mgmtPB.PatchAuthenticatedUserResponse{
 		User: pbUserUpdated,
 	}
@@ -516,9 +416,9 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
 		logUUID.String(),
-		pbUserUpdated,
+		ctxUserUID,
 		eventName,
-		custom_otel.SetEventResource(dbUserUpdated),
+		custom_otel.SetEventResource(pbUserUpdated),
 	)))
 
 	// Trigger single reporter right after user updated
@@ -562,7 +462,7 @@ func (h *PublicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUser
 		return &mgmtPB.ExistUsernameResponse{}, st.Err()
 	}
 
-	dbUser, err := h.Service.GetUserByID(ctx, id)
+	pbUser, err := h.Service.GetUserAdmin(ctx, id)
 	if err != nil {
 		sta := status.Convert(err)
 		switch sta.Code() {
@@ -601,35 +501,161 @@ func (h *PublicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUser
 		}
 	}
 
-	pbUser, err := datamodel.DBUser2PBUser(dbUser)
-	if err != nil {
-		logger.Error(err.Error())
-		st, e := sterr.CreateErrorResourceInfo(
-			codes.Internal,
-			"get user error",
-			"user",
-			fmt.Sprintf("id %s", dbUser.ID),
-			"",
-			err.Error(),
-		)
-		if e != nil {
-			logger.Error(e.Error())
-		}
-		return nil, st.Err()
-	}
-
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
 		logUUID.String(),
-		pbUser,
+		uuid.FromStringOrNil(*pbUser.Uid),
 		eventName,
-		custom_otel.SetEventResource(dbUser),
+		custom_otel.SetEventResource(pbUser),
 	)))
 
 	resp := mgmtPB.ExistUsernameResponse{
 		Exists: true,
 	}
 	return &resp, nil
+}
+
+func (h *PublicHandler) CreateOrganization(ctx context.Context, req *mgmtPB.CreateOrganizationRequest) (*mgmtPB.CreateOrganizationResponse, error) {
+
+	eventName := "CreateOrganization"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	// Set all OUTPUT_ONLY fields to zero value on the requested payload organization resource
+	if err := checkfield.CheckCreateOutputOnlyFields(req.Organization, outputOnlyFieldsForOrganization); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+
+	// Return error if REQUIRED fields are not provided in the requested payload organization resource
+	if err := checkfield.CheckRequiredFields(req.Organization, createRequiredFieldsForOrganization); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+
+	// Return error if resource ID does not follow RFC-1034
+	if err := checkfield.CheckResourceID(req.Organization.GetId()); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+
+	_, ctxUserUID, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	_, err = h.Service.GetOrganization(ctx, ctxUserUID, req.Organization.Id)
+	if err == nil {
+		return nil, status.Errorf(codes.AlreadyExists, "Organization ID already existed")
+	}
+
+	_, createErr := h.Service.CreateOrganization(ctx, ctxUserUID, req.Organization)
+	if createErr != nil {
+		return nil, status.Errorf(codes.AlreadyExists, createErr.Error())
+	}
+
+	pbCreatedOrg, err := h.Service.GetOrganization(ctx, ctxUserUID, req.Organization.Id)
+	if createErr != nil {
+		return nil, status.Errorf(codes.AlreadyExists, err.Error())
+	}
+
+	resp := &mgmtPB.CreateOrganizationResponse{
+		Organization: pbCreatedOrg,
+	}
+
+	// Manually set the custom header to have a StatusCreated http response for REST endpoint
+	if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", strconv.Itoa(http.StatusCreated))); err != nil {
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		ctxUserUID,
+		eventName,
+		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v", pbCreatedOrg)),
+	)))
+
+	return resp, nil
+}
+
+func (h *PublicHandler) ListOrganizations(ctx context.Context, req *mgmtPB.ListOrganizationsRequest) (*mgmtPB.ListOrganizationsResponse, error) {
+
+	eventName := "ListOrganizations"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, ctxUserUID, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	pbOrgs, totalSize, nextPageToken, err := h.Service.ListOrganizations(ctx, ctxUserUID, int(req.GetPageSize()), req.GetPageToken(), filtering.Filter{})
+	if err != nil {
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		ctxUserUID,
+		eventName,
+	)))
+
+	resp := &mgmtPB.ListOrganizationsResponse{
+		Organizations: pbOrgs,
+		NextPageToken: nextPageToken,
+		TotalSize:     int32(totalSize),
+	}
+	return resp, nil
+}
+
+func (h *PublicHandler) GetOrganization(ctx context.Context, req *mgmtPB.GetOrganizationRequest) (*mgmtPB.GetOrganizationResponse, error) {
+
+	eventName := "GetOrganization"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, ctxUserUID, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	id, err := resource.GetRscNameID(req.GetName())
+	if err != nil {
+		return nil, err
+	}
+
+	pbOrg, err := h.Service.GetOrganization(ctx, ctxUserUID, id)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &mgmtPB.GetOrganizationResponse{
+		Organization: pbOrg,
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		ctxUserUID,
+		eventName,
+		custom_otel.SetEventResource(pbOrg),
+	)))
+
+	return resp, nil
 }
 
 // CreateToken creates an API token for triggering pipelines. This endpoint is not supported yet.
@@ -664,51 +690,28 @@ func (h *PublicHandler) CreateToken(ctx context.Context, req *mgmtPB.CreateToken
 		return &mgmtPB.CreateTokenResponse{}, status.Errorf(codes.InvalidArgument, "no expiration info")
 	}
 
-	owner, err := h.GetUser(ctx)
+	_, ctxUserUID, err := h.Service.GetCtxUser(ctx)
 	if err != nil {
-		return &mgmtPB.CreateTokenResponse{}, status.Errorf(codes.Unauthenticated, "Unauthorized")
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
 	}
-	ownerPermalink := "users/" + owner.GetUid()
 
-	_, err = h.Service.GetToken(ctx, req.Token.Id, ownerPermalink)
+	_, err = h.Service.GetToken(ctx, ctxUserUID, req.Token.Id)
 	if err == nil {
 		return &mgmtPB.CreateTokenResponse{}, status.Errorf(codes.AlreadyExists, "Token ID already existed")
 	}
 
-	dbToken := datamodel.PBToken2DBToken(ctx, req.Token)
-	dbToken.AccessToken = datamodel.GenerateToken()
-	dbToken.Owner = ownerPermalink
-	curTime := time.Now()
-	dbToken.CreateTime = curTime
-	dbToken.UpdateTime = curTime
-	dbToken.State = datamodel.TokenState(mgmtPB.ApiToken_STATE_ACTIVE)
-
-	switch req.Token.GetExpiration().(type) {
-	case *mgmtPB.ApiToken_Ttl:
-		if req.Token.GetTtl() >= 0 {
-			dbToken.ExpireTime = curTime.Add(time.Second * time.Duration(req.Token.GetTtl()))
-		} else if req.Token.GetTtl() == -1 {
-			dbToken.ExpireTime = time.Date(2099, 12, 31, 0, 0, 0, 0, time.Now().UTC().Location())
-		} else {
-			return &mgmtPB.CreateTokenResponse{}, status.Errorf(codes.InvalidArgument, "ttl should >= -1")
-		}
-	case *mgmtPB.ApiToken_ExpireTime:
-		dbToken.ExpireTime = req.Token.GetExpireTime().AsTime()
-	}
-
-	dbToken.TokenType = constant.DefaultTokenType
-	createErr := h.Service.CreateToken(ctx, dbToken)
+	createErr := h.Service.CreateToken(ctx, ctxUserUID, req.Token)
 	if createErr != nil {
 		return &mgmtPB.CreateTokenResponse{}, status.Errorf(codes.AlreadyExists, createErr.Error())
 	}
 
-	dbCreatedToken, err := h.Service.GetToken(ctx, req.Token.Id, ownerPermalink)
+	pbCreatedToken, err := h.Service.GetToken(ctx, ctxUserUID, req.Token.Id)
 	if createErr != nil {
 		return &mgmtPB.CreateTokenResponse{}, status.Errorf(codes.AlreadyExists, err.Error())
 	}
 
 	resp := &mgmtPB.CreateTokenResponse{
-		Token: datamodel.DBToken2PBToken(dbCreatedToken),
+		Token: pbCreatedToken,
 	}
 
 	// Manually set the custom header to have a StatusCreated http response for REST endpoint
@@ -719,9 +722,9 @@ func (h *PublicHandler) CreateToken(ctx context.Context, req *mgmtPB.CreateToken
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
 		logUUID.String(),
-		owner,
+		ctxUserUID,
 		eventName,
-		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v", dbToken)),
+		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v", pbCreatedToken)),
 	)))
 
 	return resp, nil
@@ -739,27 +742,20 @@ func (h *PublicHandler) ListTokens(ctx context.Context, req *mgmtPB.ListTokensRe
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	owner, err := h.GetUser(ctx)
+	_, ctxUserUID, err := h.Service.GetCtxUser(ctx)
 	if err != nil {
-		return &mgmtPB.ListTokensResponse{}, err
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
 	}
 
-	ownerPermalink := "users/" + owner.GetUid()
-
-	dbTokens, totalSize, nextPageToken, err := h.Service.ListTokens(ctx, int64(req.GetPageSize()), req.GetPageToken(), ownerPermalink)
+	pbTokens, totalSize, nextPageToken, err := h.Service.ListTokens(ctx, ctxUserUID, int64(req.GetPageSize()), req.GetPageToken())
 	if err != nil {
 		return &mgmtPB.ListTokensResponse{}, err
-	}
-
-	pbTokens := []*mgmtPB.ApiToken{}
-	for _, dbToken := range dbTokens {
-		pbTokens = append(pbTokens, datamodel.DBToken2PBToken(&dbToken))
 	}
 
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
 		logUUID.String(),
-		owner,
+		ctxUserUID,
 		eventName,
 	)))
 
@@ -783,23 +779,20 @@ func (h *PublicHandler) GetToken(ctx context.Context, req *mgmtPB.GetTokenReques
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	owner, err := h.GetUser(ctx)
+	_, ctxUserUID, err := h.Service.GetCtxUser(ctx)
 	if err != nil {
-		return &mgmtPB.GetTokenResponse{}, err
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
 	}
 
-	ownerPermalink := "users/" + owner.GetUid()
 	id, err := resource.GetRscNameID(req.GetName())
 	if err != nil {
 		return &mgmtPB.GetTokenResponse{}, err
 	}
 
-	dbToken, err := h.Service.GetToken(ctx, id, ownerPermalink)
+	pbToken, err := h.Service.GetToken(ctx, ctxUserUID, id)
 	if err != nil {
 		return &mgmtPB.GetTokenResponse{}, err
 	}
-
-	pbToken := datamodel.DBToken2PBToken(dbToken)
 
 	resp := &mgmtPB.GetTokenResponse{
 		Token: pbToken,
@@ -808,9 +801,9 @@ func (h *PublicHandler) GetToken(ctx context.Context, req *mgmtPB.GetTokenReques
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
 		logUUID.String(),
-		owner,
+		ctxUserUID,
 		eventName,
-		custom_otel.SetEventResource(dbToken),
+		custom_otel.SetEventResource(pbToken),
 	)))
 
 	return resp, nil
@@ -828,18 +821,17 @@ func (h *PublicHandler) DeleteToken(ctx context.Context, req *mgmtPB.DeleteToken
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	owner, err := h.GetUser(ctx)
+	_, ctxUserUID, err := h.Service.GetCtxUser(ctx)
 	if err != nil {
-		return &mgmtPB.DeleteTokenResponse{}, err
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
 	}
-	ownerPermalink := "users/" + owner.GetUid()
 
 	existToken, err := h.GetToken(ctx, &mgmtPB.GetTokenRequest{Name: req.GetName()})
 	if err != nil {
 		return &mgmtPB.DeleteTokenResponse{}, err
 	}
 
-	if err := h.Service.DeleteToken(ctx, existToken.Token.GetId(), ownerPermalink); err != nil {
+	if err := h.Service.DeleteToken(ctx, ctxUserUID, existToken.Token.GetId()); err != nil {
 		return &mgmtPB.DeleteTokenResponse{}, err
 	}
 
@@ -851,7 +843,7 @@ func (h *PublicHandler) DeleteToken(ctx context.Context, req *mgmtPB.DeleteToken
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
 		logUUID.String(),
-		owner,
+		ctxUserUID,
 		eventName,
 		custom_otel.SetEventResource(existToken.GetToken()),
 	)))
@@ -891,7 +883,11 @@ func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgm
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	pbUser, err := h.GetUser(ctx)
+	ctxUserId, ctxUserUID, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+	pbUser, err := h.Service.GetUser(ctx, ctxUserUID, ctxUserId)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return &mgmtPB.ListPipelineTriggerRecordsResponse{}, err
@@ -937,7 +933,7 @@ func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgm
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
 		logUUID.String(),
-		pbUser,
+		uuid.FromStringOrNil(*pbUser.Uid),
 		eventName,
 		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v", totalSize)),
 	)))
@@ -956,7 +952,11 @@ func (h *PublicHandler) ListPipelineTriggerTableRecords(ctx context.Context, req
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	pbUser, err := h.GetUser(ctx)
+	ctxUserId, ctxUserUID, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+	pbUser, err := h.Service.GetUser(ctx, ctxUserUID, ctxUserId)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return &mgmtPB.ListPipelineTriggerTableRecordsResponse{}, err
@@ -997,7 +997,7 @@ func (h *PublicHandler) ListPipelineTriggerTableRecords(ctx context.Context, req
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
 		logUUID.String(),
-		pbUser,
+		uuid.FromStringOrNil(*pbUser.Uid),
 		eventName,
 		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v", totalSize)),
 	)))
@@ -1016,7 +1016,11 @@ func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	pbUser, err := h.GetUser(ctx)
+	ctxUserId, ctxUserUID, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+	pbUser, err := h.Service.GetUser(ctx, ctxUserUID, ctxUserId)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return &mgmtPB.ListPipelineTriggerChartRecordsResponse{}, err
@@ -1060,7 +1064,7 @@ func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
 		logUUID.String(),
-		pbUser,
+		uuid.FromStringOrNil(*pbUser.Uid),
 		eventName,
 	)))
 
@@ -1078,7 +1082,11 @@ func (h *PublicHandler) ListConnectorExecuteRecords(ctx context.Context, req *mg
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	pbUser, err := h.GetUser(ctx)
+	ctxUserId, ctxUserUID, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+	pbUser, err := h.Service.GetUser(ctx, ctxUserUID, ctxUserId)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return &mgmtPB.ListConnectorExecuteRecordsResponse{}, err
@@ -1124,7 +1132,7 @@ func (h *PublicHandler) ListConnectorExecuteRecords(ctx context.Context, req *mg
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
 		logUUID.String(),
-		pbUser,
+		uuid.FromStringOrNil(*pbUser.Uid),
 		eventName,
 		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v", totalSize)),
 	)))
@@ -1143,7 +1151,11 @@ func (h *PublicHandler) ListConnectorExecuteTableRecords(ctx context.Context, re
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	pbUser, err := h.GetUser(ctx)
+	ctxUserId, ctxUserUID, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+	pbUser, err := h.Service.GetUser(ctx, ctxUserUID, ctxUserId)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return &mgmtPB.ListConnectorExecuteTableRecordsResponse{}, err
@@ -1182,7 +1194,7 @@ func (h *PublicHandler) ListConnectorExecuteTableRecords(ctx context.Context, re
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
 		logUUID.String(),
-		pbUser,
+		uuid.FromStringOrNil(*pbUser.Uid),
 		eventName,
 		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v", totalSize)),
 	)))
@@ -1201,7 +1213,11 @@ func (h *PublicHandler) ListConnectorExecuteChartRecords(ctx context.Context, re
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	pbUser, err := h.GetUser(ctx)
+	ctxUserId, ctxUserUID, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+	pbUser, err := h.Service.GetUser(ctx, ctxUserUID, ctxUserId)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return &mgmtPB.ListConnectorExecuteChartRecordsResponse{}, err
@@ -1245,9 +1261,375 @@ func (h *PublicHandler) ListConnectorExecuteChartRecords(ctx context.Context, re
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
 		logUUID.String(),
-		pbUser,
+		uuid.FromStringOrNil(*pbUser.Uid),
 		eventName,
 	)))
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) ListUserMemberships(ctx context.Context, req *mgmtPB.ListUserMembershipsRequest) (*mgmtPB.ListUserMembershipsResponse, error) {
+
+	eventName := "ListUserMemberships"
+
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, userUid, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	pbMemberships, err := h.Service.ListUserMemberships(ctx, userUid, strings.Split(req.Parent, "/")[1])
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		userUid,
+		eventName,
+	)))
+
+	resp := mgmtPB.ListUserMembershipsResponse{
+		Memberships: pbMemberships,
+	}
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) GetUserMembership(ctx context.Context, req *mgmtPB.GetUserMembershipRequest) (*mgmtPB.GetUserMembershipResponse, error) {
+
+	eventName := "GetUserMembership"
+
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, userUid, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	userID := strings.Split(req.Name, "/")[1]
+	orgID := strings.Split(req.Name, "/")[3]
+
+	pbMembership, err := h.Service.GetUserMembership(ctx, userUid, userID, orgID)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		userUid,
+		eventName,
+	)))
+
+	resp := mgmtPB.GetUserMembershipResponse{
+		Membership: pbMembership,
+	}
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) UpdateUserMembership(ctx context.Context, req *mgmtPB.UpdateUserMembershipRequest) (*mgmtPB.UpdateUserMembershipResponse, error) {
+
+	eventName := "UpdateUserMembership"
+
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, userUid, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	userID := strings.Split(req.Membership.Name, "/")[1]
+	orgID := strings.Split(req.Membership.Name, "/")[3]
+
+	if err := checkfield.CheckRequiredFields(req.Membership, requiredFieldsForUserMembership); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+
+	if err := checkfield.CheckCreateOutputOnlyFields(req.Membership, outputOnlyFieldsForUserMembership); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+
+	pbMembership, err := h.Service.UpdateUserMembership(ctx, userUid, userID, orgID, req.Membership)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		userUid,
+		eventName,
+	)))
+
+	resp := mgmtPB.UpdateUserMembershipResponse{
+		Membership: pbMembership,
+	}
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) DeleteUserMembership(ctx context.Context, req *mgmtPB.DeleteUserMembershipRequest) (*mgmtPB.DeleteUserMembershipResponse, error) {
+
+	eventName := "DeleteUserMembership"
+
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, userUid, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	userID := strings.Split(req.Name, "/")[1]
+	orgID := strings.Split(req.Name, "/")[3]
+
+	err = h.Service.DeleteUserMembership(ctx, userUid, userID, orgID)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		userUid,
+		eventName,
+	)))
+
+	resp := mgmtPB.DeleteUserMembershipResponse{}
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) ListOrganizationMemberships(ctx context.Context, req *mgmtPB.ListOrganizationMembershipsRequest) (*mgmtPB.ListOrganizationMembershipsResponse, error) {
+
+	eventName := "ListOrganizationMemberships"
+
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, userUid, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	pbMemberships, err := h.Service.ListOrganizationMemberships(ctx, userUid, strings.Split(req.Parent, "/")[1])
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		userUid,
+		eventName,
+	)))
+
+	resp := mgmtPB.ListOrganizationMembershipsResponse{
+		Memberships: pbMemberships,
+	}
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) GetOrganizationMembership(ctx context.Context, req *mgmtPB.GetOrganizationMembershipRequest) (*mgmtPB.GetOrganizationMembershipResponse, error) {
+
+	eventName := "GetOrganizationMembership"
+
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, userUid, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	userID := strings.Split(req.Name, "/")[1]
+	orgID := strings.Split(req.Name, "/")[3]
+
+	pbMembership, err := h.Service.GetOrganizationMembership(ctx, userUid, userID, orgID)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		userUid,
+		eventName,
+	)))
+
+	resp := mgmtPB.GetOrganizationMembershipResponse{
+		Membership: pbMembership,
+	}
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) UpdateOrganizationMembership(ctx context.Context, req *mgmtPB.UpdateOrganizationMembershipRequest) (*mgmtPB.UpdateOrganizationMembershipResponse, error) {
+
+	eventName := "UpdateOrganizationMembership"
+
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, userUid, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	userID := strings.Split(req.Membership.Name, "/")[1]
+	orgID := strings.Split(req.Membership.Name, "/")[3]
+
+	if err := checkfield.CheckRequiredFields(req.Membership, requiredFieldsForOrganizationMembership); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+
+	if err := checkfield.CheckCreateOutputOnlyFields(req.Membership, outputOnlyFieldsForOrganizationMembership); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+
+	pbMembership, err := h.Service.UpdateOrganizationMembership(ctx, userUid, userID, orgID, req.Membership)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		userUid,
+		eventName,
+	)))
+
+	resp := mgmtPB.UpdateOrganizationMembershipResponse{
+		Membership: pbMembership,
+	}
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) DeleteOrganizationMembership(ctx context.Context, req *mgmtPB.DeleteOrganizationMembershipRequest) (*mgmtPB.DeleteOrganizationMembershipResponse, error) {
+
+	eventName := "DeleteOrganizationMembership"
+
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, userUid, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	orgID := strings.Split(req.Name, "/")[1]
+	userID := strings.Split(req.Name, "/")[3]
+
+	err = h.Service.DeleteUserMembership(ctx, userUid, userID, orgID)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		userUid,
+		eventName,
+	)))
+
+	resp := mgmtPB.DeleteOrganizationMembershipResponse{}
 
 	return &resp, nil
 }

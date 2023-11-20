@@ -1,6 +1,8 @@
 module github.com/instill-ai/mgmt-backend
 
-go 1.21
+go 1.21.1
+
+toolchain go1.21.3
 
 retract v0.3.2 // Published accidentally.
 
@@ -12,12 +14,13 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/influxdata/influxdb-client-go/v2 v2.12.3
-	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20231019202606-71607ddcd93f
+	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20231120083341-b8334d73ed74
 	github.com/instill-ai/usage-client v0.2.4-alpha.0.20231019203021-70410a0a8061
 	github.com/instill-ai/x v0.3.0-alpha
 	github.com/jackc/pgx/v5 v5.2.0
 	github.com/knadh/koanf v1.4.4
 	github.com/mennanov/fieldmask-utils v0.5.0
+	github.com/openfga/go-sdk v0.2.3
 	github.com/redis/go-redis/v9 v9.2.0
 	go.einride.tech/aip v0.60.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.17.0
@@ -96,6 +99,7 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/mod v0.8.0 // indirect
+	golang.org/x/sync v0.4.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/tools v0.6.0 // indirect
