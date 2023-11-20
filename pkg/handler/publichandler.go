@@ -1261,3 +1261,353 @@ func (h *PublicHandler) ListConnectorExecuteChartRecords(ctx context.Context, re
 
 	return &resp, nil
 }
+
+func (h *PublicHandler) ListUserMemberships(ctx context.Context, req *mgmtPB.ListUserMembershipsRequest) (*mgmtPB.ListUserMembershipsResponse, error) {
+
+	eventName := "ListUserMemberships"
+
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, userUid, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	pbMemberships, err := h.Service.ListUserMemberships(ctx, userUid, strings.Split(req.Parent, "/")[1])
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		userUid,
+		eventName,
+	)))
+
+	resp := mgmtPB.ListUserMembershipsResponse{
+		Memberships: pbMemberships,
+	}
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) GetUserMembership(ctx context.Context, req *mgmtPB.GetUserMembershipRequest) (*mgmtPB.GetUserMembershipResponse, error) {
+
+	eventName := "GetUserMembership"
+
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, userUid, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	userID := strings.Split(req.Name, "/")[1]
+	orgID := strings.Split(req.Name, "/")[3]
+
+	pbMembership, err := h.Service.GetUserMembership(ctx, userUid, userID, orgID)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		userUid,
+		eventName,
+	)))
+
+	resp := mgmtPB.GetUserMembershipResponse{
+		Membership: pbMembership,
+	}
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) UpdateUserMembership(ctx context.Context, req *mgmtPB.UpdateUserMembershipRequest) (*mgmtPB.UpdateUserMembershipResponse, error) {
+
+	eventName := "UpdateUserMembership"
+
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, userUid, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	userID := strings.Split(req.Membership.Name, "/")[1]
+	orgID := strings.Split(req.Membership.Name, "/")[3]
+
+	pbMembership, err := h.Service.UpdateUserMembership(ctx, userUid, userID, orgID, req.Membership)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		userUid,
+		eventName,
+	)))
+
+	resp := mgmtPB.UpdateUserMembershipResponse{
+		Membership: pbMembership,
+	}
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) DeleteUserMembership(ctx context.Context, req *mgmtPB.DeleteUserMembershipRequest) (*mgmtPB.DeleteUserMembershipResponse, error) {
+
+	eventName := "DeleteUserMembership"
+
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, userUid, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	userID := strings.Split(req.Name, "/")[1]
+	orgID := strings.Split(req.Name, "/")[3]
+
+	err = h.Service.DeleteUserMembership(ctx, userUid, userID, orgID)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		userUid,
+		eventName,
+	)))
+
+	resp := mgmtPB.DeleteUserMembershipResponse{}
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) ListOrganizationMemberships(ctx context.Context, req *mgmtPB.ListOrganizationMembershipsRequest) (*mgmtPB.ListOrganizationMembershipsResponse, error) {
+
+	eventName := "ListOrganizationMemberships"
+
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, userUid, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	pbMemberships, err := h.Service.ListOrganizationMemberships(ctx, userUid, strings.Split(req.Parent, "/")[1])
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		userUid,
+		eventName,
+	)))
+
+	resp := mgmtPB.ListOrganizationMembershipsResponse{
+		Memberships: pbMemberships,
+	}
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) GetOrganizationMembership(ctx context.Context, req *mgmtPB.GetOrganizationMembershipRequest) (*mgmtPB.GetOrganizationMembershipResponse, error) {
+
+	eventName := "GetOrganizationMembership"
+
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, userUid, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	userID := strings.Split(req.Name, "/")[1]
+	orgID := strings.Split(req.Name, "/")[3]
+
+	pbMembership, err := h.Service.GetOrganizationMembership(ctx, userUid, userID, orgID)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		userUid,
+		eventName,
+	)))
+
+	resp := mgmtPB.GetOrganizationMembershipResponse{
+		Membership: pbMembership,
+	}
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) UpdateOrganizationMembership(ctx context.Context, req *mgmtPB.UpdateOrganizationMembershipRequest) (*mgmtPB.UpdateOrganizationMembershipResponse, error) {
+
+	eventName := "UpdateOrganizationMembership"
+
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, userUid, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	userID := strings.Split(req.Membership.Name, "/")[1]
+	orgID := strings.Split(req.Membership.Name, "/")[3]
+
+	pbMembership, err := h.Service.UpdateOrganizationMembership(ctx, userUid, userID, orgID, req.Membership)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		userUid,
+		eventName,
+	)))
+
+	resp := mgmtPB.UpdateOrganizationMembershipResponse{
+		Membership: pbMembership,
+	}
+
+	return &resp, nil
+}
+
+func (h *PublicHandler) DeleteOrganizationMembership(ctx context.Context, req *mgmtPB.DeleteOrganizationMembershipRequest) (*mgmtPB.DeleteOrganizationMembershipResponse, error) {
+
+	eventName := "DeleteOrganizationMembership"
+
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, userUid, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	userID := strings.Split(req.Name, "/")[1]
+	orgID := strings.Split(req.Name, "/")[3]
+
+	err = h.Service.DeleteUserMembership(ctx, userUid, userID, orgID)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		userUid,
+		eventName,
+	)))
+
+	resp := mgmtPB.DeleteOrganizationMembershipResponse{}
+
+	return &resp, nil
+}

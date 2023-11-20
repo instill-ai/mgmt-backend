@@ -139,7 +139,7 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 
 	return &mgmtPB.Organization{
 		Name:       fmt.Sprintf("organizations/%s", id),
-		Uid:        &uid,
+		Uid:        uid,
 		Id:         id,
 		CreateTime: timestamppb.New(dbOrg.Base.CreateTime),
 		UpdateTime: timestamppb.New(dbOrg.Base.UpdateTime),

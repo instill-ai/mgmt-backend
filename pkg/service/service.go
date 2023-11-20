@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/instill-ai/mgmt-backend/internal/resource"
+	"github.com/instill-ai/mgmt-backend/pkg/acl"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
@@ -27,26 +28,36 @@ type Service interface {
 	GetCtxUser(ctx context.Context) (string, uuid.UUID, error)
 
 	ListRole() []string
-	CreateUser(ctx context.Context, userUID uuid.UUID, user *mgmtPB.User) (*mgmtPB.User, error)
-	ListUsers(ctx context.Context, userUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.User, int64, string, error)
-	GetUser(ctx context.Context, userUID uuid.UUID, id string) (*mgmtPB.User, error)
-	UpdateUser(ctx context.Context, userUID uuid.UUID, id string, user *mgmtPB.User) (*mgmtPB.User, error)
-	DeleteUser(ctx context.Context, userUID uuid.UUID, id string) error
+	CreateUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.User) (*mgmtPB.User, error)
+	ListUsers(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.User, int64, string, error)
+	GetUser(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.User, error)
+	UpdateUser(ctx context.Context, ctxUserUID uuid.UUID, id string, user *mgmtPB.User) (*mgmtPB.User, error)
+	DeleteUser(ctx context.Context, ctxUserUID uuid.UUID, id string) error
 
 	ListUsersAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.User, int64, string, error)
 	GetUserAdmin(ctx context.Context, id string) (*mgmtPB.User, error)
 	GetUserByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtPB.User, error)
 
-	CreateOrganization(ctx context.Context, userUID uuid.UUID, org *mgmtPB.Organization) (*mgmtPB.Organization, error)
-	ListOrganizations(ctx context.Context, userUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.Organization, int64, string, error)
-	GetOrganization(ctx context.Context, userUID uuid.UUID, id string) (*mgmtPB.Organization, error)
-	UpdateOrganization(ctx context.Context, userUID uuid.UUID, id string, org *mgmtPB.Organization) (*mgmtPB.Organization, error)
-	DeleteOrganization(ctx context.Context, userUID uuid.UUID, id string) error
+	CreateOrganization(ctx context.Context, ctxUserUID uuid.UUID, org *mgmtPB.Organization) (*mgmtPB.Organization, error)
+	ListOrganizations(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.Organization, int64, string, error)
+	GetOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.Organization, error)
+	UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string, org *mgmtPB.Organization) (*mgmtPB.Organization, error)
+	DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string) error
 
-	CreateToken(ctx context.Context, userUID uuid.UUID, token *mgmtPB.ApiToken) error
-	ListTokens(ctx context.Context, userUID uuid.UUID, pageSize int64, pageToken string) ([]*mgmtPB.ApiToken, int64, string, error)
-	GetToken(ctx context.Context, userUID uuid.UUID, id string) (*mgmtPB.ApiToken, error)
-	DeleteToken(ctx context.Context, userUID uuid.UUID, id string) error
+	ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID, userID string) ([]*mgmtPB.UserMembership, error)
+	GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) (*mgmtPB.UserMembership, error)
+	UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string, membership *mgmtPB.UserMembership) (*mgmtPB.UserMembership, error)
+	DeleteUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) error
+
+	ListOrganizationMemberships(ctx context.Context, ctxUserUID uuid.UUID, orgID string) ([]*mgmtPB.OrganizationMembership, error)
+	GetOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) (*mgmtPB.OrganizationMembership, error)
+	UpdateOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string, membership *mgmtPB.OrganizationMembership) (*mgmtPB.OrganizationMembership, error)
+	DeleteOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) error
+
+	CreateToken(ctx context.Context, ctxUserUID uuid.UUID, token *mgmtPB.ApiToken) error
+	ListTokens(ctx context.Context, ctxUserUID uuid.UUID, pageSize int64, pageToken string) ([]*mgmtPB.ApiToken, int64, string, error)
+	GetToken(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.ApiToken, error)
+	DeleteToken(ctx context.Context, ctxUserUID uuid.UUID, id string) error
 	ValidateToken(accessToken string) (string, error)
 
 	GetUserPasswordHash(ctx context.Context, uid uuid.UUID) (string, time.Time, error)
@@ -74,34 +85,36 @@ type service struct {
 	connectorPublicServiceClient connectorPB.ConnectorPublicServiceClient
 	pipelinePublicServiceClient  pipelinePB.PipelinePublicServiceClient
 	redisClient                  *redis.Client
+	aclClient                    *acl.ACLClient
 }
 
 // NewService initiates a service instance
-func NewService(r repository.Repository, rc *redis.Client, i repository.InfluxDB, c connectorPB.ConnectorPublicServiceClient, p pipelinePB.PipelinePublicServiceClient) Service {
+func NewService(r repository.Repository, rc *redis.Client, i repository.InfluxDB, c connectorPB.ConnectorPublicServiceClient, p pipelinePB.PipelinePublicServiceClient, acl *acl.ACLClient) Service {
 	return &service{
 		repository:                   r,
 		influxDB:                     i,
 		connectorPublicServiceClient: c,
 		pipelinePublicServiceClient:  p,
 		redisClient:                  rc,
+		aclClient:                    acl,
 	}
 }
 
 // GetUser returns the api user
 func (s *service) GetCtxUser(ctx context.Context) (string, uuid.UUID, error) {
 	// Verify if "jwt-sub" is in the header
-	headerUserUId := resource.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)
+	headerctxUserUID := resource.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)
 
-	if headerUserUId != "" {
-		_, err := uuid.FromString(headerUserUId)
+	if headerctxUserUID != "" {
+		_, err := uuid.FromString(headerctxUserUID)
 		if err != nil {
 			return "", uuid.Nil, status.Errorf(codes.Unauthenticated, "Unauthorized")
 		}
-		user, err := s.repository.GetUserByUID(ctx, uuid.FromStringOrNil(headerUserUId))
+		user, err := s.repository.GetUserByUID(ctx, uuid.FromStringOrNil(headerctxUserUID))
 		if err != nil {
 			return "", uuid.Nil, status.Errorf(codes.Unauthenticated, "Unauthorized")
 		}
-		return user.ID, uuid.FromStringOrNil(headerUserUId), nil
+		return user.ID, uuid.FromStringOrNil(headerctxUserUID), nil
 	}
 
 	return "", uuid.Nil, status.Errorf(codes.Unauthenticated, "Unauthorized")
@@ -117,7 +130,7 @@ func (s *service) ListRole() []string {
 // Return error types
 //   - codes.InvalidArgument
 //   - codes.Internal
-func (s *service) ListUsers(ctx context.Context, userUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.User, int64, string, error) {
+func (s *service) ListUsers(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.User, int64, string, error) {
 	dbUsers, totalSize, nextPageToken, err := s.repository.ListUsers(ctx, pageSize, pageToken, filter)
 	if err != nil {
 		return nil, 0, "", err
@@ -131,7 +144,7 @@ func (s *service) ListUsers(ctx context.Context, userUID uuid.UUID, pageSize int
 //   - codes.InvalidArgument
 //   - codes.NotFound
 //   - codes.Internal
-func (s *service) CreateUser(ctx context.Context, userUID uuid.UUID, user *mgmtPB.User) (*mgmtPB.User, error) {
+func (s *service) CreateUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.User) (*mgmtPB.User, error) {
 
 	dbUser, err := s.PBUser2DBUser(user)
 	if err != nil {
@@ -158,7 +171,7 @@ func (s *service) CreateUser(ctx context.Context, userUID uuid.UUID, user *mgmtP
 // Return error types
 //   - codes.InvalidArgument
 //   - codes.NotFound
-func (s *service) GetUser(ctx context.Context, userUID uuid.UUID, id string) (*mgmtPB.User, error) {
+func (s *service) GetUser(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.User, error) {
 	// Validation: Required field
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "the required field `id` is not specified")
@@ -203,7 +216,7 @@ func (s *service) ListUsersAdmin(ctx context.Context, pageSize int, pageToken st
 //   - codes.InvalidArgument
 //   - codes.NotFound
 //   - codes.Internal
-func (s *service) UpdateUser(ctx context.Context, userUID uuid.UUID, id string, user *mgmtPB.User) (*mgmtPB.User, error) {
+func (s *service) UpdateUser(ctx context.Context, ctxUserUID uuid.UUID, id string, user *mgmtPB.User) (*mgmtPB.User, error) {
 
 	// Check if the user exists
 	if _, err := s.repository.GetUser(ctx, id); err != nil {
@@ -238,7 +251,7 @@ func (s *service) UpdateUser(ctx context.Context, userUID uuid.UUID, id string, 
 //   - codes.InvalidArgument
 //   - codes.NotFound
 //   - codes.Internal
-func (s *service) DeleteUser(ctx context.Context, userUID uuid.UUID, id string) error {
+func (s *service) DeleteUser(ctx context.Context, ctxUserUID uuid.UUID, id string) error {
 	// Validation: Required field
 	if id == "" {
 		return status.Error(codes.InvalidArgument, "the required field `id` is not specified")
@@ -247,7 +260,7 @@ func (s *service) DeleteUser(ctx context.Context, userUID uuid.UUID, id string) 
 	return s.repository.DeleteUser(ctx, id)
 }
 
-func (s *service) ListOrganizations(ctx context.Context, userUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.Organization, int64, string, error) {
+func (s *service) ListOrganizations(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.Organization, int64, string, error) {
 	dbOrgs, totalSize, nextPageToken, err := s.repository.ListOrganizations(ctx, pageSize, pageToken, filter)
 	if err != nil {
 		return nil, 0, "", err
@@ -256,11 +269,11 @@ func (s *service) ListOrganizations(ctx context.Context, userUID uuid.UUID, page
 	return pbOrgs, totalSize, nextPageToken, err
 }
 
-func (s *service) CreateOrganization(ctx context.Context, userUID uuid.UUID, org *mgmtPB.Organization) (*mgmtPB.Organization, error) {
+func (s *service) CreateOrganization(ctx context.Context, ctxUserUID uuid.UUID, org *mgmtPB.Organization) (*mgmtPB.Organization, error) {
 
 	uid, _ := uuid.NewV4()
 	uidStr := uid.String()
-	org.Uid = &uidStr
+	org.Uid = uidStr
 	dbOrg, err := s.PBOrg2DBOrg(org)
 	if err != nil {
 		return nil, err
@@ -275,10 +288,15 @@ func (s *service) CreateOrganization(ctx context.Context, userUID uuid.UUID, org
 		return nil, err
 	}
 
+	err = s.aclClient.SetOrganizationUserMembership(dbOrg.UID, ctxUserUID, "owner")
+	if err != nil {
+		return nil, err
+	}
+
 	return s.DBOrg2PBOrg(ctx, dbCreatedOrg)
 }
 
-func (s *service) GetOrganization(ctx context.Context, userUID uuid.UUID, id string) (*mgmtPB.Organization, error) {
+func (s *service) GetOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.Organization, error) {
 	// Validation: Required field
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "the required field `id` is not specified")
@@ -291,7 +309,7 @@ func (s *service) GetOrganization(ctx context.Context, userUID uuid.UUID, id str
 	return s.DBOrg2PBOrg(ctx, dbOrg)
 }
 
-func (s *service) UpdateOrganization(ctx context.Context, userUID uuid.UUID, id string, org *mgmtPB.Organization) (*mgmtPB.Organization, error) {
+func (s *service) UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string, org *mgmtPB.Organization) (*mgmtPB.Organization, error) {
 
 	// Check if the org exists
 	if _, err := s.repository.GetOrganization(ctx, id); err != nil {
@@ -316,7 +334,7 @@ func (s *service) UpdateOrganization(ctx context.Context, userUID uuid.UUID, id 
 
 }
 
-func (s *service) DeleteOrganization(ctx context.Context, userUID uuid.UUID, id string) error {
+func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string) error {
 	// Validation: Required field
 	if id == "" {
 		return status.Error(codes.InvalidArgument, "the required field `id` is not specified")
@@ -334,7 +352,7 @@ func (s *service) UpdateUserPasswordHash(ctx context.Context, uid uuid.UUID, new
 	return s.repository.UpdateUserPasswordHash(ctx, uid, newPassword, time.Now())
 }
 
-func (s *service) CreateToken(ctx context.Context, userUID uuid.UUID, token *mgmtPB.ApiToken) error {
+func (s *service) CreateToken(ctx context.Context, ctxUserUID uuid.UUID, token *mgmtPB.ApiToken) error {
 
 	dbToken, err := s.PBToken2DBToken(ctx, token)
 	if err != nil {
@@ -342,7 +360,7 @@ func (s *service) CreateToken(ctx context.Context, userUID uuid.UUID, token *mgm
 	}
 
 	dbToken.AccessToken = datamodel.GenerateToken()
-	dbToken.Owner = fmt.Sprintf("users/%s", userUID)
+	dbToken.Owner = fmt.Sprintf("users/%s", ctxUserUID)
 	curTime := time.Now()
 	dbToken.CreateTime = curTime
 	dbToken.UpdateTime = curTime
@@ -373,8 +391,8 @@ func (s *service) CreateToken(ctx context.Context, userUID uuid.UUID, token *mgm
 
 	return nil
 }
-func (s *service) ListTokens(ctx context.Context, userUID uuid.UUID, pageSize int64, pageToken string) ([]*mgmtPB.ApiToken, int64, string, error) {
-	ownerPermlink := fmt.Sprintf("users/%s", userUID.String())
+func (s *service) ListTokens(ctx context.Context, ctxUserUID uuid.UUID, pageSize int64, pageToken string) ([]*mgmtPB.ApiToken, int64, string, error) {
+	ownerPermlink := fmt.Sprintf("users/%s", ctxUserUID.String())
 	dbTokens, pageSize, pageToken, err := s.repository.ListTokens(ctx, ownerPermlink, pageSize, pageToken)
 	if err != nil {
 		return nil, 0, "", err
@@ -384,9 +402,9 @@ func (s *service) ListTokens(ctx context.Context, userUID uuid.UUID, pageSize in
 	return pbTokens, pageSize, pageToken, err
 
 }
-func (s *service) GetToken(ctx context.Context, userUID uuid.UUID, id string) (*mgmtPB.ApiToken, error) {
+func (s *service) GetToken(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.ApiToken, error) {
 
-	ownerPermlink := fmt.Sprintf("users/%s", userUID.String())
+	ownerPermlink := fmt.Sprintf("users/%s", ctxUserUID.String())
 	dbToken, err := s.repository.GetToken(ctx, ownerPermlink, id)
 	if err != nil {
 		return nil, err
@@ -395,9 +413,9 @@ func (s *service) GetToken(ctx context.Context, userUID uuid.UUID, id string) (*
 	return s.DBToken2PBToken(ctx, dbToken)
 
 }
-func (s *service) DeleteToken(ctx context.Context, userUID uuid.UUID, id string) error {
+func (s *service) DeleteToken(ctx context.Context, ctxUserUID uuid.UUID, id string) error {
 
-	ownerPermlink := fmt.Sprintf("users/%s", userUID.String())
+	ownerPermlink := fmt.Sprintf("users/%s", ctxUserUID.String())
 	token, err := s.repository.GetToken(ctx, ownerPermlink, id)
 	if err != nil {
 		return err
@@ -419,4 +437,246 @@ func (s *service) ValidateToken(accessToken string) (string, error) {
 		return "", err
 	}
 	return strings.Split(ownerPermalink, "/")[1], nil
+}
+
+func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID, userID string) ([]*mgmtPB.UserMembership, error) {
+	user, err := s.repository.GetUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	orgRelations, err := s.aclClient.GetUserOrganizations(user.UID)
+	if err != nil {
+		return nil, err
+	}
+
+	pbUser, err := s.DBUser2PBUser(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	memberships := []*mgmtPB.UserMembership{}
+	for _, orgRelation := range orgRelations {
+		org, err := s.repository.GetOrganizationByUID(ctx, orgRelation.UID)
+		if err != nil {
+			return nil, err
+		}
+		pbOrg, err := s.DBOrg2PBOrg(ctx, org)
+		if err != nil {
+			return nil, err
+		}
+
+		memberships = append(memberships, &mgmtPB.UserMembership{
+			Name:         fmt.Sprintf("users/%s/memberships/%s", user.ID, org.ID),
+			Role:         orgRelation.Relation,
+			User:         pbUser,
+			Organization: pbOrg,
+			State:        mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE,
+		})
+	}
+	return memberships, nil
+}
+
+func (s *service) GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) (*mgmtPB.UserMembership, error) {
+	user, err := s.repository.GetUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	org, err := s.repository.GetOrganization(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+	role, err := s.aclClient.GetOrganizationUserMembership(org.UID, user.UID)
+	if err != nil {
+		return nil, err
+	}
+	pbUser, err := s.DBUser2PBUser(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	pbOrg, err := s.DBOrg2PBOrg(ctx, org)
+	if err != nil {
+		return nil, err
+	}
+
+	membership := &mgmtPB.UserMembership{
+		Name:         fmt.Sprintf("users/%s/memberships/%s", user.ID, org.ID),
+		Role:         role,
+		User:         pbUser,
+		Organization: pbOrg,
+		State:        mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE,
+	}
+	return membership, nil
+}
+
+func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string, membership *mgmtPB.UserMembership) (*mgmtPB.UserMembership, error) {
+	user, err := s.repository.GetUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	org, err := s.repository.GetOrganization(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+	pbUser, err := s.DBUser2PBUser(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	pbOrg, err := s.DBOrg2PBOrg(ctx, org)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.aclClient.SetOrganizationUserMembership(org.UID, user.UID, membership.Role)
+	if err != nil {
+		return nil, err
+	}
+
+	updatedMembership := &mgmtPB.UserMembership{
+		Name:         fmt.Sprintf("users/%s/memberships/%s", user.ID, org.ID),
+		Role:         membership.Role,
+		User:         pbUser,
+		Organization: pbOrg,
+		State:        mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE,
+	}
+	return updatedMembership, nil
+}
+
+func (s *service) DeleteUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) error {
+	user, err := s.repository.GetUser(ctx, userID)
+	if err != nil {
+		return err
+	}
+	org, err := s.repository.GetOrganization(ctx, orgID)
+	if err != nil {
+		return err
+	}
+	err = s.aclClient.DeleteOrganizationUserMembership(org.UID, user.UID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uuid.UUID, orgID string) ([]*mgmtPB.OrganizationMembership, error) {
+	org, err := s.repository.GetOrganization(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	userRelations, err := s.aclClient.GetOrganizationUsers(org.UID)
+	if err != nil {
+		return nil, err
+	}
+
+	pbOrg, err := s.DBOrg2PBOrg(ctx, org)
+	if err != nil {
+		return nil, err
+	}
+
+	memberships := []*mgmtPB.OrganizationMembership{}
+	for _, userRelation := range userRelations {
+		user, err := s.repository.GetUserByUID(ctx, userRelation.UID)
+		if err != nil {
+			return nil, err
+		}
+		pbUser, err := s.DBUser2PBUser(ctx, user)
+		if err != nil {
+			return nil, err
+		}
+
+		memberships = append(memberships, &mgmtPB.OrganizationMembership{
+			Name:         fmt.Sprintf("organizations/%s/memberships/%s", user.ID, org.ID),
+			Role:         userRelation.Relation,
+			User:         pbUser,
+			Organization: pbOrg,
+			State:        mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE,
+		})
+	}
+	return memberships, nil
+}
+
+func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) (*mgmtPB.OrganizationMembership, error) {
+	user, err := s.repository.GetUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	org, err := s.repository.GetOrganization(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+	role, err := s.aclClient.GetOrganizationUserMembership(org.UID, user.UID)
+	if err != nil {
+		return nil, err
+	}
+	pbUser, err := s.DBUser2PBUser(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	pbOrg, err := s.DBOrg2PBOrg(ctx, org)
+	if err != nil {
+		return nil, err
+	}
+
+	membership := &mgmtPB.OrganizationMembership{
+		Name:         fmt.Sprintf("organizations/%s/memberships/%s", user.ID, org.ID),
+		Role:         role,
+		User:         pbUser,
+		Organization: pbOrg,
+		State:        mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE,
+	}
+	return membership, nil
+}
+
+func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string, membership *mgmtPB.OrganizationMembership) (*mgmtPB.OrganizationMembership, error) {
+	user, err := s.repository.GetUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	org, err := s.repository.GetOrganization(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+	pbUser, err := s.DBUser2PBUser(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	pbOrg, err := s.DBOrg2PBOrg(ctx, org)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.aclClient.SetOrganizationUserMembership(org.UID, user.UID, membership.Role)
+	if err != nil {
+		return nil, err
+	}
+
+	updatedMembership := &mgmtPB.OrganizationMembership{
+		Name:         fmt.Sprintf("organizations/%s/memberships/%s", user.ID, org.ID),
+		Role:         membership.Role,
+		User:         pbUser,
+		Organization: pbOrg,
+		State:        mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE,
+	}
+	return updatedMembership, nil
+}
+
+func (s *service) DeleteOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) error {
+	user, err := s.repository.GetUser(ctx, userID)
+	if err != nil {
+		return err
+	}
+	org, err := s.repository.GetOrganization(ctx, orgID)
+	if err != nil {
+		return err
+	}
+	err = s.aclClient.DeleteOrganizationUserMembership(org.UID, user.UID)
+	if err != nil {
+		return err
+	}
+	return nil
 }

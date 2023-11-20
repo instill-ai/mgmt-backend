@@ -13,7 +13,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gofrs/uuid"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/contrib/propagators/b3"
@@ -157,18 +156,6 @@ func main() {
 		panic(err)
 	}
 
-	u1, _ := uuid.NewV4()
-	u2, _ := uuid.NewV4()
-	u3, _ := uuid.NewV4()
-	err = aclClient.SetOrganizationUserMembership(u1, u2)
-	if err != nil {
-		panic(err)
-	}
-	err = aclClient.SetOrganizationUserMembership(u3, u2)
-	if err != nil {
-		panic(err)
-	}
-
 	if config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "" {
 		tlsConfig = &tls.Config{
 			ClientAuth: tls.RequireAndVerifyClientCert,
@@ -198,7 +185,7 @@ func main() {
 
 	influxDB := repository.NewInfluxDB(influxDBQueryAPI, config.Config.InfluxDB.Bucket)
 	repository := repository.NewRepository(db)
-	service := service.NewService(repository, redisClient, influxDB, connectorPublicServiceClient, pipelinePublicServiceClient)
+	service := service.NewService(repository, redisClient, influxDB, connectorPublicServiceClient, pipelinePublicServiceClient, &aclClient)
 
 	// Start usage reporter
 	var usg usage.Usage
