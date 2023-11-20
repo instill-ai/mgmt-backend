@@ -18,6 +18,11 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
 
+      - name: Load .env file
+        uses: cardinalby/export-env-action@v2
+        with:
+          envFile: .env
+
       - uses: actions/setup-go@v3
         with:
           go-version: ${{ env.GOLANG_VERSION }}
