@@ -57,7 +57,7 @@ func (c *ACLClient) DeleteOrganizationUserMembership(orgUID uuid.UUID, userUID u
 		AuthorizationModelId: c.authorizationModelId,
 	}
 
-	for _, role := range []string{"owner", "member"} {
+	for _, role := range []string{"owner", "member", "pending_owner", "pending_member"} {
 		body := openfgaClient.ClientWriteRequest{
 			Deletes: &[]openfgaClient.ClientTupleKey{
 				{
@@ -90,35 +90,21 @@ func (c *ACLClient) CheckOrganizationUserMembership(orgUID uuid.UUID, userUID uu
 }
 
 func (c *ACLClient) GetOrganizationUserMembership(orgUID uuid.UUID, userUID uuid.UUID) (string, error) {
-	options := openfgaClient.ClientCheckOptions{
-		AuthorizationModelId: c.authorizationModelId,
+	options := openfgaClient.ClientReadOptions{
+		PageSize: openfga.PtrInt32(1),
 	}
-	body := openfgaClient.ClientCheckRequest{
-		User:     fmt.Sprintf("user:%s", userUID.String()),
-		Relation: "owner",
-		Object:   fmt.Sprintf("organization:%s", orgUID.String()),
+	body := openfgaClient.ClientReadRequest{
+		User:   openfga.PtrString(fmt.Sprintf("user:%s", userUID.String())),
+		Object: openfga.PtrString(fmt.Sprintf("organization:%s", orgUID.String())),
 	}
-	data, err := c.client.Check(context.Background()).Body(body).Options(options).Execute()
+	data, err := c.client.Read(context.Background()).Body(body).Options(options).Execute()
 	if err != nil {
 		return "", err
 	}
-	if *data.Allowed {
-		return "owner", nil
-	}
 
-	body = openfgaClient.ClientCheckRequest{
-		User:     fmt.Sprintf("user:%s", userUID.String()),
-		Relation: "member",
-		Object:   fmt.Sprintf("organization:%s", orgUID.String()),
+	for _, tuple := range *data.Tuples {
+		return *tuple.Key.Relation, nil
 	}
-	data, err = c.client.Check(context.Background()).Body(body).Options(options).Execute()
-	if err != nil {
-		return "", err
-	}
-	if *data.Allowed {
-		return "member", nil
-	}
-
 	return "", fmt.Errorf("no permission")
 }
 

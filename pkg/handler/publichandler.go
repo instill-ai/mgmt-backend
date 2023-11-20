@@ -47,6 +47,12 @@ var outputOnlyFieldsForToken = []string{"name", "uid", "state", "token_type", "a
 var createRequiredFieldsForOrganization = []string{"id"}
 var outputOnlyFieldsForOrganization = []string{"name", "uid", "create_time", "update_time"}
 
+var requiredFieldsForOrganizationMembership = []string{"role"}
+var outputOnlyFieldsForOrganizationMembership = []string{"name", "state", "user", "organization"}
+
+var requiredFieldsForUserMembership = []string{"state"}
+var outputOnlyFieldsForUserMembership = []string{"name", "role", "user", "organization"}
+
 type PublicHandler struct {
 	mgmtPB.UnimplementedMgmtPublicServiceServer
 	Service      service.Service
@@ -1374,6 +1380,14 @@ func (h *PublicHandler) UpdateUserMembership(ctx context.Context, req *mgmtPB.Up
 	userID := strings.Split(req.Membership.Name, "/")[1]
 	orgID := strings.Split(req.Membership.Name, "/")[3]
 
+	if err := checkfield.CheckRequiredFields(req.Membership, requiredFieldsForUserMembership); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+
+	if err := checkfield.CheckCreateOutputOnlyFields(req.Membership, outputOnlyFieldsForUserMembership); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+
 	pbMembership, err := h.Service.UpdateUserMembership(ctx, userUid, userID, orgID, req.Membership)
 	if err != nil {
 		span.SetStatus(1, err.Error())
@@ -1549,6 +1563,14 @@ func (h *PublicHandler) UpdateOrganizationMembership(ctx context.Context, req *m
 	userID := strings.Split(req.Membership.Name, "/")[1]
 	orgID := strings.Split(req.Membership.Name, "/")[3]
 
+	if err := checkfield.CheckRequiredFields(req.Membership, requiredFieldsForOrganizationMembership); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+
+	if err := checkfield.CheckCreateOutputOnlyFields(req.Membership, outputOnlyFieldsForOrganizationMembership); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+
 	pbMembership, err := h.Service.UpdateOrganizationMembership(ctx, userUid, userID, orgID, req.Membership)
 	if err != nil {
 		span.SetStatus(1, err.Error())
@@ -1591,8 +1613,8 @@ func (h *PublicHandler) DeleteOrganizationMembership(ctx context.Context, req *m
 		return nil, err
 	}
 
-	userID := strings.Split(req.Name, "/")[1]
-	orgID := strings.Split(req.Name, "/")[3]
+	orgID := strings.Split(req.Name, "/")[1]
+	userID := strings.Split(req.Name, "/")[3]
 
 	err = h.Service.DeleteUserMembership(ctx, userUid, userID, orgID)
 	if err != nil {

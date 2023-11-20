@@ -515,6 +515,9 @@ func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 	if err != nil {
 		return nil, err
 	}
+	if ctxUserUID != user.UID {
+		return nil, status.Errorf(codes.PermissionDenied, "Permission Denied")
+	}
 	org, err := s.repository.GetOrganization(ctx, orgID)
 	if err != nil {
 		return nil, err
@@ -529,25 +532,41 @@ func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 		return nil, err
 	}
 
-	err = s.aclClient.SetOrganizationUserMembership(org.UID, user.UID, membership.Role)
-	if err != nil {
-		return nil, err
+	if membership.State == mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE {
+		curRole, err := s.aclClient.GetOrganizationUserMembership(org.UID, user.UID)
+		if err != nil {
+			return nil, err
+		}
+
+		curRoleSplits := strings.Split(curRole, "_")
+		if len(curRoleSplits) == 2 {
+			curRole = curRoleSplits[1]
+		}
+		err = s.aclClient.SetOrganizationUserMembership(org.UID, user.UID, curRole)
+		if err != nil {
+			return nil, err
+		}
+
+		updatedMembership := &mgmtPB.UserMembership{
+			Name:         fmt.Sprintf("users/%s/memberships/%s", user.ID, org.ID),
+			Role:         curRole,
+			User:         pbUser,
+			Organization: pbOrg,
+			State:        mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE,
+		}
+		return updatedMembership, nil
 	}
 
-	updatedMembership := &mgmtPB.UserMembership{
-		Name:         fmt.Sprintf("users/%s/memberships/%s", user.ID, org.ID),
-		Role:         membership.Role,
-		User:         pbUser,
-		Organization: pbOrg,
-		State:        mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE,
-	}
-	return updatedMembership, nil
+	return nil, fmt.Errorf("state can only be 'active'")
 }
 
 func (s *service) DeleteUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) error {
 	user, err := s.repository.GetUser(ctx, userID)
 	if err != nil {
 		return err
+	}
+	if ctxUserUID != user.UID {
+		return status.Errorf(codes.PermissionDenied, "Permission Denied")
 	}
 	org, err := s.repository.GetOrganization(ctx, orgID)
 	if err != nil {
@@ -640,6 +659,15 @@ func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID u
 	if err != nil {
 		return nil, err
 	}
+
+	role, err := s.aclClient.GetOrganizationUserMembership(org.UID, ctxUserUID)
+	if err != nil {
+		return nil, status.Errorf(codes.PermissionDenied, "Permission Denied")
+	}
+	if role != "owner" {
+		return nil, status.Errorf(codes.PermissionDenied, "Permission Denied")
+	}
+
 	pbUser, err := s.DBUser2PBUser(ctx, user)
 	if err != nil {
 		return nil, err
@@ -650,22 +678,41 @@ func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID u
 		return nil, err
 	}
 
-	err = s.aclClient.SetOrganizationUserMembership(org.UID, user.UID, membership.Role)
-	if err != nil {
-		return nil, err
+	curRole, err := s.aclClient.GetOrganizationUserMembership(org.UID, user.UID)
+	if err == nil && !strings.HasPrefix(curRole, "pending") {
+		err = s.aclClient.SetOrganizationUserMembership(org.UID, user.UID, membership.Role)
+		if err != nil {
+			return nil, err
+		}
+
+		updatedMembership := &mgmtPB.OrganizationMembership{
+			Name:         fmt.Sprintf("organizations/%s/memberships/%s", user.ID, org.ID),
+			Role:         membership.Role,
+			User:         pbUser,
+			Organization: pbOrg,
+			State:        mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE,
+		}
+		return updatedMembership, nil
+	} else {
+		err = s.aclClient.SetOrganizationUserMembership(org.UID, user.UID, "pending_"+membership.Role)
+		if err != nil {
+			return nil, err
+		}
+
+		updatedMembership := &mgmtPB.OrganizationMembership{
+			Name:         fmt.Sprintf("organizations/%s/memberships/%s", user.ID, org.ID),
+			Role:         membership.Role,
+			User:         pbUser,
+			Organization: pbOrg,
+			State:        mgmtPB.MembershipState_MEMBERSHIP_STATE_PENDING,
+		}
+		return updatedMembership, nil
 	}
 
-	updatedMembership := &mgmtPB.OrganizationMembership{
-		Name:         fmt.Sprintf("organizations/%s/memberships/%s", user.ID, org.ID),
-		Role:         membership.Role,
-		User:         pbUser,
-		Organization: pbOrg,
-		State:        mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE,
-	}
-	return updatedMembership, nil
 }
 
 func (s *service) DeleteOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) error {
+
 	user, err := s.repository.GetUser(ctx, userID)
 	if err != nil {
 		return err
@@ -673,6 +720,13 @@ func (s *service) DeleteOrganizationMembership(ctx context.Context, ctxUserUID u
 	org, err := s.repository.GetOrganization(ctx, orgID)
 	if err != nil {
 		return err
+	}
+	role, err := s.aclClient.GetOrganizationUserMembership(org.UID, ctxUserUID)
+	if err != nil {
+		return status.Errorf(codes.PermissionDenied, "Permission Denied")
+	}
+	if role != "owner" {
+		return status.Errorf(codes.PermissionDenied, "Permission Denied")
 	}
 	err = s.aclClient.DeleteOrganizationUserMembership(org.UID, user.UID)
 	if err != nil {

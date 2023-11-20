@@ -9,31 +9,14 @@ const ACLModel = `
 		"metadata": null
 	  },
 	  {
-		"type": "team",
-		"relations": {
-		  "member": {
-			"this": {}
-		  }
-		},
-		"metadata": {
-		  "relations": {
-			"member": {
-			  "directly_related_user_types": [
-				{
-				  "type": "user"
-				},
-				{
-				  "type": "team",
-				  "relation": "member"
-				}
-			  ]
-			}
-		  }
-		}
-	  },
-	  {
 		"type": "organization",
 		"relations": {
+		  "pending_member": {
+			"this": {}
+		  },
+		  "pending_owner": {
+			"this": {}
+		  },
 		  "member": {
 			"union": {
 			  "child": [
@@ -64,6 +47,20 @@ const ACLModel = `
 		},
 		"metadata": {
 		  "relations": {
+			"pending_member": {
+			  "directly_related_user_types": [
+				{
+				  "type": "user"
+				}
+			  ]
+			},
+			"pending_owner": {
+			  "directly_related_user_types": [
+				{
+				  "type": "user"
+				}
+			  ]
+			},
 			"member": {
 			  "directly_related_user_types": [
 				{
