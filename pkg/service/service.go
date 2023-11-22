@@ -19,7 +19,6 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 
 	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1alpha"
-	connectorPB "github.com/instill-ai/protogen-go/vdp/connector/v1alpha"
 	pipelinePB "github.com/instill-ai/protogen-go/vdp/pipeline/v1alpha"
 )
 
@@ -80,23 +79,21 @@ type Service interface {
 }
 
 type service struct {
-	repository                   repository.Repository
-	influxDB                     repository.InfluxDB
-	connectorPublicServiceClient connectorPB.ConnectorPublicServiceClient
-	pipelinePublicServiceClient  pipelinePB.PipelinePublicServiceClient
-	redisClient                  *redis.Client
-	aclClient                    *acl.ACLClient
+	repository                  repository.Repository
+	influxDB                    repository.InfluxDB
+	pipelinePublicServiceClient pipelinePB.PipelinePublicServiceClient
+	redisClient                 *redis.Client
+	aclClient                   *acl.ACLClient
 }
 
 // NewService initiates a service instance
-func NewService(r repository.Repository, rc *redis.Client, i repository.InfluxDB, c connectorPB.ConnectorPublicServiceClient, p pipelinePB.PipelinePublicServiceClient, acl *acl.ACLClient) Service {
+func NewService(r repository.Repository, rc *redis.Client, i repository.InfluxDB, p pipelinePB.PipelinePublicServiceClient, acl *acl.ACLClient) Service {
 	return &service{
-		repository:                   r,
-		influxDB:                     i,
-		connectorPublicServiceClient: c,
-		pipelinePublicServiceClient:  p,
-		redisClient:                  rc,
-		aclClient:                    acl,
+		repository:                  r,
+		influxDB:                    i,
+		pipelinePublicServiceClient: p,
+		redisClient:                 rc,
+		aclClient:                   acl,
 	}
 }
 
