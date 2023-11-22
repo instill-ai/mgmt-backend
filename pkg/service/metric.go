@@ -11,7 +11,6 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 
 	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1alpha"
-	connectorPB "github.com/instill-ai/protogen-go/vdp/connector/v1alpha"
 	pipelinePB "github.com/instill-ai/protogen-go/vdp/pipeline/v1alpha"
 )
 
@@ -56,12 +55,12 @@ func (s *service) connectorUIDLookup(ctx context.Context, filter filtering.Filte
 		connectorID, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.ConnectorID, false)
 
 		if connectorID != "" {
-			if respConnector, err := s.connectorPublicServiceClient.GetUserConnectorResource(ctx, &connectorPB.GetUserConnectorResourceRequest{
+			if respConnector, err := s.pipelinePublicServiceClient.GetUserConnector(ctx, &pipelinePB.GetUserConnectorRequest{
 				Name: fmt.Sprintf("%s/connectors/%s", owner.Name, connectorID),
 			}); err != nil {
 				return filter, err
 			} else {
-				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.ConnectorID, constant.ConnectorUID, respConnector.ConnectorResource.Uid, false)
+				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.ConnectorID, constant.ConnectorUID, respConnector.Connector.Uid, false)
 			}
 		}
 	}

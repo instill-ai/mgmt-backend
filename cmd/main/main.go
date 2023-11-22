@@ -167,11 +167,6 @@ func main() {
 		grpcServerOpts = append(grpcServerOpts, grpc.Creds(creds))
 	}
 
-	connectorPublicServiceClient, connectorPublicServiceClientConn := external.InitConnectorPublicServiceClient(ctx, &config.Config)
-	if connectorPublicServiceClientConn != nil {
-		defer connectorPublicServiceClientConn.Close()
-	}
-
 	pipelinePublicServiceClient, pipelinePublicServiceClientConn := external.InitPipelinePublicServiceClient(ctx, &config.Config)
 	if pipelinePublicServiceClientConn != nil {
 		defer pipelinePublicServiceClientConn.Close()
@@ -185,7 +180,7 @@ func main() {
 
 	influxDB := repository.NewInfluxDB(influxDBQueryAPI, config.Config.InfluxDB.Bucket)
 	repository := repository.NewRepository(db)
-	service := service.NewService(repository, redisClient, influxDB, connectorPublicServiceClient, pipelinePublicServiceClient, &aclClient)
+	service := service.NewService(repository, redisClient, influxDB, pipelinePublicServiceClient, &aclClient)
 
 	// Start usage reporter
 	var usg usage.Usage
