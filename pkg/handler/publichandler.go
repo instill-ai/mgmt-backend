@@ -37,7 +37,6 @@ import (
 
 // TODO: Validate mask based on the field behavior. Currently, the fields are hard-coded.
 // We stipulate that the ID of the user is IMMUTABLE
-var createRequiredFields = []string{"id", "email", "newsletter_subscription"}
 var outputOnlyFields = []string{"name", "type", "create_time", "update_time", "customer_id"}
 var immutableFields = []string{"uid", "id"}
 
@@ -702,12 +701,12 @@ func (h *PublicHandler) CreateToken(ctx context.Context, req *mgmtPB.CreateToken
 
 	createErr := h.Service.CreateToken(ctx, ctxUserUID, req.Token)
 	if createErr != nil {
-		return &mgmtPB.CreateTokenResponse{}, status.Errorf(codes.AlreadyExists, createErr.Error())
+		return &mgmtPB.CreateTokenResponse{}, status.Errorf(codes.InvalidArgument, createErr.Error())
 	}
 
 	pbCreatedToken, err := h.Service.GetToken(ctx, ctxUserUID, req.Token.Id)
 	if createErr != nil {
-		return &mgmtPB.CreateTokenResponse{}, status.Errorf(codes.AlreadyExists, err.Error())
+		return &mgmtPB.CreateTokenResponse{}, status.Errorf(codes.InvalidArgument, err.Error())
 	}
 
 	resp := &mgmtPB.CreateTokenResponse{

@@ -16,7 +16,6 @@ import (
 	"github.com/instill-ai/x/sterr"
 
 	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1alpha"
-	checkfield "github.com/instill-ai/x/checkfield"
 )
 
 const defaultPageSize = int32(10)
@@ -83,61 +82,6 @@ func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUse
 		TotalSize:     int32(totalSize),
 	}
 	return &resp, nil
-}
-
-// CreateUserAdmin creates a user. This endpoint is not supported yet.
-func (h *PrivateHandler) CreateUserAdmin(ctx context.Context, req *mgmtPB.CreateUserAdminRequest) (*mgmtPB.CreateUserAdminResponse, error) {
-	logger, _ := logger.GetZapLogger(ctx)
-	resp := &mgmtPB.CreateUserAdminResponse{}
-
-	// Return error if REQUIRED fields are not provided in the requested payload resource
-	if err := checkfield.CheckRequiredFields(req.GetUser(), createRequiredFields); err != nil {
-		st, e := sterr.CreateErrorBadRequest(
-			"create user bad request error", []*errdetails.BadRequest_FieldViolation{
-				{
-					Field:       fmt.Sprintf("%v", createRequiredFields),
-					Description: err.Error(),
-				},
-			},
-		)
-		if e != nil {
-			logger.Error(e.Error())
-		}
-		return resp, st.Err()
-	}
-
-	// Validate the user id conforms to RFC-1034, which restricts to letters, numbers,
-	// and hyphen, with the first character a letter, the last a letter or a
-	// number, and a 63 character maximum.
-	id := req.GetUser().GetId()
-	err := checkfield.CheckResourceID(id)
-	if err != nil {
-		st, e := sterr.CreateErrorBadRequest(
-			"create user bad request error", []*errdetails.BadRequest_FieldViolation{
-				{
-					Field:       "id",
-					Description: err.Error(),
-				},
-			},
-		)
-		if e != nil {
-			logger.Error(e.Error())
-		}
-		return resp, st.Err()
-	}
-
-	st, err := sterr.CreateErrorResourceInfo(
-		codes.Unimplemented,
-		"create user not implemented error",
-		"endpoint",
-		"/users",
-		"",
-		"not implemented",
-	)
-	if err != nil {
-		logger.Error(err.Error())
-	}
-	return resp, st.Err()
 }
 
 // GetUserAdmin gets a user
