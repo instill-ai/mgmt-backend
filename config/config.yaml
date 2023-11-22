@@ -12,12 +12,6 @@ server:
     port: 443
   debug: true
   defaultuseruid:
-connectorbackend:
-  host: connector-backend
-  publicport: 8082
-  https:
-    cert:
-    key:
 pipelinebackend:
   host: pipeline-backend
   publicport: 8081

@@ -19,14 +19,13 @@ var Config AppConfig
 
 // AppConfig defines
 type AppConfig struct {
-	Server           ServerConfig           `koanf:"server"`
-	Database         DatabaseConfig         `koanf:"database"`
-	Cache            CacheConfig            `koanf:"cache"`
-	Log              LogConfig              `koanf:"log"`
-	InfluxDB         InfluxDBConfig         `koanf:"influxdb"`
-	ConnectorBackend ConnectorBackendConfig `koanf:"connectorbackend"`
-	PipelineBackend  PipelineBackendConfig  `koanf:"pipelinebackend"`
-	OpenFGA          OpenFGAConfig          `koanf:"openfga"`
+	Server          ServerConfig          `koanf:"server"`
+	Database        DatabaseConfig        `koanf:"database"`
+	Cache           CacheConfig           `koanf:"cache"`
+	Log             LogConfig             `koanf:"log"`
+	InfluxDB        InfluxDBConfig        `koanf:"influxdb"`
+	PipelineBackend PipelineBackendConfig `koanf:"pipelinebackend"`
+	OpenFGA         OpenFGAConfig         `koanf:"openfga"`
 }
 
 // ServerConfig defines HTTP server configurations
@@ -46,16 +45,6 @@ type ServerConfig struct {
 	}
 	Debug          bool   `koanf:"debug"`
 	DefaultUserUid string `koanf:"defaultuseruid"`
-}
-
-// ConnectorBackendConfig related to connector-backend
-type ConnectorBackendConfig struct {
-	Host       string `koanf:"host"`
-	PublicPort int    `koanf:"publicport"`
-	HTTPS      struct {
-		Cert string `koanf:"cert"`
-		Key  string `koanf:"key"`
-	}
 }
 
 // OpenFGA config

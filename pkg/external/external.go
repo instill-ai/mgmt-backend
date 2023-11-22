@@ -19,33 +19,8 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 
 	usagePB "github.com/instill-ai/protogen-go/core/usage/v1alpha"
-	connectorPB "github.com/instill-ai/protogen-go/vdp/connector/v1alpha"
 	pipelinePB "github.com/instill-ai/protogen-go/vdp/pipeline/v1alpha"
 )
-
-// InitConnectorPublicServiceClient initialises a ConnectorPublicServiceClient instance
-func InitConnectorPublicServiceClient(ctx context.Context, appConfig *config.AppConfig) (connectorPB.ConnectorPublicServiceClient, *grpc.ClientConn) {
-	logger, _ := logger.GetZapLogger(ctx)
-
-	var clientDialOpts grpc.DialOption
-	if appConfig.ConnectorBackend.HTTPS.Cert != "" && appConfig.ConnectorBackend.HTTPS.Key != "" {
-		creds, err := credentials.NewServerTLSFromFile(appConfig.ConnectorBackend.HTTPS.Cert, appConfig.ConnectorBackend.HTTPS.Key)
-		if err != nil {
-			logger.Fatal(err.Error())
-		}
-		clientDialOpts = grpc.WithTransportCredentials(creds)
-	} else {
-		clientDialOpts = grpc.WithTransportCredentials(insecure.NewCredentials())
-	}
-
-	clientConn, err := grpc.Dial(fmt.Sprintf("%v:%v", appConfig.ConnectorBackend.Host, appConfig.ConnectorBackend.PublicPort), clientDialOpts)
-	if err != nil {
-		logger.Error(err.Error())
-		return nil, nil
-	}
-
-	return connectorPB.NewConnectorPublicServiceClient(clientConn), clientConn
-}
 
 // InitPipelinePublicServiceClient initialises a PipelinePublicServiceClient instance
 func InitPipelinePublicServiceClient(ctx context.Context, appConfig *config.AppConfig) (pipelinePB.PipelinePublicServiceClient, *grpc.ClientConn) {
