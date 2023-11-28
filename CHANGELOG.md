@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.0-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.6.2-alpha...v0.7.0-alpha) (2023-11-28)
+
+
+### Features
+
+* **organization:** implement organization endpoints ([#138](https://github.com/instill-ai/mgmt-backend/issues/138)) ([b6a960f](https://github.com/instill-ai/mgmt-backend/commit/b6a960f6d53fe2d1b8c0c06f96962066443c6ef7))
+
+
+### Miscellaneous Chores
+
+* release v0.7.0-alpha ([2adcc65](https://github.com/instill-ai/mgmt-backend/commit/2adcc653d8946c8884f121ef00c0308b68db7eb2))
+
 ## [0.6.2-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.6.1-alpha...v0.6.2-alpha) (2023-10-27)
 
 
