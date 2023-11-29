@@ -43,6 +43,10 @@ type Service interface {
 	UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string, org *mgmtPB.Organization) (*mgmtPB.Organization, error)
 	DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string) error
 
+	ListOrganizationsAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.Organization, int64, string, error)
+	GetOrganizationAdmin(ctx context.Context, id string) (*mgmtPB.Organization, error)
+	GetOrganizationByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtPB.Organization, error)
+
 	ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID, userID string) ([]*mgmtPB.UserMembership, error)
 	GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) (*mgmtPB.UserMembership, error)
 	UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string, membership *mgmtPB.UserMembership) (*mgmtPB.UserMembership, error)
@@ -338,6 +342,33 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 	}
 
 	return s.repository.DeleteOrganization(ctx, id)
+}
+
+func (s *service) GetOrganizationAdmin(ctx context.Context, id string) (*mgmtPB.Organization, error) {
+
+	dbOrganization, err := s.repository.GetOrganization(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return s.DBOrg2PBOrg(ctx, dbOrganization)
+}
+
+func (s *service) GetOrganizationByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtPB.Organization, error) {
+
+	dbOrganization, err := s.repository.GetOrganizationByUID(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+	return s.DBOrg2PBOrg(ctx, dbOrganization)
+}
+
+func (s *service) ListOrganizationsAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.Organization, int64, string, error) {
+	dbOrganizations, totalSize, nextPageToken, err := s.repository.ListOrganizations(ctx, pageSize, pageToken, filter)
+	if err != nil {
+		return nil, 0, "", err
+	}
+	pbOrganizations, err := s.DBOrgs2PBOrgs(ctx, dbOrganizations)
+	return pbOrganizations, totalSize, nextPageToken, err
 }
 
 func (s *service) GetUserPasswordHash(ctx context.Context, uid uuid.UUID) (string, time.Time, error) {
