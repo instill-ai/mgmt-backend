@@ -657,6 +657,139 @@ func (h *PublicHandler) GetOrganization(ctx context.Context, req *mgmtPB.GetOrga
 	return resp, nil
 }
 
+// return pbPipeline, nil
+func (h *PublicHandler) UpdateOrganization(ctx context.Context, req *mgmtPB.UpdateOrganizationRequest) (*mgmtPB.UpdateOrganizationResponse, error) {
+
+	eventName := "UpdateOrganization"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	_, ctxUserUID, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated request")
+	}
+
+	id, err := resource.GetRscNameID(req.GetOrganization().Name)
+	if err != nil {
+		return nil, err
+	}
+
+	pbOrgReq := req.GetOrganization()
+	pbUpdateMask := req.GetUpdateMask()
+
+	// Validate the field mask
+	if !pbUpdateMask.IsValid(pbOrgReq) {
+		return nil, status.Error(codes.InvalidArgument, "The update_mask is invalid")
+	}
+
+	getResp, err := h.GetOrganization(ctx, &mgmtPB.GetOrganizationRequest{Name: pbOrgReq.GetName()})
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	mask, err := fieldmask_utils.MaskFromProtoFieldMask(pbUpdateMask, strcase.ToCamel)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	if mask.IsEmpty() {
+		return &mgmtPB.UpdateOrganizationResponse{
+			Organization: getResp.GetOrganization(),
+		}, nil
+	}
+
+	pbOrgToUpdate := getResp.GetOrganization()
+
+	// Return error if IMMUTABLE fields are intentionally changed
+	if err := checkfield.CheckUpdateImmutableFields(pbOrgReq, pbOrgToUpdate, immutableFields); err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	// Only the fields mentioned in the field mask will be copied to `pbPipelineToUpdate`, other fields are left intact
+	err = fieldmask_utils.StructToStruct(mask, pbOrgReq, pbOrgToUpdate)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	pbOrg, err := h.Service.UpdateOrganization(ctx, ctxUserUID, id, pbOrgToUpdate)
+	fmt.Println(pbOrg, err)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &mgmtPB.UpdateOrganizationResponse{
+		Organization: pbOrg,
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		ctxUserUID,
+		eventName,
+		custom_otel.SetEventResource(pbOrg),
+	)))
+
+	return resp, nil
+}
+func (h *PublicHandler) DeleteOrganization(ctx context.Context, req *mgmtPB.DeleteOrganizationRequest) (*mgmtPB.DeleteOrganizationResponse, error) {
+
+	eventName := "DeleteOrganization"
+
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	id, err := resource.GetRscNameID(req.Name)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+	_, userUid, err := h.Service.GetCtxUser(ctx)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+	existOrg, err := h.GetOrganization(ctx, &mgmtPB.GetOrganizationRequest{Name: req.GetName()})
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	if err := h.Service.DeleteOrganization(ctx, userUid, id); err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	// We need to manually set the custom header to have a StatusCreated http response for REST endpoint
+	if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", strconv.Itoa(http.StatusNoContent))); err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		userUid,
+		eventName,
+		custom_otel.SetEventResource(existOrg.GetOrganization()),
+	)))
+
+	return &mgmtPB.DeleteOrganizationResponse{}, nil
+}
+
 // CreateToken creates an API token for triggering pipelines. This endpoint is not supported yet.
 func (h *PublicHandler) CreateToken(ctx context.Context, req *mgmtPB.CreateTokenRequest) (*mgmtPB.CreateTokenResponse, error) {
 

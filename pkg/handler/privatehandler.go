@@ -187,3 +187,158 @@ func (h *PrivateHandler) LookUpUserAdmin(ctx context.Context, req *mgmtPB.LookUp
 	}
 	return &resp, nil
 }
+
+// ListOrganizationsAdmin lists all organizations
+func (h *PrivateHandler) ListOrganizationsAdmin(ctx context.Context, req *mgmtPB.ListOrganizationsAdminRequest) (*mgmtPB.ListOrganizationsAdminResponse, error) {
+	logger, _ := logger.GetZapLogger(ctx)
+
+	pageSize := req.GetPageSize()
+	if pageSize == 0 {
+		pageSize = defaultPageSize
+	} else if pageSize > maxPageSize {
+		pageSize = maxPageSize
+	}
+
+	pbOrganizations, totalSize, nextPageToken, err := h.Service.ListOrganizationsAdmin(ctx, int(pageSize), req.GetPageToken(), filtering.Filter{})
+	if err != nil {
+		sta := status.Convert(err)
+		switch sta.Code() {
+		case codes.InvalidArgument:
+			st, e := sterr.CreateErrorBadRequest(
+				"list organization error", []*errdetails.BadRequest_FieldViolation{
+					{
+						Field:       "ListOrganizationsAdminRequest.page_token",
+						Description: sta.Message(),
+					},
+				})
+			if e != nil {
+				logger.Error(e.Error())
+			}
+			return &mgmtPB.ListOrganizationsAdminResponse{}, st.Err()
+		default:
+			st, e := sterr.CreateErrorResourceInfo(
+				sta.Code(),
+				"list organization error",
+				"organization",
+				"",
+				"",
+				sta.Message(),
+			)
+			if e != nil {
+				logger.Error(e.Error())
+			}
+			return &mgmtPB.ListOrganizationsAdminResponse{}, st.Err()
+		}
+	}
+
+	resp := mgmtPB.ListOrganizationsAdminResponse{
+		Organizations: pbOrganizations,
+		NextPageToken: nextPageToken,
+		TotalSize:     int32(totalSize),
+	}
+	return &resp, nil
+}
+
+// GetOrganizationAdmin gets a organization
+func (h *PrivateHandler) GetOrganizationAdmin(ctx context.Context, req *mgmtPB.GetOrganizationAdminRequest) (*mgmtPB.GetOrganizationAdminResponse, error) {
+	logger, _ := logger.GetZapLogger(ctx)
+
+	id := strings.TrimPrefix(req.GetName(), "organizations/")
+
+	pbOrganization, err := h.Service.GetOrganizationAdmin(ctx, id)
+	if err != nil {
+		sta := status.Convert(err)
+		switch sta.Code() {
+		case codes.InvalidArgument:
+			st, e := sterr.CreateErrorBadRequest(
+				"get organization error", []*errdetails.BadRequest_FieldViolation{
+					{
+						Field:       "GetOrganizationAdminRequest.name",
+						Description: sta.Message(),
+					},
+				})
+			if e != nil {
+				logger.Error(e.Error())
+			}
+			return &mgmtPB.GetOrganizationAdminResponse{}, st.Err()
+		default:
+			st, e := sterr.CreateErrorResourceInfo(
+				sta.Code(),
+				"get organization error",
+				"organization",
+				fmt.Sprintf("id %s", id),
+				"",
+				sta.Message(),
+			)
+			if e != nil {
+				logger.Error(e.Error())
+			}
+			return &mgmtPB.GetOrganizationAdminResponse{}, st.Err()
+		}
+	}
+
+	resp := mgmtPB.GetOrganizationAdminResponse{
+		Organization: pbOrganization,
+	}
+	return &resp, nil
+}
+
+// LookUpOrganizationAdmin gets a organization by permalink
+func (h *PrivateHandler) LookUpOrganizationAdmin(ctx context.Context, req *mgmtPB.LookUpOrganizationAdminRequest) (*mgmtPB.LookUpOrganizationAdminResponse, error) {
+	logger, _ := logger.GetZapLogger(ctx)
+
+	uidStr := strings.TrimPrefix(req.GetPermalink(), "organizations/")
+	// Validation: `uid` in request is valid
+	uid, err := uuid.FromString(uidStr)
+	if err != nil {
+		st, e := sterr.CreateErrorBadRequest(
+			"look up organization invalid uuid error", []*errdetails.BadRequest_FieldViolation{
+				{
+					Field:       "LookUpOrganizationAdminRequest.permalink",
+					Description: err.Error(),
+				},
+			},
+		)
+		if e != nil {
+			logger.Error(e.Error())
+		}
+		return &mgmtPB.LookUpOrganizationAdminResponse{}, st.Err()
+	}
+
+	pbOrganization, err := h.Service.GetOrganizationByUIDAdmin(ctx, uid)
+	if err != nil {
+		sta := status.Convert(err)
+		switch sta.Code() {
+		case codes.InvalidArgument:
+			st, e := sterr.CreateErrorBadRequest(
+				"look up organization error", []*errdetails.BadRequest_FieldViolation{
+					{
+						Field:       "LookUpOrganizationAdminRequest.permalink",
+						Description: sta.Message(),
+					},
+				})
+			if e != nil {
+				logger.Error(e.Error())
+			}
+			return &mgmtPB.LookUpOrganizationAdminResponse{}, st.Err()
+		default:
+			st, e := sterr.CreateErrorResourceInfo(
+				sta.Code(),
+				"look up organization error",
+				"organization",
+				fmt.Sprintf("uid %s", uid),
+				"",
+				sta.Message(),
+			)
+			if e != nil {
+				logger.Error(e.Error())
+			}
+			return &mgmtPB.LookUpOrganizationAdminResponse{}, st.Err()
+		}
+	}
+
+	resp := mgmtPB.LookUpOrganizationAdminResponse{
+		Organization: pbOrganization,
+	}
+	return &resp, nil
+}
