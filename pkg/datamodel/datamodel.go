@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
 	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1alpha"
@@ -49,6 +50,8 @@ type Owner struct {
 	Role                   sql.NullString
 	NewsletterSubscription bool `gorm:"default:false"`
 	CookieToken            sql.NullString
+	ProfileAvatar          sql.NullString
+	ProfileData            datatypes.JSON `gorm:"type:jsonb"`
 }
 
 type Password struct {
