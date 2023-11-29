@@ -9,6 +9,7 @@ import (
 	"github.com/gofrs/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
@@ -54,6 +55,15 @@ func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*
 		Role:                   &dbUser.Role.String,
 		NewsletterSubscription: dbUser.NewsletterSubscription,
 		CookieToken:            &dbUser.CookieToken.String,
+		ProfileAvatar:          &dbUser.ProfileAvatar.String,
+		ProfileData: func() *structpb.Struct {
+			str := &structpb.Struct{}
+			err := str.UnmarshalJSON(dbUser.ProfileData)
+			if err != nil {
+				return &structpb.Struct{}
+			}
+			return str
+		}(),
 	}, nil
 }
 
@@ -76,6 +86,7 @@ func (s *service) PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.Owner, error) {
 	orgName := pbUser.GetOrgName()
 	role := pbUser.GetRole()
 	cookieToken := pbUser.GetCookieToken()
+	profileAvatar := pbUser.GetProfileAvatar()
 
 	return &datamodel.Owner{
 		Base: datamodel.Base{
@@ -109,6 +120,20 @@ func (s *service) PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.Owner, error) {
 			String: cookieToken,
 			Valid:  len(cookieToken) > 0,
 		},
+		ProfileAvatar: sql.NullString{
+			String: profileAvatar,
+			Valid:  len(profileAvatar) > 0,
+		},
+		ProfileData: func() []byte {
+			if pbUser.GetProfileData() != nil {
+				b, err := pbUser.GetProfileData().MarshalJSON()
+				if err != nil {
+					return nil
+				}
+				return b
+			}
+			return []byte{}
+		}(),
 	}, nil
 }
 
@@ -138,13 +163,22 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 	uid := dbOrg.Base.UID.String()
 
 	return &mgmtPB.Organization{
-		Name:       fmt.Sprintf("organizations/%s", id),
-		Uid:        uid,
-		Id:         id,
-		CreateTime: timestamppb.New(dbOrg.Base.CreateTime),
-		UpdateTime: timestamppb.New(dbOrg.Base.UpdateTime),
-		CustomerId: dbOrg.CustomerId,
-		OrgName:    &dbOrg.OrgName.String,
+		Name:          fmt.Sprintf("organizations/%s", id),
+		Uid:           uid,
+		Id:            id,
+		CreateTime:    timestamppb.New(dbOrg.Base.CreateTime),
+		UpdateTime:    timestamppb.New(dbOrg.Base.UpdateTime),
+		CustomerId:    dbOrg.CustomerId,
+		OrgName:       &dbOrg.OrgName.String,
+		ProfileAvatar: &dbOrg.ProfileAvatar.String,
+		ProfileData: func() *structpb.Struct {
+			str := &structpb.Struct{}
+			err := str.UnmarshalJSON(dbOrg.ProfileData)
+			if err != nil {
+				return &structpb.Struct{}
+			}
+			return str
+		}(),
 	}, nil
 }
 
@@ -162,6 +196,7 @@ func (s *service) PBOrg2DBOrg(pbOrg *mgmtPB.Organization) (*datamodel.Owner, err
 	userType := "organization"
 	customerId := pbOrg.GetCustomerId()
 	orgName := pbOrg.GetOrgName()
+	profileAvatar := pbOrg.GetProfileAvatar()
 
 	return &datamodel.Owner{
 		Base: datamodel.Base{
@@ -177,6 +212,20 @@ func (s *service) PBOrg2DBOrg(pbOrg *mgmtPB.Organization) (*datamodel.Owner, err
 			String: orgName,
 			Valid:  len(orgName) > 0,
 		},
+		ProfileAvatar: sql.NullString{
+			String: profileAvatar,
+			Valid:  len(profileAvatar) > 0,
+		},
+		ProfileData: func() []byte {
+			if pbOrg.GetProfileData() != nil {
+				b, err := pbOrg.GetProfileData().MarshalJSON()
+				if err != nil {
+					return nil
+				}
+				return b
+			}
+			return []byte{}
+		}(),
 	}, nil
 }
 
