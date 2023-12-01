@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -85,7 +86,7 @@ func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 		return nil
 	}
 
-	if s, ok := status.FromError(err); !ok || s.Code() != codes.NotFound {
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return status.Errorf(codes.Internal, "error %v", err)
 	}
 

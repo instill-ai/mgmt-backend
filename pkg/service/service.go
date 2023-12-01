@@ -9,8 +9,7 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/redis/go-redis/v9"
 	"go.einride.tech/aip/filtering"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/instill-ai/mgmt-backend/internal/resource"
 	"github.com/instill-ai/mgmt-backend/pkg/acl"
@@ -24,7 +23,7 @@ import (
 
 // Service interface
 type Service interface {
-	GetCtxUser(ctx context.Context) (string, uuid.UUID, error)
+	AuthenticateUser(ctx context.Context) (userID string, userUID uuid.UUID, err error)
 
 	ListRole() []string
 	CreateUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.User) (*mgmtPB.User, error)
@@ -63,8 +62,8 @@ type Service interface {
 	DeleteToken(ctx context.Context, ctxUserUID uuid.UUID, id string) error
 	ValidateToken(accessToken string) (string, error)
 
-	GetUserPasswordHash(ctx context.Context, uid uuid.UUID) (string, time.Time, error)
-	UpdateUserPasswordHash(ctx context.Context, uid uuid.UUID, newPassword string) error
+	CheckUserPassword(ctx context.Context, uid uuid.UUID, password string) error
+	UpdateUserPassword(ctx context.Context, uid uuid.UUID, newPassword string) error
 
 	ListPipelineTriggerRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerRecord, int64, string, error)
 	ListPipelineTriggerTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerTableRecord, int64, string, error)
@@ -102,23 +101,23 @@ func NewService(r repository.Repository, rc *redis.Client, i repository.InfluxDB
 }
 
 // GetUser returns the api user
-func (s *service) GetCtxUser(ctx context.Context) (string, uuid.UUID, error) {
+func (s *service) AuthenticateUser(ctx context.Context) (userID string, userUID uuid.UUID, err error) {
 	// Verify if "jwt-sub" is in the header
-	headerctxUserUID := resource.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)
+	headerCtxUserUID := resource.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)
 
-	if headerctxUserUID != "" {
-		_, err := uuid.FromString(headerctxUserUID)
+	if headerCtxUserUID != "" {
+		_, err := uuid.FromString(headerCtxUserUID)
 		if err != nil {
-			return "", uuid.Nil, status.Errorf(codes.Unauthenticated, "Unauthorized")
+			return "", uuid.Nil, ErrUnauthenticated
 		}
-		user, err := s.repository.GetUserByUID(ctx, uuid.FromStringOrNil(headerctxUserUID))
+		user, err := s.repository.GetUserByUID(ctx, uuid.FromStringOrNil(headerCtxUserUID))
 		if err != nil {
-			return "", uuid.Nil, status.Errorf(codes.Unauthenticated, "Unauthorized")
+			return "", uuid.Nil, ErrUnauthenticated
 		}
-		return user.ID, uuid.FromStringOrNil(headerctxUserUID), nil
+		return user.ID, uuid.FromStringOrNil(headerCtxUserUID), nil
 	}
 
-	return "", uuid.Nil, status.Errorf(codes.Unauthenticated, "Unauthorized")
+	return "", uuid.Nil, ErrUnauthenticated
 
 }
 
@@ -127,24 +126,15 @@ func (s *service) ListRole() []string {
 	return ListAllowedRoleName()
 }
 
-// ListUser lists all users
-// Return error types
-//   - codes.InvalidArgument
-//   - codes.Internal
-func (s *service) ListUsers(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.User, int64, string, error) {
+func (s *service) ListUsers(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) (users []*mgmtPB.User, totalSize int64, nextPageToken string, err error) {
 	dbUsers, totalSize, nextPageToken, err := s.repository.ListUsers(ctx, pageSize, pageToken, filter)
 	if err != nil {
-		return nil, 0, "", err
+		return nil, 0, "", fmt.Errorf("users/ with page_size=%d page_token=%s: %w", pageSize, pageToken, err)
 	}
-	pbUsers, err := s.DBUsers2PBUsers(ctx, dbUsers)
-	return pbUsers, totalSize, nextPageToken, err
+	users, err = s.DBUsers2PBUsers(ctx, dbUsers)
+	return users, totalSize, nextPageToken, err
 }
 
-// CreateUser creates an user instance
-// Return error types
-//   - codes.InvalidArgument
-//   - codes.NotFound
-//   - codes.Internal
 func (s *service) CreateUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.User) (*mgmtPB.User, error) {
 
 	dbUser, err := s.PBUser2DBUser(user)
@@ -153,7 +143,7 @@ func (s *service) CreateUser(ctx context.Context, ctxUserUID uuid.UUID, user *mg
 	}
 	if dbUser.Role.Valid {
 		if r := Role(dbUser.Role.String); !ValidateRole(r) {
-			return nil, status.Errorf(codes.InvalidArgument, "`role` %s in the body is not valid. Please choose from: [ %v ]", r.GetName(), strings.Join(s.ListRole(), ", "))
+			return nil, ErrInvalidRole
 		}
 	}
 	if err := s.repository.CreateUser(ctx, dbUser); err != nil {
@@ -162,25 +152,17 @@ func (s *service) CreateUser(ctx context.Context, ctxUserUID uuid.UUID, user *mg
 
 	dbCreatedUser, err := s.repository.GetUser(ctx, dbUser.ID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("users/%s: %w", dbUser.ID, err)
 	}
 
 	return s.DBUser2PBUser(ctx, dbCreatedUser)
 }
 
-// GetUser gets a user by ID
-// Return error types
-//   - codes.InvalidArgument
-//   - codes.NotFound
 func (s *service) GetUser(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.User, error) {
-	// Validation: Required field
-	if id == "" {
-		return nil, status.Error(codes.InvalidArgument, "the required field `id` is not specified")
-	}
 
 	dbUser, err := s.repository.GetUser(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("users/%s: %w", id, err)
 	}
 	return s.DBUser2PBUser(ctx, dbUser)
 }
@@ -189,7 +171,7 @@ func (s *service) GetUserAdmin(ctx context.Context, id string) (*mgmtPB.User, er
 
 	dbUser, err := s.repository.GetUser(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("users/%s: %w", id, err)
 	}
 	return s.DBUser2PBUser(ctx, dbUser)
 }
@@ -198,7 +180,7 @@ func (s *service) GetUserByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtPB
 
 	dbUser, err := s.repository.GetUserByUID(ctx, uid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("users/%s: %w", uid, err)
 	}
 	return s.DBUser2PBUser(ctx, dbUser)
 }
@@ -206,22 +188,18 @@ func (s *service) GetUserByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtPB
 func (s *service) ListUsersAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.User, int64, string, error) {
 	dbUsers, totalSize, nextPageToken, err := s.repository.ListUsers(ctx, pageSize, pageToken, filter)
 	if err != nil {
-		return nil, 0, "", err
+		return nil, 0, "", fmt.Errorf("users/ with page_size=%d page_token=%s: %w", pageSize, pageToken, err)
 	}
 	pbUsers, err := s.DBUsers2PBUsers(ctx, dbUsers)
 	return pbUsers, totalSize, nextPageToken, err
 }
 
 // UpdateUser updates a user by UUID
-// Return error types
-//   - codes.InvalidArgument
-//   - codes.NotFound
-//   - codes.Internal
 func (s *service) UpdateUser(ctx context.Context, ctxUserUID uuid.UUID, id string, user *mgmtPB.User) (*mgmtPB.User, error) {
 
 	// Check if the user exists
 	if _, err := s.repository.GetUser(ctx, id); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("users/%s: %w", id, err)
 	}
 
 	// Update the user
@@ -232,39 +210,35 @@ func (s *service) UpdateUser(ctx context.Context, ctxUserUID uuid.UUID, id strin
 	//Validation: role field
 	if dbUser.Role.Valid {
 		if r := Role(dbUser.Role.String); !ValidateRole(r) {
-			return nil, status.Errorf(codes.InvalidArgument, "`role` %s in the body is not valid. Please choose from: [ %v ]", r.GetName(), strings.Join(s.ListRole(), ", "))
+			return nil, ErrInvalidRole
 		}
 	}
 	if err := s.repository.UpdateUser(ctx, id, dbUser); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("users/%s: %w", id, err)
 	}
 
 	dbUserUpdated, err := s.repository.GetUser(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("users/%s: %w", id, err)
 	}
 	return s.DBUser2PBUser(ctx, dbUserUpdated)
 
 }
 
 // DeleteUser deletes a user by ID
-// Return error types
-//   - codes.InvalidArgument
-//   - codes.NotFound
-//   - codes.Internal
 func (s *service) DeleteUser(ctx context.Context, ctxUserUID uuid.UUID, id string) error {
-	// Validation: Required field
-	if id == "" {
-		return status.Error(codes.InvalidArgument, "the required field `id` is not specified")
-	}
 
-	return s.repository.DeleteUser(ctx, id)
+	err := s.repository.DeleteUser(ctx, id)
+	if err != nil {
+		return fmt.Errorf("users/%s: %w", id, err)
+	}
+	return nil
 }
 
 func (s *service) ListOrganizations(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.Organization, int64, string, error) {
 	dbOrgs, totalSize, nextPageToken, err := s.repository.ListOrganizations(ctx, pageSize, pageToken, filter)
 	if err != nil {
-		return nil, 0, "", err
+		return nil, 0, "", fmt.Errorf("organizations/ with page_size=%d page_token=%s: %w", pageSize, pageToken, err)
 	}
 	pbOrgs, err := s.DBOrgs2PBOrgs(ctx, dbOrgs)
 	return pbOrgs, totalSize, nextPageToken, err
@@ -286,7 +260,7 @@ func (s *service) CreateOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 
 	dbCreatedOrg, err := s.repository.GetOrganization(ctx, dbOrg.ID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("organizations/%s: %w", dbOrg.ID, err)
 	}
 
 	err = s.aclClient.SetOrganizationUserMembership(dbOrg.UID, ctxUserUID, "owner")
@@ -298,23 +272,26 @@ func (s *service) CreateOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 }
 
 func (s *service) GetOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.Organization, error) {
-	// Validation: Required field
-	if id == "" {
-		return nil, status.Error(codes.InvalidArgument, "the required field `id` is not specified")
-	}
 
 	dbOrg, err := s.repository.GetOrganization(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("organizations/%s: %w", id, err)
 	}
 	return s.DBOrg2PBOrg(ctx, dbOrg)
 }
 
 func (s *service) UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string, org *mgmtPB.Organization) (*mgmtPB.Organization, error) {
 
-	// Check if the org exists
-	if _, err := s.repository.GetOrganization(ctx, id); err != nil {
+	oriOrg, err := s.repository.GetOrganization(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("organizations/%s: %w", id, err)
+	}
+	isOwner, err := s.aclClient.CheckOrganizationUserMembership(oriOrg.UID, ctxUserUID, "owner")
+	if err != nil {
 		return nil, err
+	}
+	if !isOwner {
+		return nil, ErrNoPermission
 	}
 
 	// Update the user
@@ -324,7 +301,7 @@ func (s *service) UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 	}
 
 	if err := s.repository.UpdateOrganization(ctx, id, dbOrg); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("organizations/%s: %w", id, err)
 	}
 
 	dbOrgUpdated, err := s.repository.GetOrganization(ctx, id)
@@ -336,19 +313,31 @@ func (s *service) UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 }
 
 func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string) error {
-	// Validation: Required field
-	if id == "" {
-		return status.Error(codes.InvalidArgument, "the required field `id` is not specified")
+	org, err := s.repository.GetOrganization(ctx, id)
+	if err != nil {
+		return fmt.Errorf("organizations/%s: %w", id, err)
 	}
 
-	return s.repository.DeleteOrganization(ctx, id)
+	isOwner, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "owner")
+	if err != nil {
+		return err
+	}
+	if !isOwner {
+		return ErrNoPermission
+	}
+
+	err = s.repository.DeleteOrganization(ctx, id)
+	if err != nil {
+		return fmt.Errorf("organizations/%s: %w", id, err)
+	}
+	return nil
 }
 
 func (s *service) GetOrganizationAdmin(ctx context.Context, id string) (*mgmtPB.Organization, error) {
 
 	dbOrganization, err := s.repository.GetOrganization(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("organizations/%s: %w", id, err)
 	}
 	return s.DBOrg2PBOrg(ctx, dbOrganization)
 }
@@ -357,7 +346,7 @@ func (s *service) GetOrganizationByUIDAdmin(ctx context.Context, uid uuid.UUID) 
 
 	dbOrganization, err := s.repository.GetOrganizationByUID(ctx, uid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("organizations/%s: %w", uid, err)
 	}
 	return s.DBOrg2PBOrg(ctx, dbOrganization)
 }
@@ -365,19 +354,31 @@ func (s *service) GetOrganizationByUIDAdmin(ctx context.Context, uid uuid.UUID) 
 func (s *service) ListOrganizationsAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.Organization, int64, string, error) {
 	dbOrganizations, totalSize, nextPageToken, err := s.repository.ListOrganizations(ctx, pageSize, pageToken, filter)
 	if err != nil {
-		return nil, 0, "", err
+		return nil, 0, "", fmt.Errorf("organizations/ with page_size=%d page_token=%s: %w", pageSize, pageToken, err)
 	}
 	pbOrganizations, err := s.DBOrgs2PBOrgs(ctx, dbOrganizations)
 	return pbOrganizations, totalSize, nextPageToken, err
 }
 
-func (s *service) GetUserPasswordHash(ctx context.Context, uid uuid.UUID) (string, time.Time, error) {
-	return s.repository.GetUserPasswordHash(ctx, uid)
+func (s *service) CheckUserPassword(ctx context.Context, uid uuid.UUID, password string) error {
+	passwordHash, _, err := s.repository.GetUserPasswordHash(ctx, uid)
+	if err != nil {
+		return err
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
+	if err != nil {
+		return ErrPasswordNotMatch
+	}
+	return nil
 }
 
-func (s *service) UpdateUserPasswordHash(ctx context.Context, uid uuid.UUID, newPassword string) error {
-
-	return s.repository.UpdateUserPasswordHash(ctx, uid, newPassword, time.Now())
+func (s *service) UpdateUserPassword(ctx context.Context, uid uuid.UUID, newPassword string) error {
+	passwordBytes, err := bcrypt.GenerateFromPassword([]byte(newPassword), 10)
+	if err != nil {
+		return err
+	}
+	return s.repository.UpdateUserPasswordHash(ctx, uid, string(passwordBytes), time.Now())
 }
 
 func (s *service) CreateToken(ctx context.Context, ctxUserUID uuid.UUID, token *mgmtPB.ApiToken) error {
@@ -401,7 +402,7 @@ func (s *service) CreateToken(ctx context.Context, ctxUserUID uuid.UUID, token *
 		} else if token.GetTtl() == -1 {
 			dbToken.ExpireTime = time.Date(2099, 12, 31, 0, 0, 0, 0, time.Now().UTC().Location())
 		} else {
-			return status.Errorf(codes.InvalidArgument, "ttl should >= -1")
+			return ErrInvalidTokenTTL
 		}
 	case *mgmtPB.ApiToken_ExpireTime:
 		dbToken.ExpireTime = token.GetExpireTime().AsTime()
@@ -423,7 +424,7 @@ func (s *service) ListTokens(ctx context.Context, ctxUserUID uuid.UUID, pageSize
 	ownerPermlink := fmt.Sprintf("users/%s", ctxUserUID.String())
 	dbTokens, pageSize, pageToken, err := s.repository.ListTokens(ctx, ownerPermlink, pageSize, pageToken)
 	if err != nil {
-		return nil, 0, "", err
+		return nil, 0, "", fmt.Errorf("tokens/ with page_size=%d page_token=%s: %w", pageSize, pageToken, err)
 	}
 
 	pbTokens, err := s.DBTokens2PBTokens(ctx, dbTokens)
@@ -435,7 +436,7 @@ func (s *service) GetToken(ctx context.Context, ctxUserUID uuid.UUID, id string)
 	ownerPermlink := fmt.Sprintf("users/%s", ctxUserUID.String())
 	dbToken, err := s.repository.GetToken(ctx, ownerPermlink, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("tokens/%s: %w", id, err)
 	}
 
 	return s.DBToken2PBToken(ctx, dbToken)
@@ -446,17 +447,16 @@ func (s *service) DeleteToken(ctx context.Context, ctxUserUID uuid.UUID, id stri
 	ownerPermlink := fmt.Sprintf("users/%s", ctxUserUID.String())
 	token, err := s.repository.GetToken(ctx, ownerPermlink, id)
 	if err != nil {
-		return err
+		return fmt.Errorf("tokens/%s: %w", id, err)
 	}
 	accessToken := token.AccessToken
 
 	// TODO: should be more robust
 	s.redisClient.Del(context.Background(), fmt.Sprintf(constant.AccessTokenKeyFormat, accessToken))
-	delErr := s.repository.DeleteToken(ctx, ownerPermlink, id)
-	if delErr != nil {
-		return delErr
+	err = s.repository.DeleteToken(ctx, ownerPermlink, id)
+	if err != nil {
+		return fmt.Errorf("tokens/%s: %w", id, err)
 	}
-
 	return nil
 }
 func (s *service) ValidateToken(accessToken string) (string, error) {
@@ -470,7 +470,10 @@ func (s *service) ValidateToken(accessToken string) (string, error) {
 func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID, userID string) ([]*mgmtPB.UserMembership, error) {
 	user, err := s.repository.GetUser(ctx, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("users/%s: %w", userID, err)
+	}
+	if ctxUserUID != user.UID {
+		return nil, ErrNoPermission
 	}
 
 	orgRelations, err := s.aclClient.GetUserOrganizations(user.UID)
@@ -487,7 +490,7 @@ func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID,
 	for _, orgRelation := range orgRelations {
 		org, err := s.repository.GetOrganizationByUID(ctx, orgRelation.UID)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("organizations/%s: %w", org.ID, err)
 		}
 		pbOrg, err := s.DBOrg2PBOrg(ctx, org)
 		if err != nil {
@@ -508,11 +511,14 @@ func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID,
 func (s *service) GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) (*mgmtPB.UserMembership, error) {
 	user, err := s.repository.GetUser(ctx, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("users/%s: %w", userID, err)
+	}
+	if ctxUserUID != user.UID {
+		return nil, ErrNoPermission
 	}
 	org, err := s.repository.GetOrganization(ctx, orgID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
 	role, err := s.aclClient.GetOrganizationUserMembership(org.UID, user.UID)
 	if err != nil {
@@ -541,14 +547,14 @@ func (s *service) GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, u
 func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string, membership *mgmtPB.UserMembership) (*mgmtPB.UserMembership, error) {
 	user, err := s.repository.GetUser(ctx, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("users/%s: %w", userID, err)
 	}
 	if ctxUserUID != user.UID {
-		return nil, status.Errorf(codes.PermissionDenied, "Permission Denied")
+		return nil, ErrNoPermission
 	}
 	org, err := s.repository.GetOrganization(ctx, orgID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
 	pbUser, err := s.DBUser2PBUser(ctx, user)
 	if err != nil {
@@ -585,20 +591,20 @@ func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 		return updatedMembership, nil
 	}
 
-	return nil, fmt.Errorf("state can only be 'active'")
+	return nil, ErrStateCanOnlyBeActive
 }
 
 func (s *service) DeleteUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) error {
 	user, err := s.repository.GetUser(ctx, userID)
 	if err != nil {
-		return err
+		return fmt.Errorf("users/%s: %w", userID, err)
 	}
 	if ctxUserUID != user.UID {
-		return status.Errorf(codes.PermissionDenied, "Permission Denied")
+		return ErrNoPermission
 	}
 	org, err := s.repository.GetOrganization(ctx, orgID)
 	if err != nil {
-		return err
+		return fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
 	err = s.aclClient.DeleteOrganizationUserMembership(org.UID, user.UID)
 	if err != nil {
@@ -610,7 +616,19 @@ func (s *service) DeleteUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uuid.UUID, orgID string) ([]*mgmtPB.OrganizationMembership, error) {
 	org, err := s.repository.GetOrganization(ctx, orgID)
 	if err != nil {
+		return nil, fmt.Errorf("organizations/%s: %w", orgID, err)
+	}
+
+	isOwner, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "owner")
+	if err != nil {
 		return nil, err
+	}
+	isMember, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "member")
+	if err != nil {
+		return nil, err
+	}
+	if !isOwner && !isMember {
+		return nil, ErrNoPermission
 	}
 
 	userRelations, err := s.aclClient.GetOrganizationUsers(org.UID)
@@ -627,7 +645,7 @@ func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uu
 	for _, userRelation := range userRelations {
 		user, err := s.repository.GetUserByUID(ctx, userRelation.UID)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("users/%s: %w", user.ID, err)
 		}
 		pbUser, err := s.DBUser2PBUser(ctx, user)
 		if err != nil {
@@ -648,12 +666,25 @@ func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uu
 func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) (*mgmtPB.OrganizationMembership, error) {
 	user, err := s.repository.GetUser(ctx, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("users/%s: %w", userID, err)
 	}
 	org, err := s.repository.GetOrganization(ctx, orgID)
 	if err != nil {
+		return nil, fmt.Errorf("organizations/%s: %w", orgID, err)
+	}
+
+	isOwner, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "owner")
+	if err != nil {
 		return nil, err
 	}
+	isMember, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "member")
+	if err != nil {
+		return nil, err
+	}
+	if !isOwner && !isMember {
+		return nil, ErrNoPermission
+	}
+
 	role, err := s.aclClient.GetOrganizationUserMembership(org.UID, user.UID)
 	if err != nil {
 		return nil, err
@@ -681,19 +712,23 @@ func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid
 func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string, membership *mgmtPB.OrganizationMembership) (*mgmtPB.OrganizationMembership, error) {
 	user, err := s.repository.GetUser(ctx, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("users/%s: %w", userID, err)
 	}
 	org, err := s.repository.GetOrganization(ctx, orgID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
 
-	role, err := s.aclClient.GetOrganizationUserMembership(org.UID, ctxUserUID)
+	isOwner, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "owner")
 	if err != nil {
-		return nil, status.Errorf(codes.PermissionDenied, "Permission Denied")
+		return nil, err
 	}
-	if role != "owner" {
-		return nil, status.Errorf(codes.PermissionDenied, "Permission Denied")
+	if !isOwner {
+		return nil, ErrNoPermission
+	}
+
+	if membership.Role == "owner" {
+		return nil, ErrCanNotSetAnotherOwner
 	}
 
 	pbUser, err := s.DBUser2PBUser(ctx, user)
@@ -743,18 +778,22 @@ func (s *service) DeleteOrganizationMembership(ctx context.Context, ctxUserUID u
 
 	user, err := s.repository.GetUser(ctx, userID)
 	if err != nil {
-		return err
+		return fmt.Errorf("users/%s: %w", userID, err)
 	}
 	org, err := s.repository.GetOrganization(ctx, orgID)
 	if err != nil {
+		return fmt.Errorf("organizations/%s: %w", orgID, err)
+	}
+
+	isOwner, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "owner")
+	if err != nil {
 		return err
 	}
-	role, err := s.aclClient.GetOrganizationUserMembership(org.UID, ctxUserUID)
-	if err != nil {
-		return status.Errorf(codes.PermissionDenied, "Permission Denied")
+	if !isOwner {
+		return ErrNoPermission
 	}
-	if role != "owner" {
-		return status.Errorf(codes.PermissionDenied, "Permission Denied")
+	if isOwner && ctxUserUID == user.UID {
+		return ErrCanNotRemoveOwnerFromOrganization
 	}
 	err = s.aclClient.DeleteOrganizationUserMembership(org.UID, user.UID)
 	if err != nil {
