@@ -113,6 +113,6 @@ func InjectErrCode(err error) error {
 		return status.Error(codes.InvalidArgument, err.Error())
 
 	default:
-		return status.Error(codes.Internal, err.Error())
+		return err
 	}
 }
