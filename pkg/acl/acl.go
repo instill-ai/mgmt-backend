@@ -105,7 +105,7 @@ func (c *ACLClient) GetOrganizationUserMembership(orgUID uuid.UUID, userUID uuid
 	for _, tuple := range *data.Tuples {
 		return *tuple.Key.Relation, nil
 	}
-	return "", fmt.Errorf("no permission")
+	return "", ErrMembershipNotFound
 }
 
 func (c *ACLClient) GetOrganizationUsers(orgUID uuid.UUID) ([]*Relation, error) {
