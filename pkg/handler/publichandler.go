@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -15,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"gorm.io/gorm"
 
 	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 
@@ -344,6 +346,12 @@ func (h *PublicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUser
 
 	pbUser, err := h.Service.GetUserAdmin(ctx, id)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			resp := mgmtPB.ExistUsernameResponse{
+				Exists: false,
+			}
+			return &resp, nil
+		}
 		return nil, err
 	}
 
