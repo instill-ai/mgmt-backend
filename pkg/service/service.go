@@ -23,7 +23,7 @@ import (
 
 // Service interface
 type Service interface {
-	AuthenticateUser(ctx context.Context) (userID string, userUID uuid.UUID, err error)
+	AuthenticateUser(ctx context.Context, allowVisitor bool) (userID string, userUID uuid.UUID, err error)
 
 	ListRole() []string
 	CreateUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.User) (*mgmtPB.User, error)
@@ -101,20 +101,29 @@ func NewService(r repository.Repository, rc *redis.Client, i repository.InfluxDB
 }
 
 // GetUser returns the api user
-func (s *service) AuthenticateUser(ctx context.Context) (userID string, userUID uuid.UUID, err error) {
+func (s *service) AuthenticateUser(ctx context.Context, allowVisitor bool) (userID string, userUID uuid.UUID, err error) {
 	// Verify if "jwt-sub" is in the header
 	headerCtxUserUID := resource.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)
 
 	if headerCtxUserUID != "" {
-		_, err := uuid.FromString(headerCtxUserUID)
-		if err != nil {
-			return "", uuid.Nil, ErrUnauthenticated
+		if allowVisitor && strings.HasPrefix(headerCtxUserUID, "visitor:") {
+			_, err := uuid.FromString(strings.Split(headerCtxUserUID, ":")[1])
+			if err != nil {
+				return "", uuid.Nil, ErrUnauthenticated
+			}
+			return "", uuid.FromStringOrNil(strings.Split(headerCtxUserUID, ":")[1]), nil
+		} else {
+			_, err := uuid.FromString(headerCtxUserUID)
+			if err != nil {
+				return "", uuid.Nil, ErrUnauthenticated
+			}
+			user, err := s.repository.GetUserByUID(ctx, uuid.FromStringOrNil(headerCtxUserUID))
+			if err != nil {
+				return "", uuid.Nil, ErrUnauthenticated
+			}
+			return user.ID, uuid.FromStringOrNil(headerCtxUserUID), nil
 		}
-		user, err := s.repository.GetUserByUID(ctx, uuid.FromStringOrNil(headerCtxUserUID))
-		if err != nil {
-			return "", uuid.Nil, ErrUnauthenticated
-		}
-		return user.ID, uuid.FromStringOrNil(headerCtxUserUID), nil
+
 	}
 
 	return "", uuid.Nil, ErrUnauthenticated
@@ -286,11 +295,11 @@ func (s *service) UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 	if err != nil {
 		return nil, fmt.Errorf("organizations/%s: %w", id, err)
 	}
-	isOwner, err := s.aclClient.CheckOrganizationUserMembership(oriOrg.UID, ctxUserUID, "owner")
+	canUpdateOrganization, err := s.aclClient.CheckOrganizationUserMembership(oriOrg.UID, ctxUserUID, "can_update_organization")
 	if err != nil {
 		return nil, err
 	}
-	if !isOwner {
+	if !canUpdateOrganization {
 		return nil, ErrNoPermission
 	}
 
@@ -318,11 +327,11 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 		return fmt.Errorf("organizations/%s: %w", id, err)
 	}
 
-	isOwner, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "owner")
+	canDeleteOrganization, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "can_delete_organization")
 	if err != nil {
 		return err
 	}
-	if !isOwner {
+	if !canDeleteOrganization {
 		return ErrNoPermission
 	}
 
@@ -619,15 +628,11 @@ func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uu
 		return nil, fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
 
-	isOwner, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "owner")
+	canGetMembership, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "can_get_membership")
 	if err != nil {
 		return nil, err
 	}
-	isMember, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "member")
-	if err != nil {
-		return nil, err
-	}
-	if !isOwner && !isMember {
+	if !canGetMembership {
 		return nil, ErrNoPermission
 	}
 
@@ -673,15 +678,11 @@ func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid
 		return nil, fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
 
-	isOwner, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "owner")
+	canGetMembership, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "can_get_membership")
 	if err != nil {
 		return nil, err
 	}
-	isMember, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "member")
-	if err != nil {
-		return nil, err
-	}
-	if !isOwner && !isMember {
+	if !canGetMembership {
 		return nil, ErrNoPermission
 	}
 
@@ -719,11 +720,11 @@ func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID u
 		return nil, fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
 
-	isOwner, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "owner")
+	canSetMembership, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "can_set_membership")
 	if err != nil {
 		return nil, err
 	}
-	if !isOwner {
+	if !canSetMembership {
 		return nil, ErrNoPermission
 	}
 
@@ -785,14 +786,14 @@ func (s *service) DeleteOrganizationMembership(ctx context.Context, ctxUserUID u
 		return fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
 
-	isOwner, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "owner")
+	canRemoveMembership, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "can_remove_membership")
 	if err != nil {
 		return err
 	}
-	if !isOwner {
+	if !canRemoveMembership {
 		return ErrNoPermission
 	}
-	if isOwner && ctxUserUID == user.UID {
+	if canRemoveMembership && ctxUserUID == user.UID {
 		return ErrCanNotRemoveOwnerFromOrganization
 	}
 	err = s.aclClient.DeleteOrganizationUserMembership(org.UID, user.UID)
