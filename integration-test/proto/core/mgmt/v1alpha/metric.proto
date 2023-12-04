@@ -45,21 +45,31 @@ message PipelineTriggerRecord {
   float compute_time_duration = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
   // Final status for pipeline trigger
   Status status = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Version for the triggered pipeline if it is a release pipeline, else emtpy
+  string pipeline_release_id = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // UID for the triggered pipeline if it is a release pipeline, else emtpy
+  string pipeline_release_uid = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
-// PipelineTriggerTableRecord represents a aggregated table record for pipeline trigger
+// PipelineTriggerTableRecord represents a aggregated table record for pipeline
+// trigger
 message PipelineTriggerTableRecord {
   // ID for the triggered pipeline
   string pipeline_id = 1;
   // UID for the triggered pipeline
   string pipeline_uid = 2;
   // Trigger count with STATUS_COMPLETED
-  int64 trigger_count_completed = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int32 trigger_count_completed = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
   // Trigger count with STATUS_ERRORED
-  int64 trigger_count_errored = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int32 trigger_count_errored = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Version for the triggered pipeline if it is a release pipeline, else emtpy
+  string pipeline_release_id = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // UID for the triggered pipeline if it is a release pipeline, else emtpy
+  string pipeline_release_uid = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
-// PipelineTriggerChartRecord represents a aggregated chart record for pipeline trigger
+// PipelineTriggerChartRecord represents a aggregated chart record for pipeline
+// trigger
 message PipelineTriggerChartRecord {
   // ID for the triggered pipeline
   string pipeline_id = 1;
@@ -72,18 +82,23 @@ message PipelineTriggerChartRecord {
   // Time buckets
   repeated google.protobuf.Timestamp time_buckets = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
   // Aggregated trigger count in each time bucket
-  repeated int64 trigger_counts = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  repeated int32 trigger_counts = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
   // Total compute time duration in each time bucket
   repeated float compute_time_duration = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Version for the triggered pipeline if it is a release pipeline, else emtpy
+  string pipeline_release_id = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // UID for the triggered pipeline if it is a release pipeline, else emtpy
+  string pipeline_release_uid = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // ListPipelineTriggerRecordsRequest represents a request to list
 // pipeline trigger record
 message ListPipelineTriggerRecordsRequest {
-  // The maximum number of pipeline trigger record to return. The service may return
-  // fewer than this value. If unspecified, at most 100 record will be returned. The
-  // maximum value is 1000; values above 1000 will be coerced to 1000.
-  optional int64 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
+  // The maximum number of pipeline trigger record to return. The service may
+  // return fewer than this value. If unspecified, at most 100 record will be
+  // returned. The maximum value is 1000; values above 1000 will be coerced to
+  // 1000.
+  optional int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
   // Page token
   optional string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
   // Filter expression to list record
@@ -98,16 +113,17 @@ message ListPipelineTriggerRecordsResponse {
   // Next page token
   string next_page_token = 2;
   // Total count of pipeline trigger records
-  int64 total_size = 3;
+  int32 total_size = 3;
 }
 
 // ListPipelineTriggerTableRecordsRequest represents a request to list
 // pipeline trigger table record
 message ListPipelineTriggerTableRecordsRequest {
-  // The maximum number of pipeline trigger record to return. The service may return
-  // fewer than this value. If unspecified, at most 100 record will be returned. The
-  // maximum value is 1000; values above 1000 will be coerced to 1000.
-  optional int64 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
+  // The maximum number of pipeline trigger record to return. The service may
+  // return fewer than this value. If unspecified, at most 100 record will be
+  // returned. The maximum value is 1000; values above 1000 will be coerced to
+  // 1000.
+  optional int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
   // Page token
   optional string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
   // Filter expression to list record
@@ -122,14 +138,14 @@ message ListPipelineTriggerTableRecordsResponse {
   // Next page token
   string next_page_token = 2;
   // Total count of pipeline trigger records
-  int64 total_size = 3;
+  int32 total_size = 3;
 }
 
 // ListPipelineTriggerChartRecordsRequest represents a request to list
 // pipeline trigger chart record
 message ListPipelineTriggerChartRecordsRequest {
   // Aggregation window in nanoseconds
-  int64 aggregation_window = 1;
+  int32 aggregation_window = 1;
   // Filter expression to list chart record
   optional string filter = 2 [(google.api.field_behavior) = OPTIONAL];
 }
@@ -167,19 +183,21 @@ message ConnectorExecuteRecord {
   Status status = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
-// ConnectorExecuteTableRecord represents a aggregated table record for connector execute
+// ConnectorExecuteTableRecord represents a aggregated table record for
+// connector execute
 message ConnectorExecuteTableRecord {
   // ID for the executed connector
   string connector_id = 1;
   // UID for the executed connector
   string connector_uid = 2;
   // Execute count with STATUS_COMPLETED
-  int64 execute_count_completed = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int32 execute_count_completed = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
   // Execute count with STATUS_ERRORED
-  int64 execute_count_errored = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int32 execute_count_errored = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
-// ConnectorExecuteChartRecord represents a aggregated chart record for connector execute
+// ConnectorExecuteChartRecord represents a aggregated chart record for
+// connector execute
 message ConnectorExecuteChartRecord {
   // ID for the executed connector
   string connector_id = 1;
@@ -190,7 +208,7 @@ message ConnectorExecuteChartRecord {
   // Time buckets
   repeated google.protobuf.Timestamp time_buckets = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
   // Aggregated execute count in each time bucket
-  repeated int64 execute_counts = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  repeated int32 execute_counts = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
   // Total compute time duration in each time bucket
   repeated float compute_time_duration = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
@@ -198,10 +216,11 @@ message ConnectorExecuteChartRecord {
 // ListConnectorExecuteRecordsRequest represents a request to list
 // connector execute record
 message ListConnectorExecuteRecordsRequest {
-  // The maximum number of connector execution record to return. The service may return
-  // fewer than this value. If unspecified, at most 100 record will be returned. The
-  // maximum value is 1000; values above 1000 will be coerced to 1000.
-  optional int64 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
+  // The maximum number of connector execution record to return. The service may
+  // return fewer than this value. If unspecified, at most 100 record will be
+  // returned. The maximum value is 1000; values above 1000 will be coerced to
+  // 1000.
+  optional int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
   // Page token
   optional string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
   // Filter expression to list record
@@ -216,16 +235,17 @@ message ListConnectorExecuteRecordsResponse {
   // Next page token
   string next_page_token = 2;
   // Total count of connector execute records
-  int64 total_size = 3;
+  int32 total_size = 3;
 }
 
 // ListConnectorExecuteTableRecordsRequest represents a request to list
 // connector execute table record
 message ListConnectorExecuteTableRecordsRequest {
-  // The maximum number of connector execution table record to return. The service may return
-  // fewer than this value. If unspecified, at most 100 record will be returned. The
-  // maximum value is 1000; values above 1000 will be coerced to 1000.
-  optional int64 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
+  // The maximum number of connector execution table record to return. The
+  // service may return fewer than this value. If unspecified, at most 100
+  // record will be returned. The maximum value is 1000; values above 1000 will
+  // be coerced to 1000.
+  optional int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
   // Page token
   optional string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
   // Filter expression to list record
@@ -240,14 +260,14 @@ message ListConnectorExecuteTableRecordsResponse {
   // Next page token
   string next_page_token = 2;
   // Total count of connector execute records
-  int64 total_size = 3;
+  int32 total_size = 3;
 }
 
 // ListConnectorExecuteChartRecordsRequest represents a request to list
 // connector execute chart record
 message ListConnectorExecuteChartRecordsRequest {
   // Aggregation window in nanoseconds
-  int64 aggregation_window = 1;
+  int32 aggregation_window = 1;
   // Filter expression to list chart record
   optional string filter = 2 [(google.api.field_behavior) = OPTIONAL];
 }
