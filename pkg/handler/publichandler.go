@@ -113,7 +113,7 @@ func (h *PublicHandler) AuthTokenIssuer(ctx context.Context, in *mgmtPB.AuthToke
 
 func (h *PublicHandler) AuthChangePassword(ctx context.Context, in *mgmtPB.AuthChangePasswordRequest) (*mgmtPB.AuthChangePasswordResponse, error) {
 
-	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (h *PublicHandler) ListUsers(ctx context.Context, req *mgmtPB.ListUsersRequ
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx, true)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -191,7 +191,6 @@ func (h *PublicHandler) ListUsers(ctx context.Context, req *mgmtPB.ListUsersRequ
 }
 
 // GetUser gets the user.
-// Note: this endpoint assumes the ID of the authenticated user is the default user.
 func (h *PublicHandler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest) (*mgmtPB.GetUserResponse, error) {
 
 	eventName := "GetUser"
@@ -203,7 +202,7 @@ func (h *PublicHandler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest)
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx, true)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -266,7 +265,7 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 		return nil, err
 	}
 
-	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -395,7 +394,7 @@ func (h *PublicHandler) CreateOrganization(ctx context.Context, req *mgmtPB.Crea
 		return nil, ErrResourceID
 	}
 
-	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -437,7 +436,7 @@ func (h *PublicHandler) ListOrganizations(ctx context.Context, req *mgmtPB.ListO
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx, true)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -474,7 +473,7 @@ func (h *PublicHandler) GetOrganization(ctx context.Context, req *mgmtPB.GetOrga
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx, true)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -517,7 +516,7 @@ func (h *PublicHandler) UpdateOrganization(ctx context.Context, req *mgmtPB.Upda
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -606,7 +605,7 @@ func (h *PublicHandler) DeleteOrganization(ctx context.Context, req *mgmtPB.Dele
 		span.SetStatus(1, err.Error())
 		return nil, ErrResourceID
 	}
-	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -651,6 +650,12 @@ func (h *PublicHandler) CreateToken(ctx context.Context, req *mgmtPB.CreateToken
 
 	logger, _ := logger.GetZapLogger(ctx)
 
+	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
 	// Set all OUTPUT_ONLY fields to zero value on the requested payload token resource
 	if err := checkfield.CheckCreateOutputOnlyFields(req.Token, outputOnlyFieldsForToken); err != nil {
 		return &mgmtPB.CreateTokenResponse{}, ErrCheckOutputOnlyFields
@@ -669,12 +674,6 @@ func (h *PublicHandler) CreateToken(ctx context.Context, req *mgmtPB.CreateToken
 	// Return error if expiration is not provided
 	if req.Token.GetExpiration() == nil {
 		return &mgmtPB.CreateTokenResponse{}, ErrCheckRequiredFields
-	}
-
-	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
-	if err != nil {
-		span.SetStatus(1, err.Error())
-		return nil, err
 	}
 
 	err = h.Service.CreateToken(ctx, ctxUserUID, req.Token)
@@ -719,7 +718,7 @@ func (h *PublicHandler) ListTokens(ctx context.Context, req *mgmtPB.ListTokensRe
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -757,7 +756,7 @@ func (h *PublicHandler) GetToken(ctx context.Context, req *mgmtPB.GetTokenReques
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -800,7 +799,7 @@ func (h *PublicHandler) DeleteToken(ctx context.Context, req *mgmtPB.DeleteToken
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -863,7 +862,7 @@ func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgm
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -933,7 +932,7 @@ func (h *PublicHandler) ListPipelineTriggerTableRecords(ctx context.Context, req
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -998,7 +997,7 @@ func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -1065,7 +1064,7 @@ func (h *PublicHandler) ListConnectorExecuteRecords(ctx context.Context, req *mg
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -1135,7 +1134,7 @@ func (h *PublicHandler) ListConnectorExecuteTableRecords(ctx context.Context, re
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -1198,7 +1197,7 @@ func (h *PublicHandler) ListConnectorExecuteChartRecords(ctx context.Context, re
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -1266,7 +1265,7 @@ func (h *PublicHandler) ListUserMemberships(ctx context.Context, req *mgmtPB.Lis
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -1309,7 +1308,7 @@ func (h *PublicHandler) GetUserMembership(ctx context.Context, req *mgmtPB.GetUs
 
 	userID := strings.Split(req.Name, "/")[1]
 	orgID := strings.Split(req.Name, "/")[3]
-	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -1352,7 +1351,7 @@ func (h *PublicHandler) UpdateUserMembership(ctx context.Context, req *mgmtPB.Up
 
 	userID := strings.Split(req.Membership.Name, "/")[1]
 	orgID := strings.Split(req.Membership.Name, "/")[3]
-	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -1403,7 +1402,7 @@ func (h *PublicHandler) DeleteUserMembership(ctx context.Context, req *mgmtPB.De
 
 	userID := strings.Split(req.Name, "/")[1]
 	orgID := strings.Split(req.Name, "/")[3]
-	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	ctxUserID, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -1442,7 +1441,7 @@ func (h *PublicHandler) ListOrganizationMemberships(ctx context.Context, req *mg
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -1480,7 +1479,7 @@ func (h *PublicHandler) GetOrganizationMembership(ctx context.Context, req *mgmt
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -1521,7 +1520,7 @@ func (h *PublicHandler) UpdateOrganizationMembership(ctx context.Context, req *m
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -1570,7 +1569,7 @@ func (h *PublicHandler) DeleteOrganizationMembership(ctx context.Context, req *m
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx)
+	_, ctxUserUID, err := h.Service.AuthenticateUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
