@@ -3,8 +3,6 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"errors"
-	"fmt"
 	"time"
 
 	"github.com/gofrs/uuid"
@@ -189,7 +187,6 @@ func (r *repository) createOwner(ctx context.Context, ownerType string, owner *d
 
 	logger, _ := logger.GetZapLogger(ctx)
 	if result := r.db.Model(&datamodel.Owner{}).Create(owner); result.Error != nil {
-		fmt.Println("errors", errors.Is(result.Error, gorm.ErrDuplicatedKey))
 		logger.Error(result.Error.Error())
 		return result.Error
 	}
