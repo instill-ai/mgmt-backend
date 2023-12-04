@@ -8,6 +8,7 @@ import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
 // Protobuf standard
 import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
 
@@ -69,16 +70,6 @@ enum MembershipState {
   MEMBERSHIP_STATE_PENDING = 2;
 }
 
-// InvitationState
-enum InvitationState {
-  // Invitation: UNSPECIFIED
-  INVITATION_STATE_UNSPECIFIED = 0;
-  // Invitation: Pending
-  INVITATION_STATE_PENDING = 1;
-  // Invitation: Failed
-  INVITATION_STATE_FAILED = 2;
-}
-
 // Users
 
 // User represents the content of a user
@@ -128,6 +119,10 @@ message User {
   bool newsletter_subscription = 13 [(google.api.field_behavior) = REQUIRED];
   // User console cookie token
   optional string cookie_token = 14 [(google.api.field_behavior) = OPTIONAL];
+  // Profile Avatar base64
+  optional string profile_avatar = 15 [(google.api.field_behavior) = OPTIONAL];
+  // Profile Data
+  optional google.protobuf.Struct profile_data = 16 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // ListUsersAdminRequest represents a request to list all users by admin
@@ -153,21 +148,6 @@ message ListUsersAdminResponse {
   string next_page_token = 2;
   // Total count of users
   int32 total_size = 3;
-}
-
-// CreateUserAdminRequest represents a request to create a user by admin
-message CreateUserAdminRequest {
-  // The user to be created
-  //
-  // The user's `name` field is used to identify the user to create.
-  // Format: users/{user}
-  User user = 1 [(google.api.field_behavior) = REQUIRED];
-}
-
-// CreateUserAdminResponse represents a response for a user response
-message CreateUserAdminResponse {
-  // A user resource
-  User user = 1;
 }
 
 // GetUserAdminRequest represents a request to query a user by admin
@@ -205,6 +185,68 @@ message LookUpUserAdminRequest {
 message LookUpUserAdminResponse {
   // A user resource
   User user = 1;
+}
+
+// ListOrganizationsAdminRequest represents a request to list all organizations by admin
+message ListOrganizationsAdminRequest {
+  // Page size: the maximum number of resources to return. The service may
+  // return fewer than this value. If unspecified, at most 10 organizations will be
+  // returned. The maximum value is 100; values above 100 will be coereced to
+  // 100.
+  optional int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
+  // Page token
+  optional string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
+  // View view (default is VIEW_BASIC)
+  optional View view = 3 [(google.api.field_behavior) = OPTIONAL];
+  // Filter expression to list organizations
+  optional string filter = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// ListOrganizationsAdminResponse represents a response for a list of organizations
+message ListOrganizationsAdminResponse {
+  // A list of organizations
+  repeated Organization organizations = 1;
+  // Next page token
+  string next_page_token = 2;
+  // Total count of organizations
+  int32 total_size = 3;
+}
+
+// GetOrganizationAdminRequest represents a request to query a organization by admin
+message GetOrganizationAdminRequest {
+  // Resource name of a organization. For example:
+  // "organizations/local-organization"
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "api.instill.tech/Organization",
+    (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+      field_configuration: {path_param_name: "organization.name"}
+    }
+  ];
+  // View view (default is VIEW_BASIC)
+  optional View view = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// GetOrganizationAdminResponse represents a response for a organization resource
+message GetOrganizationAdminResponse {
+  // A organization resource
+  Organization organization = 1;
+}
+
+// LookUpOrganizationAdminRequest represents a request to query a organization via permalink by
+// admin
+message LookUpOrganizationAdminRequest {
+  // Permalink of a organization. For example:
+  // "organizations/{uid}"
+  string permalink = 1 [(google.api.field_behavior) = REQUIRED];
+  // View view (default is VIEW_BASIC)
+  optional View view = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// LookUpOrganizationAdminResponse represents a response for a organization resource by admin
+message LookUpOrganizationAdminResponse {
+  // A organization resource
+  Organization organization = 1;
 }
 
 // ListUsersRequest represents a request to list all users
@@ -269,25 +311,36 @@ message PatchAuthenticatedUserResponse {
   User user = 1;
 }
 
-// ExistUsernameRequest represents a request to verify if
-// a username has been occupied
-message ExistUsernameRequest {
-  // The resource name of the user to check,
-  // for example: "users/local-user"
-  string name = 1 [
-    (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference).type = "api.instill.tech/User",
-    (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
-      field_configuration: {path_param_name: "user.name"}
-    }
-  ];
+// CheckNamespaceRequest represents a request to verify if
+// a namespace has been occupied and know its type
+message CheckNamespaceRequest {
+  // CheckNamespaceRequestBody
+  message CheckNamespaceRequestBody {
+    // The resource id of to check,
+    string id = 1 [(google.api.field_behavior) = REQUIRED];
+  }
+  // body
+  CheckNamespaceRequestBody namespace = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-// ExistUsernameResponse represents a response about whether
+// CheckNamespaceResponse represents a response about whether
 // the queried username has been occupied
-message ExistUsernameResponse {
+message CheckNamespaceResponse {
+  // Namespace type
+  enum Namespace {
+    // UNSPECIFIED
+    NAMESPACE_UNSPECIFIED = 0;
+    // Available
+    NAMESPACE_AVAILABLE = 1;
+    // User
+    NAMESPACE_USER = 2;
+    // Org
+    NAMESPACE_ORGANIZATION = 3;
+    // Reserved
+    NAMESPACE_RESERVED = 4;
+  }
   // A boolean value indicating whether the username has been occupied
-  bool exists = 1;
+  Namespace type = 1;
 }
 
 // ApiToken represents the content of a API token
@@ -495,9 +548,8 @@ message Organization {
   // Resource name. It must have the format of "organizations/*".
   // For example: "organizations/local-organization".
   string name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
-  // Organization ID in UUIDv4. This field is optionally set by organizations
-  // (optional on resource creation, server-generated if unset).
-  optional string uid = 2 [(google.api.field_behavior) = IMMUTABLE];
+  // Organization ID in UUIDv4.
+  string uid = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
   // Resource ID (the last segment of the resource name), also the organization
   // name. This conforms to RFC-1034, which restricts to letters, numbers,
   // and hyphen, with the first character a letter, the last a letter or a
@@ -510,6 +562,12 @@ message Organization {
   google.protobuf.Timestamp update_time = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
   // Organization company or institution name
   optional string org_name = 6 [(google.api.field_behavior) = OPTIONAL];
+  // Stripe customer ID. This field is used in Instill Cloud.
+  string customer_id = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Profile Avatar base64
+  optional string profile_avatar = 9 [(google.api.field_behavior) = OPTIONAL];
+  // Profile Data
+  optional google.protobuf.Struct profile_data = 10 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // ListOrganizationsRequest represents a request to list all organizations
@@ -627,118 +685,40 @@ message ExistOrganizationNameResponse {
   bool exists = 1;
 }
 
-// OrganizationInvitation represents the content of a organization invitation
-message OrganizationInvitation {
-  option (google.api.resource) = {
-    type: "api.instill.tech/OrganizationInvitation"
-    pattern: "organizations/{organization}/invitations/{invitation}"
-  };
-
-  // Resource name. It must have the format of "organizations/*/invitations/*".
-  string name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
-  // Organization ID in UUIDv4. This field is optionally set by organizations
-  // (optional on resource creation, server-generated if unset).
-  optional string uid = 2 [(google.api.field_behavior) = IMMUTABLE];
-  // Resource ID (the last segment of the resource name), also the organization
-  // name. This conforms to RFC-1034, which restricts to letters, numbers,
-  // and hyphen, with the first character a letter, the last a letter or a
-  // number, and a 63 character maximum.
-
-  // User
-  oneof user {
-    // User ID
-    string user_id = 3 [(google.api.field_behavior) = REQUIRED];
-    // User Email
-    string user_email = 4 [(google.api.field_behavior) = REQUIRED];
-  }
-
-  // Role
-  string role = 5 [(google.api.field_behavior) = REQUIRED];
-
-  // Invitor
-  User invitor = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
-
-  //InvitationState
-  InvitationState state = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
-
-  // create time
-  google.protobuf.Timestamp create_time = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
-  // update time
-  google.protobuf.Timestamp update_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
-}
-
 // Membership represents the content of a membership
 message OrganizationMembership {
-  // Resource name. It must have the format of "organizations/*/memberships/*" or "users/*/memberships/*".
+  // Resource name. It must have the format of "organizations/*/memberships/*"
   string name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
-  // Organization ID in UUIDv4. This field is optionally set by organizations
-  // (optional on resource creation, server-generated if unset).
-  optional string uid = 2 [(google.api.field_behavior) = IMMUTABLE];
-  // Resource ID (the last segment of the resource name), also the organization
-  // name. This conforms to RFC-1034, which restricts to letters, numbers,
-  // and hyphen, with the first character a letter, the last a letter or a
-  // number, and a 63 character maximum.
 
   // Role
   string role = 3 [(google.api.field_behavior) = REQUIRED];
 
   // State
-  MembershipState state = 4;
+  MembershipState state = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // User
   User user = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Organization
-  User organization = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
-
-  // create time
-  google.protobuf.Timestamp create_time = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
-  // update time
-  google.protobuf.Timestamp update_time = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  Organization organization = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // Membership represents the content of a membership
 message UserMembership {
-  // Resource name. It must have the format of "organizations/*/memberships/*" or "users/*/memberships/*".
+  // Resource name. It must have the format of "users/*/memberships/*".
   string name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
-  // Organization ID in UUIDv4. This field is optionally set by organizations
-  // (optional on resource creation, server-generated if unset).
-  optional string uid = 2 [(google.api.field_behavior) = IMMUTABLE];
-  // Resource ID (the last segment of the resource name), also the organization
-  // name. This conforms to RFC-1034, which restricts to letters, numbers,
-  // and hyphen, with the first character a letter, the last a letter or a
-  // number, and a 63 character maximum.
-
   // Role
-  string role = 3 [(google.api.field_behavior) = REQUIRED];
-
+  string role = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
   // State
-  MembershipState state = 4;
-
+  MembershipState state = 4 [(google.api.field_behavior) = REQUIRED];
   // User
   User user = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
-
   // Organization
-  User organization = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
-
-  // create time
-  google.protobuf.Timestamp create_time = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
-  // update time
-  google.protobuf.Timestamp update_time = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  Organization organization = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // ListUserMembershipsRequest represents a request to list user memberships
 message ListUserMembershipsRequest {
-  // The maximum number of organizations to return. The service may return fewer
-  // than this value. If unspecified, at most 10 organizations will be returned. The
-  // maximum value is 100; values above 100 will be coerced to 100.
-  optional int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
-  // Page token
-  optional string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
-  // View view (default is VIEW_BASIC)
-  optional View view = 3 [(google.api.field_behavior) = OPTIONAL];
-  // Filter expression to list organizations
-  optional string filter = 4 [(google.api.field_behavior) = OPTIONAL];
   // The parent resource where this connector resource will be created.
   // Format: users/{users}
   string parent = 5 [
@@ -751,10 +731,6 @@ message ListUserMembershipsRequest {
 message ListUserMembershipsResponse {
   // A list of memberships
   repeated UserMembership memberships = 1;
-  // Next page token
-  string next_page_token = 2;
-  // Total count of membership resources
-  int32 total_size = 3;
 }
 
 // GetUserMembershipRequest represents a request to query a membership
@@ -808,16 +784,6 @@ message DeleteUserMembershipResponse {}
 
 // ListOrganizationMembershipsRequest represents a request to list organization memberships
 message ListOrganizationMembershipsRequest {
-  // The maximum number of organizations to return. The service may return fewer
-  // than this value. If unspecified, at most 10 organizations will be returned. The
-  // maximum value is 100; values above 100 will be coerced to 100.
-  optional int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
-  // Page token
-  optional string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
-  // View view (default is VIEW_BASIC)
-  optional View view = 3 [(google.api.field_behavior) = OPTIONAL];
-  // Filter expression to list organizations
-  optional string filter = 4 [(google.api.field_behavior) = OPTIONAL];
   // The parent resource where this connector resource will be created.
   // Format: organization/{organizations}
   string parent = 5 [
@@ -830,10 +796,6 @@ message ListOrganizationMembershipsRequest {
 message ListOrganizationMembershipsResponse {
   // A list of memberships
   repeated OrganizationMembership memberships = 1;
-  // Next page token
-  string next_page_token = 2;
-  // Total count of membership resources
-  int32 total_size = 3;
 }
 
 // GetOrganizationMembershipRequest represents a request to query a membership
@@ -884,86 +846,3 @@ message DeleteOrganizationMembershipRequest {
 
 // DeleteOrganizationMembershipResponse represents an empty response
 message DeleteOrganizationMembershipResponse {}
-
-// ListOrganizationInvitationsRequest represents a request to list organization invitations
-message ListOrganizationInvitationsRequest {
-  // The maximum number of organizations to return. The service may return fewer
-  // than this value. If unspecified, at most 10 organizations will be returned. The
-  // maximum value is 100; values above 100 will be coerced to 100.
-  optional int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
-  // Page token
-  optional string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
-  // View view (default is VIEW_BASIC)
-  optional View view = 3 [(google.api.field_behavior) = OPTIONAL];
-  // Filter expression to list organizations
-  optional string filter = 4 [(google.api.field_behavior) = OPTIONAL];
-  // The parent resource where this connector resource will be created.
-  // Format: organization/{organizations}
-  string parent = 5 [
-    (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {child_type: "api.instill.tech/Organization"}
-  ];
-}
-
-// ListOrganizationInvitationsResponse represents a response for a list of invitations
-message ListOrganizationInvitationsResponse {
-  // A list of invitations
-  repeated OrganizationInvitation invitations = 1;
-  // Next page token
-  string next_page_token = 2;
-  // Total count of invitation resources
-  int32 total_size = 3;
-}
-
-// CreateOrganizationInvitationRequest represents a request to create a pipeline
-message CreateOrganizationInvitationRequest {
-  // A pipeline resource to create
-  OrganizationInvitation invitation = 1 [(google.api.field_behavior) = REQUIRED];
-  // The parent resource where this connector resource will be created.
-  // Format: users/{users}
-  string parent = 2 [
-    (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {child_type: "api.instill.tech/OrganizationInvitation"}
-  ];
-}
-
-// CreateOrganizationInvitationResponse represents a response for a pipeline resource
-message CreateOrganizationInvitationResponse {
-  // The created pipeline resource
-  OrganizationInvitation invitation = 1;
-}
-
-// GetOrganizationInvitationRequest represents a request to query a invitation
-message GetOrganizationInvitationRequest {
-  // Invitation resource name. It must have the format of "organizations/*/invitations/*"
-  string name = 1 [
-    (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "api.instill.tech/OrganizationInvitation"},
-    (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
-      field_configuration: {path_param_name: "invitation.name"}
-    }
-  ];
-  // Invitation resource view (default is VIEW_BASIC)
-  optional View view = 2 [(google.api.field_behavior) = OPTIONAL];
-}
-
-// GetOrganizationInvitationResponse represents a response for a invitation resource
-message GetOrganizationInvitationResponse {
-  // A invitation resource
-  OrganizationInvitation invitation = 1;
-}
-
-// DeleteOrganizationInvitationRequest represents a request to delete a invitation resource
-message DeleteOrganizationInvitationRequest {
-  // Invitation resource name. It must have the format of "organizations/*/invitation/*"
-  string name = 1 [
-    (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "api.instill.tech/OrganizationInvitation"},
-    (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
-      field_configuration: {path_param_name: "invitation.name"}
-    }
-  ];
-}
-
-// DeleteOrganizationInvitationResponse represents an empty response
-message DeleteOrganizationInvitationResponse {}
