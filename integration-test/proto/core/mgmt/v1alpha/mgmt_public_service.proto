@@ -34,6 +34,15 @@ service MgmtPublicService {
     };
   }
 
+  // Check namespace
+  rpc CheckNamespace(CheckNamespaceRequest) returns (CheckNamespaceResponse) {
+    option (google.api.http) = {
+      post: "/v1alpha/check-namespace"
+      body: "namespace"
+    };
+    option (google.api.method_signature) = "namespace";
+  }
+
   // ListUsers method receives a ListUsersRequest message and returns a
   // ListUsersResponse message.
   rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
@@ -57,13 +66,6 @@ service MgmtPublicService {
     option (google.api.method_signature) = "user,update_mask";
   }
 
-  // ExistUsername method receives a ExistUsernameRequest message and returns a
-  // ExistUsernameResponse
-  rpc ExistUsername(ExistUsernameRequest) returns (ExistUsernameResponse) {
-    option (google.api.http) = {get: "/v1alpha/{name=users/*}/exist"};
-    option (google.api.method_signature) = "name";
-  }
-
   // ListUserMemberships method receives a ListUserMembershipsRequest message and returns a
   // ListUserMembershipsResponse message.
   rpc ListUserMemberships(ListUserMembershipsRequest) returns (ListUserMembershipsResponse) {
@@ -82,7 +84,7 @@ service MgmtPublicService {
   // a UpdateUserMembershipResponse message.
   rpc UpdateUserMembership(UpdateUserMembershipRequest) returns (UpdateUserMembershipResponse) {
     option (google.api.http) = {
-      patch: "/v1alpha/{membership.name=users/*/memberships/*}"
+      put: "/v1alpha/{membership.name=users/*/memberships/*}"
       body: "membership"
     };
     option (google.api.method_signature) = "membership,update_mask";
@@ -153,7 +155,7 @@ service MgmtPublicService {
   // a UpdateOrganizationMembershipResponse message.
   rpc UpdateOrganizationMembership(UpdateOrganizationMembershipRequest) returns (UpdateOrganizationMembershipResponse) {
     option (google.api.http) = {
-      patch: "/v1alpha/{membership.name=organizations/*/memberships/*}"
+      put: "/v1alpha/{membership.name=organizations/*/memberships/*}"
       body: "membership"
     };
     option (google.api.method_signature) = "membership,update_mask";
@@ -163,37 +165,6 @@ service MgmtPublicService {
   // a DeleteOrganizationMembershipResponse message.
   rpc DeleteOrganizationMembership(DeleteOrganizationMembershipRequest) returns (DeleteOrganizationMembershipResponse) {
     option (google.api.http) = {delete: "/v1alpha/{name=organizations/*/memberships/*}"};
-    option (google.api.method_signature) = "name";
-  }
-
-  // ListOrganizationInvitations method receives a ListOrganizationInvitationsRequest message and returns a
-  // ListOrganizationInvitationpsResponse message.
-  rpc ListOrganizationInvitations(ListOrganizationInvitationsRequest) returns (ListOrganizationInvitationsResponse) {
-    option (google.api.http) = {get: "/v1alpha/{parent=organizations/*}/invitations"};
-    option (google.api.method_signature) = "parent";
-  }
-
-  // CreateOrganizationInvitation method receives a CreateOrganizationInvitationRequest message and returns
-  // a CreateOrganizationInvitationResponse message.
-  rpc CreateOrganizationInvitation(CreateOrganizationInvitationRequest) returns (CreateOrganizationInvitationResponse) {
-    option (google.api.http) = {
-      post: "/v1alpha/{parent=organizations/*}/invitations"
-      body: "invitation"
-    };
-    option (google.api.method_signature) = "parent,invitation";
-  }
-
-  // GetOrganizationInvitation method receives a GetOrganizationInvitationRequest message and returns a
-  // GetOrganizationInvitationResponse message.
-  rpc GetOrganizationInvitation(GetOrganizationInvitationRequest) returns (GetOrganizationInvitationResponse) {
-    option (google.api.http) = {get: "/v1alpha/{name=organizations/*/invitations/*}"};
-    option (google.api.method_signature) = "name";
-  }
-
-  // DeleteOrganizationInvitation method receives a DeleteOrganizationInvitationRequest message and returns
-  // a DeleteOrganizationInvitationResponse message.
-  rpc DeleteOrganizationInvitation(DeleteOrganizationInvitationRequest) returns (DeleteOrganizationInvitationResponse) {
-    option (google.api.http) = {delete: "/v1alpha/{name=organizations/*/invitations/*}"};
     option (google.api.method_signature) = "name";
   }
 

@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -16,7 +15,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"gorm.io/gorm"
 
 	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 
@@ -321,51 +319,34 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 	return &resp, nil
 }
 
-// ExistUsername verifies if a username (ID) has been occupied
-func (h *PublicHandler) ExistUsername(ctx context.Context, req *mgmtPB.ExistUsernameRequest) (*mgmtPB.ExistUsernameResponse, error) {
+func (h *PublicHandler) CheckNamespace(ctx context.Context, req *mgmtPB.CheckNamespaceRequest) (*mgmtPB.CheckNamespaceResponse, error) {
 
-	eventName := "ExistUsername"
+	eventName := "CheckNamespace"
 	ctx, span := tracer.Start(ctx, eventName,
 		trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
-	logUUID, _ := uuid.NewV4()
-
-	logger, _ := logger.GetZapLogger(ctx)
-
-	id := strings.TrimPrefix(req.GetName(), "users/")
-
-	// Validate the user id conforms to RFC-1034, which restricts to letters, numbers,
-	// and hyphen, with the first character a letter, the last a letter or a
-	// number, and a 63 character maximum.
-	err := checkfield.CheckResourceID(id)
+	err := checkfield.CheckResourceID(req.GetNamespace().GetId())
 	if err != nil {
 		return nil, ErrResourceID
 	}
 
-	pbUser, err := h.Service.GetUserAdmin(ctx, id)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			resp := mgmtPB.ExistUsernameResponse{
-				Exists: false,
-			}
-			return &resp, nil
-		}
-		return nil, err
+	_, err = h.Service.GetUserAdmin(ctx, req.GetNamespace().GetId())
+	if err == nil {
+		return &mgmtPB.CheckNamespaceResponse{
+			Type: mgmtPB.CheckNamespaceResponse_NAMESPACE_USER,
+		}, nil
+	}
+	_, err = h.Service.GetOrganizationAdmin(ctx, req.GetNamespace().GetId())
+	if err == nil {
+		return &mgmtPB.CheckNamespaceResponse{
+			Type: mgmtPB.CheckNamespaceResponse_NAMESPACE_ORGANIZATION,
+		}, nil
 	}
 
-	logger.Info(string(custom_otel.NewLogMessage(
-		span,
-		logUUID.String(),
-		uuid.FromStringOrNil(*pbUser.Uid),
-		eventName,
-		custom_otel.SetEventResource(pbUser),
-	)))
-
-	resp := mgmtPB.ExistUsernameResponse{
-		Exists: true,
-	}
-	return &resp, nil
+	return &mgmtPB.CheckNamespaceResponse{
+		Type: mgmtPB.CheckNamespaceResponse_NAMESPACE_AVAILABLE,
+	}, nil
 }
 
 func (h *PublicHandler) CreateOrganization(ctx context.Context, req *mgmtPB.CreateOrganizationRequest) (*mgmtPB.CreateOrganizationResponse, error) {

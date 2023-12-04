@@ -254,7 +254,7 @@ export function CheckPublicMetrics(header) {
     let emptyPipelineTriggerRecordResponse = {
       "pipelineTriggerRecords": [],
       "nextPageToken": "",
-      "totalSize": "0"
+      "totalSize": 0
     }
 
     check(client.invoke('core.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerRecords', {}, header), {
@@ -279,7 +279,7 @@ export function CheckPublicMetrics(header) {
     let emptyPipelineTriggerTableRecordResponse = {
       "pipelineTriggerTableRecords": [],
       "nextPageToken": "",
-      "totalSize": "0"
+      "totalSize": 0
     }
 
     check(client.invoke('core.mgmt.v1alpha.MgmtPublicService/ListPipelineTriggerTableRecords', {}, header), {
@@ -319,7 +319,7 @@ export function CheckPublicMetrics(header) {
     let emptyConnectorExecuteRecordResponse = {
       "connectorExecuteRecords": [],
       "nextPageToken": "",
-      "totalSize": "0"
+      "totalSize": 0
     }
 
     check(client.invoke('core.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteRecords', {}, header), {
@@ -344,7 +344,7 @@ export function CheckPublicMetrics(header) {
     let emptyConnectorExecuteTableRecordResponse = {
       "connectorExecuteTableRecords": [],
       "nextPageToken": "",
-      "totalSize": "0"
+      "totalSize": 0
     }
 
     check(client.invoke('core.mgmt.v1alpha.MgmtPublicService/ListConnectorExecuteTableRecords', {}, header), {
