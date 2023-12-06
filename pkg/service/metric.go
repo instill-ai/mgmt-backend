@@ -10,8 +10,8 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 
-	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1alpha"
-	pipelinePB "github.com/instill-ai/protogen-go/vdp/pipeline/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	pipelinePB "github.com/instill-ai/protogen-go/vdp/pipeline/v1beta"
 )
 
 func InjectOwnerToContext(ctx context.Context, owner *mgmtPB.User) context.Context {

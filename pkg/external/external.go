@@ -18,8 +18,8 @@ import (
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 
-	usagePB "github.com/instill-ai/protogen-go/core/usage/v1alpha"
-	pipelinePB "github.com/instill-ai/protogen-go/vdp/pipeline/v1alpha"
+	usagePB "github.com/instill-ai/protogen-go/core/usage/v1beta"
+	pipelinePB "github.com/instill-ai/protogen-go/vdp/pipeline/v1beta"
 )
 
 // InitPipelinePublicServiceClient initialises a PipelinePublicServiceClient instance

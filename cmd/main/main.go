@@ -43,7 +43,7 @@ import (
 
 	database "github.com/instill-ai/mgmt-backend/pkg/db"
 	custom_otel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
-	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 )
 
 var propagator propagation.TextMapPropagator
@@ -103,10 +103,10 @@ func main() {
 			// will not log gRPC calls if it was a call to liveness or readiness and no error was raised
 			if err == nil {
 				// stop logging successful private function calls
-				if match, _ := regexp.MatchString("core.mgmt.v1alpha.MgmtPrivateService/.*(?:Admin|ness)$", fullMethodName); match {
+				if match, _ := regexp.MatchString("core.mgmt.v1beta.MgmtPrivateService/.*(?:Admin|ness)$", fullMethodName); match {
 					return false
 				}
-				if match, _ := regexp.MatchString("core.mgmt.v1alpha.MgmtPublicService/.*ness$", fullMethodName); match {
+				if match, _ := regexp.MatchString("core.mgmt.v1beta.MgmtPublicService/.*ness$", fullMethodName); match {
 					return false
 				}
 			}
