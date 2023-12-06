@@ -9,7 +9,7 @@ import (
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
-	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 )
 
 type TokenState int32

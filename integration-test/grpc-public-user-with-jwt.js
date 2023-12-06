@@ -10,8 +10,8 @@ import * as constant from "./const.js";
 import * as helper from "./helper.js";
 
 const client = new grpc.Client();
-client.load(['proto/core/mgmt/v1alpha'], 'mgmt.proto');
-client.load(['proto/core/mgmt/v1alpha'], 'mgmt_public_service.proto');
+client.load(['proto/core/mgmt/v1beta'], 'mgmt.proto');
+client.load(['proto/core/mgmt/v1beta'], 'mgmt_public_service.proto');
 
 export function CheckPublicGetUser() {
 
@@ -21,8 +21,8 @@ export function CheckPublicGetUser() {
       plaintext: true
     });
 
-    check(client.invoke('core.mgmt.v1alpha.MgmtPublicService/GetUser', {name: "users/me"}, constant.grpcParamsWithJwtSub), {
-      '[with random "jwt-sub" header] core.mgmt.v1alpha.MgmtPublicService/GetUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
+    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/GetUser', {name: "users/me"}, constant.grpcParamsWithJwtSub), {
+      '[with random "jwt-sub" header] core.mgmt.v1beta.MgmtPublicService/GetUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
     });
 
     client.close();
@@ -48,11 +48,11 @@ export function CheckPublicPatchAuthenticatedUser() {
       cookie_token: "f5730f62-7026-4e11-917a-d890da315d3b",
     };
 
-    check(client.invoke('core.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser', {
+    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser', {
       user: userUpdate,
       update_mask: "email,firstName,lastName,orgName,role,newsletterSubscription,cookieToken"
     }, constant.grpcParamsWithJwtSub), {
-      '[with random "jwt-sub" header] core.mgmt.v1alpha.MgmtPublicService/PatchAuthenticatedUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
+      '[with random "jwt-sub" header] core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
     });
   });
 

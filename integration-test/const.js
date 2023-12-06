@@ -12,7 +12,7 @@ if (__ENV.API_GATEWAY_PROTOCOL) {
 } else {
   proto = "http"
 }
-export const mgmtVersion = "v1alpha";
+export const mgmtVersion = "v1beta";
 export const mgmtPrivateHost = apiGatewayMode ? "" : `http://mgmt-backend:3084/${mgmtVersion}`
 export const mgmtPublicHost = apiGatewayMode ? `${proto}://${__ENV.API_GATEWAY_URL}/core/${mgmtVersion}` : `http://mgmt-backend:8084/${mgmtVersion}`
 

@@ -25,8 +25,8 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/usage"
 
 	custom_otel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
-	healthcheckPB "github.com/instill-ai/protogen-go/common/healthcheck/v1alpha"
-	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1alpha"
+	healthcheckPB "github.com/instill-ai/protogen-go/common/healthcheck/v1beta"
+	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 	checkfield "github.com/instill-ai/x/checkfield"
 )
 
@@ -206,6 +206,9 @@ func (h *PublicHandler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest)
 		return nil, err
 	}
 	userID := strings.Split(req.Name, "/")[1]
+	if userID == "me" && ctxUserID == "" {
+		return nil, service.ErrUnauthenticated
+	}
 	if userID == "me" {
 		userID = ctxUserID
 	}
@@ -1252,6 +1255,9 @@ func (h *PublicHandler) ListUserMemberships(ctx context.Context, req *mgmtPB.Lis
 		return nil, err
 	}
 	userID := strings.Split(req.Parent, "/")[1]
+	if userID == "me" && ctxUserID == "" {
+		return nil, service.ErrUnauthenticated
+	}
 	if userID == "me" {
 		userID = ctxUserID
 	}
@@ -1293,6 +1299,9 @@ func (h *PublicHandler) GetUserMembership(ctx context.Context, req *mgmtPB.GetUs
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
+	}
+	if userID == "me" && ctxUserID == "" {
+		return nil, service.ErrUnauthenticated
 	}
 	if userID == "me" {
 		userID = ctxUserID
@@ -1336,6 +1345,9 @@ func (h *PublicHandler) UpdateUserMembership(ctx context.Context, req *mgmtPB.Up
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
+	}
+	if userID == "me" && ctxUserID == "" {
+		return nil, service.ErrUnauthenticated
 	}
 	if userID == "me" {
 		userID = ctxUserID
@@ -1387,6 +1399,9 @@ func (h *PublicHandler) DeleteUserMembership(ctx context.Context, req *mgmtPB.De
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
+	}
+	if userID == "me" && ctxUserID == "" {
+		return nil, service.ErrUnauthenticated
 	}
 	if userID == "me" {
 		userID = ctxUserID

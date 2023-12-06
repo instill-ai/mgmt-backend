@@ -11,8 +11,8 @@ import (
 	"github.com/instill-ai/x/repo"
 	"go.einride.tech/aip/filtering"
 
-	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1alpha"
-	usagePB "github.com/instill-ai/protogen-go/core/usage/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	usagePB "github.com/instill-ai/protogen-go/core/usage/v1beta"
 	usageClient "github.com/instill-ai/usage-client/client"
 	usageReporter "github.com/instill-ai/usage-client/reporter"
 )

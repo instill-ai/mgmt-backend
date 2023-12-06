@@ -18,7 +18,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/x/paginate"
 
-	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1alpha"
+	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 )
 
 // DefaultPageSize is the default pagination page size when page size is not assigned
