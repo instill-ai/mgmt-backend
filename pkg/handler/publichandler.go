@@ -329,18 +329,18 @@ func (h *PublicHandler) CheckNamespace(ctx context.Context, req *mgmtPB.CheckNam
 		trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
-	err := checkfield.CheckResourceID(req.GetNamespace().GetId())
+	err := checkfield.CheckResourceID(req.GetId())
 	if err != nil {
 		return nil, ErrResourceID
 	}
 
-	_, err = h.Service.GetUserAdmin(ctx, req.GetNamespace().GetId())
+	_, err = h.Service.GetUserAdmin(ctx, req.GetId())
 	if err == nil {
 		return &mgmtPB.CheckNamespaceResponse{
 			Type: mgmtPB.CheckNamespaceResponse_NAMESPACE_USER,
 		}, nil
 	}
-	_, err = h.Service.GetOrganizationAdmin(ctx, req.GetNamespace().GetId())
+	_, err = h.Service.GetOrganizationAdmin(ctx, req.GetId())
 	if err == nil {
 		return &mgmtPB.CheckNamespaceResponse{
 			Type: mgmtPB.CheckNamespaceResponse_NAMESPACE_ORGANIZATION,
