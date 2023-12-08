@@ -26,6 +26,7 @@ type AppConfig struct {
 	InfluxDB        InfluxDBConfig        `koanf:"influxdb"`
 	PipelineBackend PipelineBackendConfig `koanf:"pipelinebackend"`
 	OpenFGA         OpenFGAConfig         `koanf:"openfga"`
+	Temporal        TemporalConfig        `koanf:"temporal"`
 }
 
 // ServerConfig defines HTTP server configurations
@@ -45,6 +46,16 @@ type ServerConfig struct {
 	}
 	Debug          bool   `koanf:"debug"`
 	DefaultUserUid string `koanf:"defaultuseruid"`
+}
+
+// TemporalConfig related to Temporal
+type TemporalConfig struct {
+	HostPort   string `koanf:"hostport"`
+	Namespace  string `koanf:"namespace"`
+	Ca         string `koanf:"ca"`
+	Cert       string `koanf:"cert"`
+	Key        string `koanf:"key"`
+	ServerName string `koanf:"servername"`
 }
 
 // OpenFGA config

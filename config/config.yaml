@@ -51,3 +51,10 @@ log:
 openfga:
   host: openfga
   port: 8080
+temporal:
+  hostport: temporal:7233
+  namespace: mgmt-backend
+  ca:
+  cert:
+  key:
+  servername:
