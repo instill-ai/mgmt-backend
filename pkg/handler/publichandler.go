@@ -1580,7 +1580,7 @@ func (h *PublicHandler) DeleteOrganizationMembership(ctx context.Context, req *m
 	orgID := strings.Split(req.Name, "/")[1]
 	userID := strings.Split(req.Name, "/")[3]
 
-	err = h.Service.DeleteUserMembership(ctx, ctxUserUID, userID, orgID)
+	err = h.Service.DeleteOrganizationMembership(ctx, ctxUserUID, orgID, userID)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
