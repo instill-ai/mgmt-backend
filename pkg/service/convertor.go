@@ -162,6 +162,22 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 	id := dbOrg.ID
 	uid := dbOrg.Base.UID.String()
 
+	relations, err := s.aclClient.GetOrganizationUsers(dbOrg.Base.UID)
+	if err != nil {
+		return nil, err
+	}
+
+	var owner *mgmtPB.User
+	for _, relation := range relations {
+		if relation.Relation == "owner" {
+			owner, err = s.GetUserByUIDAdmin(ctx, relation.UID)
+			if err != nil {
+				return nil, err
+			}
+			break
+		}
+	}
+
 	return &mgmtPB.Organization{
 		Name:          fmt.Sprintf("organizations/%s", id),
 		Uid:           uid,
@@ -179,6 +195,7 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 			}
 			return str
 		}(),
+		Owner: owner,
 	}, nil
 }
 
