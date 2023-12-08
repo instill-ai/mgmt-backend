@@ -513,6 +513,12 @@ func (h *PublicHandler) UpdateOrganization(ctx context.Context, req *mgmtPB.Upda
 
 	pbOrgReq := req.GetOrganization()
 	pbUpdateMask := req.GetUpdateMask()
+	// profile_data field is type google.protobuf.Struct, which needs to be updated as a whole
+	for idx, path := range pbUpdateMask.Paths {
+		if strings.Contains(path, "profile_data") {
+			pbUpdateMask.Paths[idx] = "profile_data"
+		}
+	}
 
 	// Validate the field mask
 	if !pbUpdateMask.IsValid(pbOrgReq) {
