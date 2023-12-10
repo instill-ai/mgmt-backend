@@ -10,6 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.einride.tech/aip/filtering"
 	"golang.org/x/crypto/bcrypt"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/instill-ai/mgmt-backend/internal/resource"
 	"github.com/instill-ai/mgmt-backend/pkg/acl"
@@ -65,6 +66,8 @@ type Service interface {
 	CheckUserPassword(ctx context.Context, uid uuid.UUID, password string) error
 	UpdateUserPassword(ctx context.Context, uid uuid.UUID, newPassword string) error
 
+	ListUserPipelines(ctx context.Context, id string) ([]*pipelinePB.Pipeline, error)
+	ListOrganizationPipelines(ctx context.Context, id string) ([]*pipelinePB.Pipeline, error)
 	ListPipelineTriggerRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerRecord, int64, string, error)
 	ListPipelineTriggerTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerTableRecord, int64, string, error)
 	ListPipelineTriggerChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerChartRecord, error)
@@ -801,4 +804,59 @@ func (s *service) DeleteOrganizationMembership(ctx context.Context, ctxUserUID u
 		return err
 	}
 	return nil
+}
+func (s *service) ListUserPipelines(ctx context.Context, id string) ([]*pipelinePB.Pipeline, error) {
+
+	pageToken := ""
+	pageSize := int32(100)
+
+	pipelines := []*pipelinePB.Pipeline{}
+	for {
+		resp, err := s.pipelinePublicServiceClient.ListUserPipelines(
+			metadata.AppendToOutgoingContext(ctx, "Jwt-Sub", resource.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)),
+			&pipelinePB.ListUserPipelinesRequest{
+				PageSize:  &pageSize,
+				PageToken: &pageToken,
+				Parent:    fmt.Sprintf("users/%s", id),
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		pipelines = append(pipelines, resp.Pipelines...)
+		pageToken = resp.NextPageToken
+		if pageToken == "" {
+			break
+		}
+	}
+
+	return pipelines, nil
+}
+
+func (s *service) ListOrganizationPipelines(ctx context.Context, id string) ([]*pipelinePB.Pipeline, error) {
+
+	pageToken := ""
+	pageSize := int32(100)
+
+	pipelines := []*pipelinePB.Pipeline{}
+	for {
+		resp, err := s.pipelinePublicServiceClient.ListOrganizationPipelines(
+			metadata.AppendToOutgoingContext(ctx, "Jwt-Sub", resource.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)),
+			&pipelinePB.ListOrganizationPipelinesRequest{
+				PageSize:  &pageSize,
+				PageToken: &pageToken,
+				Parent:    fmt.Sprintf("organizations/%s", id),
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		pipelines = append(pipelines, resp.Pipelines...)
+		pageToken = resp.NextPageToken
+		if pageToken == "" {
+			break
+		}
+	}
+
+	return pipelines, nil
 }
