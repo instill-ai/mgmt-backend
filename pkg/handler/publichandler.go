@@ -249,8 +249,16 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 
 	reqUser := req.GetUser()
 
+	pbUpdateMask := req.GetUpdateMask()
+	// profile_data field is type google.protobuf.Struct, which needs to be updated as a whole
+	for idx, path := range pbUpdateMask.Paths {
+		if strings.Contains(path, "profile_data") {
+			pbUpdateMask.Paths[idx] = "profile_data"
+		}
+	}
+
 	// Validate the field mask
-	if !req.GetUpdateMask().IsValid(reqUser) {
+	if !pbUpdateMask.IsValid(reqUser) {
 		return nil, fmt.Errorf("err")
 	}
 
