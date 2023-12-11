@@ -82,6 +82,8 @@ type Service interface {
 	DBToken2PBToken(ctx context.Context, dbToken *datamodel.Token) (*mgmtPB.ApiToken, error)
 	DBTokens2PBTokens(ctx context.Context, dbTokens []*datamodel.Token) ([]*mgmtPB.ApiToken, error)
 	PBToken2DBToken(ctx context.Context, pbToken *mgmtPB.ApiToken) (*datamodel.Token, error)
+
+	GetRedisClient() *redis.Client
 }
 
 type service struct {
@@ -101,6 +103,10 @@ func NewService(r repository.Repository, rc *redis.Client, i repository.InfluxDB
 		redisClient:                 rc,
 		aclClient:                   acl,
 	}
+}
+
+func (s *service) GetRedisClient() *redis.Client {
+	return s.redisClient
 }
 
 // GetUser returns the api user
