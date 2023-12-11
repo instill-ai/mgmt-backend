@@ -1495,10 +1495,10 @@ func (h *PublicHandler) GetOrganizationMembership(ctx context.Context, req *mgmt
 		return nil, err
 	}
 
-	userID := strings.Split(req.Name, "/")[1]
-	orgID := strings.Split(req.Name, "/")[3]
+	orgID := strings.Split(req.Name, "/")[1]
+	userID := strings.Split(req.Name, "/")[3]
 
-	pbMembership, err := h.Service.GetOrganizationMembership(ctx, ctxUserUID, userID, orgID)
+	pbMembership, err := h.Service.GetOrganizationMembership(ctx, ctxUserUID, orgID, userID)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -1536,8 +1536,8 @@ func (h *PublicHandler) UpdateOrganizationMembership(ctx context.Context, req *m
 		return nil, err
 	}
 
-	userID := strings.Split(req.Membership.Name, "/")[1]
-	orgID := strings.Split(req.Membership.Name, "/")[3]
+	orgID := strings.Split(req.Membership.Name, "/")[1]
+	userID := strings.Split(req.Membership.Name, "/")[3]
 
 	if err := checkfield.CheckRequiredFields(req.Membership, requiredFieldsForOrganizationMembership); err != nil {
 		return nil, ErrCheckRequiredFields
@@ -1547,7 +1547,7 @@ func (h *PublicHandler) UpdateOrganizationMembership(ctx context.Context, req *m
 		return nil, ErrCheckOutputOnlyFields
 	}
 
-	pbMembership, err := h.Service.UpdateOrganizationMembership(ctx, ctxUserUID, userID, orgID, req.Membership)
+	pbMembership, err := h.Service.UpdateOrganizationMembership(ctx, ctxUserUID, orgID, userID, req.Membership)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
