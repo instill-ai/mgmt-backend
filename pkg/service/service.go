@@ -85,6 +85,7 @@ type Service interface {
 
 	GetRedisClient() *redis.Client
 	GetInfluxClient() repository.InfluxDB
+	GetACLClient() *acl.ACLClient
 }
 
 type service struct {
@@ -112,6 +113,10 @@ func (s *service) GetRedisClient() *redis.Client {
 
 func (s *service) GetInfluxClient() repository.InfluxDB {
 	return s.influxDB
+}
+
+func (s *service) GetACLClient() *acl.ACLClient {
+	return s.aclClient
 }
 
 // GetUser returns the api user
@@ -520,12 +525,19 @@ func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID,
 			return nil, err
 		}
 
+		role := orgRelation.Relation
+		state := mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE
+		if strings.HasPrefix(role, "pending") {
+			role = strings.Replace(role, "pending_", "", -1)
+			state = mgmtPB.MembershipState_MEMBERSHIP_STATE_PENDING
+		}
+
 		memberships = append(memberships, &mgmtPB.UserMembership{
 			Name:         fmt.Sprintf("users/%s/memberships/%s", user.ID, org.ID),
-			Role:         orgRelation.Relation,
+			Role:         role,
 			User:         pbUser,
 			Organization: pbOrg,
-			State:        mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE,
+			State:        state,
 		})
 	}
 	return memberships, nil
@@ -557,12 +569,17 @@ func (s *service) GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, u
 		return nil, err
 	}
 
+	state := mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE
+	if strings.HasPrefix(role, "pending") {
+		role = strings.Replace(role, "pending_", "", -1)
+		state = mgmtPB.MembershipState_MEMBERSHIP_STATE_PENDING
+	}
 	membership := &mgmtPB.UserMembership{
 		Name:         fmt.Sprintf("users/%s/memberships/%s", user.ID, org.ID),
 		Role:         role,
 		User:         pbUser,
 		Organization: pbOrg,
-		State:        mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE,
+		State:        state,
 	}
 	return membership, nil
 }
@@ -650,6 +667,11 @@ func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uu
 		return nil, ErrNoPermission
 	}
 
+	canSetMembership, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "can_set_membership")
+	if err != nil {
+		return nil, err
+	}
+
 	userRelations, err := s.aclClient.GetOrganizationUsers(org.UID)
 	if err != nil {
 		return nil, err
@@ -670,14 +692,21 @@ func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uu
 		if err != nil {
 			return nil, err
 		}
-
-		memberships = append(memberships, &mgmtPB.OrganizationMembership{
-			Name:         fmt.Sprintf("organizations/%s/memberships/%s", user.ID, org.ID),
-			Role:         userRelation.Relation,
-			User:         pbUser,
-			Organization: pbOrg,
-			State:        mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE,
-		})
+		role := userRelation.Relation
+		state := mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE
+		if strings.HasPrefix(role, "pending") {
+			role = strings.Replace(role, "pending_", "", -1)
+			state = mgmtPB.MembershipState_MEMBERSHIP_STATE_PENDING
+		}
+		if state != mgmtPB.MembershipState_MEMBERSHIP_STATE_PENDING || canSetMembership {
+			memberships = append(memberships, &mgmtPB.OrganizationMembership{
+				Name:         fmt.Sprintf("organizations/%s/memberships/%s", org.ID, user.ID),
+				Role:         role,
+				User:         pbUser,
+				Organization: pbOrg,
+				State:        state,
+			})
+		}
 	}
 	return memberships, nil
 }
@@ -699,6 +728,10 @@ func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid
 	if !canGetMembership {
 		return nil, ErrNoPermission
 	}
+	canSetMembership, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "can_set_membership")
+	if err != nil {
+		return nil, err
+	}
 
 	role, err := s.aclClient.GetOrganizationUserMembership(org.UID, user.UID)
 	if err != nil {
@@ -714,12 +747,23 @@ func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid
 		return nil, err
 	}
 
+	state := mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE
+	if strings.HasPrefix(role, "pending") {
+		role = strings.Replace(role, "pending_", "", -1)
+		state = mgmtPB.MembershipState_MEMBERSHIP_STATE_PENDING
+	}
+
+	if state == mgmtPB.MembershipState_MEMBERSHIP_STATE_PENDING && ctxUserUID != uuid.FromStringOrNil(*pbUser.Uid) {
+		if !canSetMembership {
+			return nil, ErrNoPermission
+		}
+	}
 	membership := &mgmtPB.OrganizationMembership{
-		Name:         fmt.Sprintf("organizations/%s/memberships/%s", user.ID, org.ID),
+		Name:         fmt.Sprintf("organizations/%s/memberships/%s", org.ID, user.ID),
 		Role:         role,
 		User:         pbUser,
 		Organization: pbOrg,
-		State:        mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE,
+		State:        state,
 	}
 	return membership, nil
 }
@@ -764,7 +808,7 @@ func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID u
 		}
 
 		updatedMembership := &mgmtPB.OrganizationMembership{
-			Name:         fmt.Sprintf("organizations/%s/memberships/%s", user.ID, org.ID),
+			Name:         fmt.Sprintf("organizations/%s/memberships/%s", org.ID, user.ID),
 			Role:         membership.Role,
 			User:         pbUser,
 			Organization: pbOrg,
@@ -778,7 +822,7 @@ func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID u
 		}
 
 		updatedMembership := &mgmtPB.OrganizationMembership{
-			Name:         fmt.Sprintf("organizations/%s/memberships/%s", user.ID, org.ID),
+			Name:         fmt.Sprintf("organizations/%s/memberships/%s", org.ID, user.ID),
 			Role:         membership.Role,
 			User:         pbUser,
 			Organization: pbOrg,

@@ -171,3 +171,37 @@ func (c *ACLClient) GetUserOrganizations(userUID uuid.UUID) ([]*Relation, error)
 
 	return relations, nil
 }
+
+func (c *ACLClient) CheckPermission(objectType string, objectUID uuid.UUID, userType string, userUID uuid.UUID, code string, role string) (bool, error) {
+
+	options := openfgaClient.ClientCheckOptions{
+		AuthorizationModelId: c.authorizationModelId,
+	}
+	body := openfgaClient.ClientCheckRequest{
+		User:     fmt.Sprintf("%s:%s", userType, userUID.String()),
+		Relation: role,
+		Object:   fmt.Sprintf("%s:%s", objectType, objectUID.String()),
+	}
+	data, err := c.client.Check(context.Background()).Body(body).Options(options).Execute()
+	if err != nil {
+		return false, err
+	}
+	if *data.Allowed {
+		return *data.Allowed, nil
+	}
+
+	if code == "" {
+		return false, nil
+	}
+	body = openfgaClient.ClientCheckRequest{
+		User:     fmt.Sprintf("code:%s", code),
+		Relation: role,
+		Object:   fmt.Sprintf("%s:%s", objectType, objectUID.String()),
+	}
+	data, err = c.client.Check(context.Background()).Body(body).Options(options).Execute()
+
+	if err != nil {
+		return false, err
+	}
+	return *data.Allowed, nil
+}
