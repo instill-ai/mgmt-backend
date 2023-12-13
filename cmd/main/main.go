@@ -33,6 +33,7 @@ import (
 
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/acl"
+	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/external"
 	"github.com/instill-ai/mgmt-backend/pkg/handler"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
@@ -166,6 +167,8 @@ func main() {
 		}
 		grpcServerOpts = append(grpcServerOpts, grpc.Creds(creds))
 	}
+	grpcServerOpts = append(grpcServerOpts, grpc.MaxRecvMsgSize(constant.MaxPayloadSize))
+	grpcServerOpts = append(grpcServerOpts, grpc.MaxSendMsgSize(constant.MaxPayloadSize))
 
 	pipelinePublicServiceClient, pipelinePublicServiceClientConn := external.InitPipelinePublicServiceClient(ctx, &config.Config)
 	if pipelinePublicServiceClientConn != nil {

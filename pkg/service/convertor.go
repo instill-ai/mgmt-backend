@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gofrs/uuid"
@@ -87,6 +89,16 @@ func (s *service) PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.Owner, error) {
 	role := pbUser.GetRole()
 	cookieToken := pbUser.GetCookieToken()
 	profileAvatar := pbUser.GetProfileAvatar()
+	if profileAvatar != "" {
+		profileAvatarStrs := strings.Split(profileAvatar, ",")
+		b, err := base64.StdEncoding.DecodeString(profileAvatarStrs[len(profileAvatarStrs)-1])
+		if err != nil {
+			return nil, err
+		}
+		if len(b) > 2*1024*1024 {
+			return nil, status.Errorf(codes.InvalidArgument, "Avatar image size should less than 2MB")
+		}
+	}
 
 	return &datamodel.Owner{
 		Base: datamodel.Base{
@@ -214,6 +226,16 @@ func (s *service) PBOrg2DBOrg(pbOrg *mgmtPB.Organization) (*datamodel.Owner, err
 	customerId := pbOrg.GetCustomerId()
 	orgName := pbOrg.GetOrgName()
 	profileAvatar := pbOrg.GetProfileAvatar()
+	if profileAvatar != "" {
+		profileAvatarStrs := strings.Split(profileAvatar, ",")
+		b, err := base64.StdEncoding.DecodeString(profileAvatarStrs[len(profileAvatarStrs)-1])
+		if err != nil {
+			return nil, err
+		}
+		if len(b) > 2*1024*1024 {
+			return nil, status.Errorf(codes.InvalidArgument, "Avatar image size should less than 2MB")
+		}
+	}
 
 	return &datamodel.Owner{
 		Base: datamodel.Base{
