@@ -27,6 +27,8 @@ const DefaultTokenType = "Bearer"
 const AccessTokenKeyFormat = "access_token:%s:owner_permalink"
 const HeaderAuthorization = "Authorization"
 
+const MaxPayloadSize = 1024 * 1024 * 32
+
 // Filter enum
 const (
 	Start              string = "start"
