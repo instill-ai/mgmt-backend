@@ -22,8 +22,10 @@ func InjectOwnerToContext(ctx context.Context, owner *mgmtPB.User) context.Conte
 	return ctx
 }
 
-func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.Filter, owner *mgmtPB.User) (*string, string, filtering.Filter, error) {
+func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.Filter, owner *mgmtPB.User) (*string, string, string, string, filtering.Filter, error) {
+	ownerID := owner.Id
 	ownerUID := owner.Uid
+	ownerType := "users"
 	ownerQueryString := ""
 
 	if len(filter.CheckedExpr.GetExpr().GetCallExpr().GetArgs()) > 0 {
@@ -34,29 +36,31 @@ func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.F
 
 			if strings.HasPrefix(ownerName, "users") {
 				if ownerName != fmt.Sprintf("users/%s", owner.Id) {
-					return nil, "", filter, ErrNoPermission
+					return nil, "", "", "", filter, ErrNoPermission
 				}
 				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.PipelineOwnerUID, *owner.Uid, false)
 			} else if strings.HasPrefix(ownerName, "organizations") {
+				ownerType = "organizations"
 				id, err := resource.GetRscNameID(ownerName)
 				if err != nil {
-					return nil, "", filter, err
+					return nil, "", "", "", filter, err
 				}
+				ownerID = id
 				org, err := s.GetOrganizationAdmin(ctx, id)
 				if err != nil {
-					return nil, "", filter, err
+					return nil, "", "", "", filter, err
 				}
 				granted, err := s.GetACLClient().CheckPermission("organization", uuid.FromStringOrNil(org.Uid), "user", uuid.FromStringOrNil(owner.GetUid()), "", "member")
 				if err != nil {
-					return nil, "", filter, err
+					return nil, "", "", "", filter, err
 				}
 				if !granted {
-					return nil, "", filter, ErrNoPermission
+					return nil, "", "", "", filter, ErrNoPermission
 				}
 				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.PipelineOwnerUID, org.Uid, false)
 				ownerUID = &org.Uid
 			} else {
-				return nil, "", filter, fmt.Errorf("owner_name namepsace format error")
+				return nil, "", "", "", filter, fmt.Errorf("owner_name namepsace format error")
 			}
 		} else {
 			ownerQueryString = fmt.Sprintf("|> filter(fn: (r) => r[\"owner_uid\"] == \"%v\")", *owner.Uid)
@@ -64,11 +68,13 @@ func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.F
 	} else {
 		ownerQueryString = fmt.Sprintf("|> filter(fn: (r) => r[\"owner_uid\"] == \"%v\")", *owner.Uid)
 	}
-	return ownerUID, ownerQueryString, filter, nil
+	return ownerUID, ownerID, ownerType, ownerQueryString, filter, nil
 }
 
-func (s *service) checkConnectorOwnership(ctx context.Context, filter filtering.Filter, owner *mgmtPB.User) (*string, string, filtering.Filter, error) {
+func (s *service) checkConnectorOwnership(ctx context.Context, filter filtering.Filter, owner *mgmtPB.User) (*string, string, string, string, filtering.Filter, error) {
+	ownerID := owner.Id
 	ownerUID := owner.Uid
+	ownerType := "users"
 	ownerQueryString := ""
 
 	if len(filter.CheckedExpr.GetExpr().GetCallExpr().GetArgs()) > 0 {
@@ -79,29 +85,29 @@ func (s *service) checkConnectorOwnership(ctx context.Context, filter filtering.
 
 			if strings.HasPrefix(ownerName, "users") {
 				if ownerName != fmt.Sprintf("users/%s", owner.Id) {
-					return nil, "", filter, ErrNoPermission
+					return nil, "", "", "", filter, ErrNoPermission
 				}
 				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.ConnectorOwnerUID, *owner.Uid, false)
 			} else if strings.HasPrefix(ownerName, "organizations") {
 				id, err := resource.GetRscNameID(ownerName)
 				if err != nil {
-					return nil, "", filter, err
+					return nil, "", "", "", filter, err
 				}
 				org, err := s.GetOrganizationAdmin(ctx, id)
 				if err != nil {
-					return nil, "", filter, err
+					return nil, "", "", "", filter, err
 				}
 				granted, err := s.GetACLClient().CheckPermission("organization", uuid.FromStringOrNil(org.Uid), "user", uuid.FromStringOrNil(owner.GetUid()), "", "member")
 				if err != nil {
-					return nil, "", filter, err
+					return nil, "", "", "", filter, err
 				}
 				if !granted {
-					return nil, "", filter, ErrNoPermission
+					return nil, "", "", "", filter, ErrNoPermission
 				}
 				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.ConnectorOwnerUID, org.Uid, false)
 				ownerUID = &org.Uid
 			} else {
-				return nil, "", filter, fmt.Errorf("owner_name namepsace format error")
+				return nil, "", "", "", filter, fmt.Errorf("owner_name namepsace format error")
 			}
 		} else {
 			ownerQueryString = fmt.Sprintf("r[\"connector_owner_uid\"] == \"%v\")", *owner.Uid)
@@ -109,10 +115,10 @@ func (s *service) checkConnectorOwnership(ctx context.Context, filter filtering.
 	} else {
 		ownerQueryString = fmt.Sprintf("|> filter(fn: (r) => r[\"owner_uid\"] == \"%v\")", *owner.Uid)
 	}
-	return ownerUID, ownerQueryString, filter, nil
+	return ownerUID, ownerID, ownerType, ownerQueryString, filter, nil
 }
 
-func (s *service) pipelineUIDLookup(ctx context.Context, filter filtering.Filter, owner *mgmtPB.User) (filtering.Filter, error) {
+func (s *service) pipelineUIDLookup(ctx context.Context, ownerID string, ownerType string, filter filtering.Filter, owner *mgmtPB.User) (filtering.Filter, error) {
 
 	ctx = InjectOwnerToContext(ctx, owner)
 
@@ -121,21 +127,41 @@ func (s *service) pipelineUIDLookup(ctx context.Context, filter filtering.Filter
 		pipelineID, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, false)
 
 		if pipelineID != "" {
-			if respPipeline, err := s.pipelinePublicServiceClient.GetUserPipeline(ctx, &pipelinePB.GetUserPipelineRequest{
-				Name: fmt.Sprintf("%s/pipelines/%s", owner.Name, pipelineID),
-			}); err != nil {
-				return filter, err
-			} else {
-				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, constant.PipelineUID, respPipeline.Pipeline.Uid, false)
+			if ownerType == "users" {
+				if respPipeline, err := s.pipelinePublicServiceClient.GetUserPipeline(ctx, &pipelinePB.GetUserPipelineRequest{
+					Name: fmt.Sprintf("%s/pipelines/%s", owner.Name, pipelineID),
+				}); err != nil {
+					return filter, err
+				} else {
+					repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, constant.PipelineUID, respPipeline.Pipeline.Uid, false)
 
-				// lookup pipeline release uid
-				pipelineReleaseID, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineReleaseID, false)
+					// lookup pipeline release uid
+					pipelineReleaseID, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineReleaseID, false)
 
-				respPipelineRelease, err := s.pipelinePublicServiceClient.GetUserPipelineRelease(ctx, &pipelinePB.GetUserPipelineReleaseRequest{
-					Name: fmt.Sprintf("%s/pipelines/%s/releases/%s", owner.Name, pipelineID, pipelineReleaseID),
-				})
-				if err == nil {
-					repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, constant.PipelineUID, respPipelineRelease.Release.Uid, false)
+					respPipelineRelease, err := s.pipelinePublicServiceClient.GetUserPipelineRelease(ctx, &pipelinePB.GetUserPipelineReleaseRequest{
+						Name: fmt.Sprintf("%s/pipelines/%s/releases/%s", owner.Name, pipelineID, pipelineReleaseID),
+					})
+					if err == nil {
+						repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, constant.PipelineUID, respPipelineRelease.Release.Uid, false)
+					}
+				}
+			} else if ownerType == "organizations" {
+				if respPipeline, err := s.pipelinePublicServiceClient.GetOrganizationPipeline(ctx, &pipelinePB.GetOrganizationPipelineRequest{
+					Name: fmt.Sprintf("organizations/%s/pipelines/%s", ownerID, pipelineID),
+				}); err != nil {
+					return filter, err
+				} else {
+					repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, constant.PipelineUID, respPipeline.Pipeline.Uid, false)
+
+					// lookup pipeline release uid
+					pipelineReleaseID, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineReleaseID, false)
+
+					respPipelineRelease, err := s.pipelinePublicServiceClient.GetUserPipelineRelease(ctx, &pipelinePB.GetUserPipelineReleaseRequest{
+						Name: fmt.Sprintf("organizations/%s/pipelines/%s/releases/%s", ownerID, pipelineID, pipelineReleaseID),
+					})
+					if err == nil {
+						repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, constant.PipelineUID, respPipelineRelease.Release.Uid, false)
+					}
 				}
 			}
 		}
@@ -168,12 +194,12 @@ func (s *service) connectorUIDLookup(ctx context.Context, filter filtering.Filte
 
 func (s *service) ListPipelineTriggerRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerRecord, int64, string, error) {
 
-	ownerUID, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
+	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
 	if err != nil {
 		return []*mgmtPB.PipelineTriggerRecord{}, 0, "", err
 	}
 
-	filter, err = s.pipelineUIDLookup(ctx, filter, owner)
+	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner)
 	if err != nil {
 		return []*mgmtPB.PipelineTriggerRecord{}, 0, "", nil
 	}
@@ -188,12 +214,12 @@ func (s *service) ListPipelineTriggerRecords(ctx context.Context, owner *mgmtPB.
 
 func (s *service) ListPipelineTriggerTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerTableRecord, int64, string, error) {
 
-	ownerUID, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
+	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
 	if err != nil {
 		return []*mgmtPB.PipelineTriggerTableRecord{}, 0, "", err
 	}
 
-	filter, err = s.pipelineUIDLookup(ctx, filter, owner)
+	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner)
 	if err != nil {
 		return []*mgmtPB.PipelineTriggerTableRecord{}, 0, "", nil
 	}
@@ -208,12 +234,12 @@ func (s *service) ListPipelineTriggerTableRecords(ctx context.Context, owner *mg
 
 func (s *service) ListPipelineTriggerChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerChartRecord, error) {
 
-	ownerUID, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
+	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
 	if err != nil {
 		return []*mgmtPB.PipelineTriggerChartRecord{}, err
 	}
 
-	filter, err = s.pipelineUIDLookup(ctx, filter, owner)
+	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner)
 	if err != nil {
 		return []*mgmtPB.PipelineTriggerChartRecord{}, nil
 	}
@@ -228,12 +254,12 @@ func (s *service) ListPipelineTriggerChartRecords(ctx context.Context, owner *mg
 
 func (s *service) ListConnectorExecuteRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteRecord, int64, string, error) {
 
-	ownerUID, ownerQueryString, filter, err := s.checkConnectorOwnership(ctx, filter, owner)
+	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkConnectorOwnership(ctx, filter, owner)
 	if err != nil {
 		return []*mgmtPB.ConnectorExecuteRecord{}, 0, "", err
 	}
 
-	filter, err = s.pipelineUIDLookup(ctx, filter, owner)
+	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner)
 	if err != nil {
 		return []*mgmtPB.ConnectorExecuteRecord{}, 0, "", nil
 	}
@@ -253,7 +279,7 @@ func (s *service) ListConnectorExecuteRecords(ctx context.Context, owner *mgmtPB
 
 func (s *service) ListConnectorExecuteTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteTableRecord, int64, string, error) {
 
-	ownerUID, ownerQueryString, filter, err := s.checkConnectorOwnership(ctx, filter, owner)
+	ownerUID, _, _, ownerQueryString, filter, err := s.checkConnectorOwnership(ctx, filter, owner)
 	if err != nil {
 		return []*mgmtPB.ConnectorExecuteTableRecord{}, 0, "", err
 	}
@@ -273,12 +299,12 @@ func (s *service) ListConnectorExecuteTableRecords(ctx context.Context, owner *m
 
 func (s *service) ListConnectorExecuteChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteChartRecord, error) {
 
-	ownerUID, ownerQueryString, filter, err := s.checkConnectorOwnership(ctx, filter, owner)
+	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkConnectorOwnership(ctx, filter, owner)
 	if err != nil {
 		return []*mgmtPB.ConnectorExecuteChartRecord{}, err
 	}
 
-	filter, err = s.pipelineUIDLookup(ctx, filter, owner)
+	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner)
 	if err != nil {
 		return []*mgmtPB.ConnectorExecuteChartRecord{}, nil
 	}
