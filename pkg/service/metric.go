@@ -28,9 +28,10 @@ func (s *service) checkOwnership(ctx context.Context, filter filtering.Filter, o
 		ownerID, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerID, false)
 
 		if strings.HasPrefix(ownerID, "users") {
-			if ownerID != owner.Id {
+			if ownerID != fmt.Sprintf("users/%s", owner.Id) {
 				return filter, ErrNoPermission
 			}
+			repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerID, constant.OwnerUID, *owner.Uid, false)
 		} else if strings.HasPrefix(ownerID, "organizations") {
 			id, err := resource.GetRscNameID(ownerID)
 			if err != nil {
@@ -47,6 +48,9 @@ func (s *service) checkOwnership(ctx context.Context, filter filtering.Filter, o
 			if !granted {
 				return filter, ErrNoPermission
 			}
+			repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerID, constant.OwnerUID, org.Uid, false)
+		} else {
+			return filter, fmt.Errorf("owner_id namepsace format error")
 		}
 	}
 	return filter, nil
