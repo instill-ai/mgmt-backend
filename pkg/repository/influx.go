@@ -55,7 +55,6 @@ func NewInfluxDB(queryAPI api.QueryAPI, bucket string) InfluxDB {
 
 func (i *influxDB) constructRecordQuery(
 	ctx context.Context,
-	owner string,
 	pageSize int64,
 	pageToken string,
 	filter filtering.Filter,
@@ -107,7 +106,6 @@ func (i *influxDB) constructRecordQuery(
 			|> range(start: %v, stop: %v)
 			|> filter(fn: (r) => r["_measurement"] == "%v")
 			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-			|> filter(fn: (r) => %v)
 			%v
 			|> group()
 			|> sort(columns: ["%v"])`,
@@ -115,7 +113,6 @@ func (i *influxDB) constructRecordQuery(
 		start,
 		stop,
 		measurement,
-		owner,
 		expr,
 		sortKey,
 	)
@@ -151,7 +148,7 @@ func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	query, total, err := i.constructRecordQuery(ctx, fmt.Sprintf("r[\"owner_uid\"] == \"%v\"", owner), pageSize, pageToken, filter, constant.PipelineTriggerMeasurement, constant.TriggerTime)
+	query, total, err := i.constructRecordQuery(ctx, pageSize, pageToken, filter, constant.PipelineTriggerMeasurement, constant.TriggerTime)
 	if err != nil {
 		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
 	}
@@ -285,7 +282,6 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 				|> range(start: %v, stop: %v)
 				|> filter(fn: (r) => r["_measurement"] == "pipeline.trigger")
 				|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-				|> filter(fn: (r) => r["owner_uid"] == "%v")
 				%v
 		triggerRank =
 			base
@@ -333,7 +329,6 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 		i.bucket,
 		start,
 		stop,
-		owner,
 		expr,
 		mostRecetTimeFilter,
 	)
@@ -461,7 +456,6 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 				|> range(start: %v, stop: %v)
 				|> filter(fn: (r) => r["_measurement"] == "pipeline.trigger")
 				|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-				|> filter(fn: (r) => r["owner_uid"] == "%v")
 				%v
 		bucketBase =
 			base
@@ -498,7 +492,6 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 		i.bucket,
 		start,
 		stop,
-		owner,
 		expr,
 		aggregationWindow,
 		aggregationWindow,
@@ -568,7 +561,7 @@ func (i *influxDB) QueryConnectorExecuteRecords(ctx context.Context, owner strin
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	query, total, err := i.constructRecordQuery(ctx, fmt.Sprintf("r[\"connector_owner_uid\"] == \"%v\"", owner), pageSize, pageToken, filter, constant.ConnectorExecuteMeasurement, "execute_time")
+	query, total, err := i.constructRecordQuery(ctx, pageSize, pageToken, filter, constant.ConnectorExecuteMeasurement, "execute_time")
 	if err != nil {
 		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
 	}
@@ -695,7 +688,6 @@ func (i *influxDB) QueryConnectorExecuteTableRecords(ctx context.Context, owner 
 				|> range(start: %v, stop: %v)
 				|> filter(fn: (r) => r["_measurement"] == "connector.execute")
 				|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-				|> filter(fn: (r) => r["connector_owner_uid"] == "%v")
 				%v
 		executeRank =
 			base
@@ -743,7 +735,6 @@ func (i *influxDB) QueryConnectorExecuteTableRecords(ctx context.Context, owner 
 		i.bucket,
 		start,
 		stop,
-		owner,
 		expr,
 		mostRecetTimeFilter,
 	)
@@ -865,7 +856,6 @@ func (i *influxDB) QueryConnectorExecuteChartRecords(ctx context.Context, owner 
 				|> range(start: %v, stop: %v)
 				|> filter(fn: (r) => r["_measurement"] == "connector.execute")
 				|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-				|> filter(fn: (r) => r["connector_owner_uid"] == "%v")
 				%v
 		bucketBase =
 			base
@@ -902,7 +892,6 @@ func (i *influxDB) QueryConnectorExecuteChartRecords(ctx context.Context, owner 
 		i.bucket,
 		start,
 		stop,
-		owner,
 		expr,
 		aggregationWindow,
 		aggregationWindow,

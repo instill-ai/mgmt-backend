@@ -33,6 +33,7 @@ const MaxPayloadSize = 1024 * 1024 * 32
 const (
 	Start              string = "start"
 	Stop               string = "stop"
+	OwnerName          string = "owner_name"
 	PipelineID         string = "pipeline_id"
 	PipelineUID        string = "pipeline_uid"
 	PipelineReleaseID  string = "pipeline_release_id"
@@ -45,7 +46,8 @@ const (
 
 // Metric data enum
 const (
-	OwnerUID                    string = "owner_uid"
+	PipelineOwnerUID            string = "owner_uid"
+	ConnectorOwnerUID           string = "connector_owner_uid"
 	PipelineTriggerMeasurement  string = "pipeline.trigger"
 	ConnectorExecuteMeasurement string = "connector.execute"
 	PipelineMode                string = "pipeline_mode"

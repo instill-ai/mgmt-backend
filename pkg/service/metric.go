@@ -3,10 +3,13 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"go.einride.tech/aip/filtering"
 	"google.golang.org/grpc/metadata"
 
+	"github.com/gofrs/uuid"
+	"github.com/instill-ai/mgmt-backend/internal/resource"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 
@@ -17,6 +20,86 @@ import (
 func InjectOwnerToContext(ctx context.Context, owner *mgmtPB.User) context.Context {
 	ctx = metadata.AppendToOutgoingContext(ctx, "Jwt-Sub", owner.GetUid())
 	return ctx
+}
+
+func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.Filter, owner *mgmtPB.User) (*string, filtering.Filter, error) {
+	ownerUID := owner.Uid
+
+	if len(filter.CheckedExpr.GetExpr().GetCallExpr().GetArgs()) > 0 {
+
+		ownerName, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, false)
+
+		if ownerName != "" {
+
+			if strings.HasPrefix(ownerName, "users") {
+				if ownerName != fmt.Sprintf("users/%s", owner.Id) {
+					return nil, filter, ErrNoPermission
+				}
+				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.PipelineOwnerUID, *owner.Uid, false)
+			} else if strings.HasPrefix(ownerName, "organizations") {
+				id, err := resource.GetRscNameID(ownerName)
+				if err != nil {
+					return nil, filter, err
+				}
+				org, err := s.GetOrganizationAdmin(ctx, id)
+				if err != nil {
+					return nil, filter, err
+				}
+				granted, err := s.GetACLClient().CheckPermission("organization", uuid.FromStringOrNil(org.Uid), "user", uuid.FromStringOrNil(owner.GetUid()), "", "member")
+				if err != nil {
+					return nil, filter, err
+				}
+				if !granted {
+					return nil, filter, ErrNoPermission
+				}
+				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.PipelineOwnerUID, org.Uid, false)
+				ownerUID = &org.Uid
+			} else {
+				return nil, filter, fmt.Errorf("owner_name namepsace format error")
+			}
+		}
+	}
+	return ownerUID, filter, nil
+}
+
+func (s *service) checkConnectorOwnership(ctx context.Context, filter filtering.Filter, owner *mgmtPB.User) (*string, filtering.Filter, error) {
+	ownerUID := owner.Uid
+
+	if len(filter.CheckedExpr.GetExpr().GetCallExpr().GetArgs()) > 0 {
+
+		ownerName, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, false)
+
+		if ownerName != "" {
+
+			if strings.HasPrefix(ownerName, "users") {
+				if ownerName != fmt.Sprintf("users/%s", owner.Id) {
+					return nil, filter, ErrNoPermission
+				}
+				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.ConnectorOwnerUID, *owner.Uid, false)
+			} else if strings.HasPrefix(ownerName, "organizations") {
+				id, err := resource.GetRscNameID(ownerName)
+				if err != nil {
+					return nil, filter, err
+				}
+				org, err := s.GetOrganizationAdmin(ctx, id)
+				if err != nil {
+					return nil, filter, err
+				}
+				granted, err := s.GetACLClient().CheckPermission("organization", uuid.FromStringOrNil(org.Uid), "user", uuid.FromStringOrNil(owner.GetUid()), "", "member")
+				if err != nil {
+					return nil, filter, err
+				}
+				if !granted {
+					return nil, filter, ErrNoPermission
+				}
+				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.ConnectorOwnerUID, org.Uid, false)
+				ownerUID = &org.Uid
+			} else {
+				return nil, filter, fmt.Errorf("owner_name namepsace format error")
+			}
+		}
+	}
+	return ownerUID, filter, nil
 }
 
 func (s *service) pipelineUIDLookup(ctx context.Context, filter filtering.Filter, owner *mgmtPB.User) (filtering.Filter, error) {
@@ -75,13 +158,17 @@ func (s *service) connectorUIDLookup(ctx context.Context, filter filtering.Filte
 
 func (s *service) ListPipelineTriggerRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerRecord, int64, string, error) {
 
-	var err error
+	ownerUID, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
+	if err != nil {
+		return []*mgmtPB.PipelineTriggerRecord{}, 0, "", err
+	}
+
 	filter, err = s.pipelineUIDLookup(ctx, filter, owner)
 	if err != nil {
 		return []*mgmtPB.PipelineTriggerRecord{}, 0, "", nil
 	}
 
-	pipelineTriggerRecords, ps, pt, err := s.influxDB.QueryPipelineTriggerRecords(ctx, *owner.Uid, pageSize, pageToken, filter)
+	pipelineTriggerRecords, ps, pt, err := s.influxDB.QueryPipelineTriggerRecords(ctx, *ownerUID, pageSize, pageToken, filter)
 	if err != nil {
 		return nil, 0, "", err
 	}
@@ -91,13 +178,17 @@ func (s *service) ListPipelineTriggerRecords(ctx context.Context, owner *mgmtPB.
 
 func (s *service) ListPipelineTriggerTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerTableRecord, int64, string, error) {
 
-	var err error
+	ownerUID, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
+	if err != nil {
+		return []*mgmtPB.PipelineTriggerTableRecord{}, 0, "", err
+	}
+
 	filter, err = s.pipelineUIDLookup(ctx, filter, owner)
 	if err != nil {
 		return []*mgmtPB.PipelineTriggerTableRecord{}, 0, "", nil
 	}
 
-	pipelineTriggerTableRecords, ps, pt, err := s.influxDB.QueryPipelineTriggerTableRecords(ctx, *owner.Uid, pageSize, pageToken, filter)
+	pipelineTriggerTableRecords, ps, pt, err := s.influxDB.QueryPipelineTriggerTableRecords(ctx, *ownerUID, pageSize, pageToken, filter)
 	if err != nil {
 		return nil, 0, "", err
 	}
@@ -107,13 +198,17 @@ func (s *service) ListPipelineTriggerTableRecords(ctx context.Context, owner *mg
 
 func (s *service) ListPipelineTriggerChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerChartRecord, error) {
 
-	var err error
+	ownerUID, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
+	if err != nil {
+		return []*mgmtPB.PipelineTriggerChartRecord{}, err
+	}
+
 	filter, err = s.pipelineUIDLookup(ctx, filter, owner)
 	if err != nil {
 		return []*mgmtPB.PipelineTriggerChartRecord{}, nil
 	}
 
-	pipelineTriggerChartRecords, err := s.influxDB.QueryPipelineTriggerChartRecords(ctx, *owner.Uid, aggregationWindow, filter)
+	pipelineTriggerChartRecords, err := s.influxDB.QueryPipelineTriggerChartRecords(ctx, *ownerUID, aggregationWindow, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +218,11 @@ func (s *service) ListPipelineTriggerChartRecords(ctx context.Context, owner *mg
 
 func (s *service) ListConnectorExecuteRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteRecord, int64, string, error) {
 
-	var err error
+	ownerUID, filter, err := s.checkConnectorOwnership(ctx, filter, owner)
+	if err != nil {
+		return []*mgmtPB.ConnectorExecuteRecord{}, 0, "", err
+	}
+
 	filter, err = s.pipelineUIDLookup(ctx, filter, owner)
 	if err != nil {
 		return []*mgmtPB.ConnectorExecuteRecord{}, 0, "", nil
@@ -134,7 +233,7 @@ func (s *service) ListConnectorExecuteRecords(ctx context.Context, owner *mgmtPB
 		return []*mgmtPB.ConnectorExecuteRecord{}, 0, "", nil
 	}
 
-	connectorExecuteRecords, ps, pt, err := s.influxDB.QueryConnectorExecuteRecords(ctx, *owner.Uid, pageSize, pageToken, filter)
+	connectorExecuteRecords, ps, pt, err := s.influxDB.QueryConnectorExecuteRecords(ctx, *ownerUID, pageSize, pageToken, filter)
 	if err != nil {
 		return nil, 0, "", err
 	}
@@ -144,13 +243,17 @@ func (s *service) ListConnectorExecuteRecords(ctx context.Context, owner *mgmtPB
 
 func (s *service) ListConnectorExecuteTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteTableRecord, int64, string, error) {
 
-	var err error
+	ownerUID, filter, err := s.checkConnectorOwnership(ctx, filter, owner)
+	if err != nil {
+		return []*mgmtPB.ConnectorExecuteTableRecord{}, 0, "", err
+	}
+
 	filter, err = s.connectorUIDLookup(ctx, filter, owner)
 	if err != nil {
 		return []*mgmtPB.ConnectorExecuteTableRecord{}, 0, "", nil
 	}
 
-	connectorExecuteTableRecords, ps, pt, err := s.influxDB.QueryConnectorExecuteTableRecords(ctx, *owner.Uid, pageSize, pageToken, filter)
+	connectorExecuteTableRecords, ps, pt, err := s.influxDB.QueryConnectorExecuteTableRecords(ctx, *ownerUID, pageSize, pageToken, filter)
 	if err != nil {
 		return nil, 0, "", err
 	}
@@ -160,7 +263,11 @@ func (s *service) ListConnectorExecuteTableRecords(ctx context.Context, owner *m
 
 func (s *service) ListConnectorExecuteChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteChartRecord, error) {
 
-	var err error
+	ownerUID, filter, err := s.checkConnectorOwnership(ctx, filter, owner)
+	if err != nil {
+		return []*mgmtPB.ConnectorExecuteChartRecord{}, err
+	}
+
 	filter, err = s.pipelineUIDLookup(ctx, filter, owner)
 	if err != nil {
 		return []*mgmtPB.ConnectorExecuteChartRecord{}, nil
@@ -171,7 +278,7 @@ func (s *service) ListConnectorExecuteChartRecords(ctx context.Context, owner *m
 		return []*mgmtPB.ConnectorExecuteChartRecord{}, nil
 	}
 
-	connectorExecuteChartRecords, err := s.influxDB.QueryConnectorExecuteChartRecords(ctx, *owner.Uid, aggregationWindow, filter)
+	connectorExecuteChartRecords, err := s.influxDB.QueryConnectorExecuteChartRecords(ctx, *ownerUID, aggregationWindow, filter)
 	if err != nil {
 		return nil, err
 	}
