@@ -32,12 +32,12 @@ var defaultAggregationWindow = time.Hour.Nanoseconds()
 
 // InfluxDB interface
 type InfluxDB interface {
-	QueryPipelineTriggerRecords(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (pipelines []*mgmtPB.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error)
-	QueryPipelineTriggerTableRecords(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerTableRecord, totalSize int64, nextPageToken string, err error)
-	QueryPipelineTriggerChartRecords(ctx context.Context, owner string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerChartRecord, err error)
-	QueryConnectorExecuteRecords(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.ConnectorExecuteRecord, totalSize int64, nextPageToken string, err error)
-	QueryConnectorExecuteTableRecords(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.ConnectorExecuteTableRecord, totalSize int64, nextPageToken string, err error)
-	QueryConnectorExecuteChartRecords(ctx context.Context, owner string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtPB.ConnectorExecuteChartRecord, err error)
+	QueryPipelineTriggerRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (pipelines []*mgmtPB.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error)
+	QueryPipelineTriggerTableRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerTableRecord, totalSize int64, nextPageToken string, err error)
+	QueryPipelineTriggerChartRecords(ctx context.Context, owner string, ownerQueryString string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerChartRecord, err error)
+	QueryConnectorExecuteRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.ConnectorExecuteRecord, totalSize int64, nextPageToken string, err error)
+	QueryConnectorExecuteTableRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.ConnectorExecuteTableRecord, totalSize int64, nextPageToken string, err error)
+	QueryConnectorExecuteChartRecords(ctx context.Context, owner string, ownerQueryString string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtPB.ConnectorExecuteChartRecord, err error)
 }
 
 type influxDB struct {
@@ -55,6 +55,7 @@ func NewInfluxDB(queryAPI api.QueryAPI, bucket string) InfluxDB {
 
 func (i *influxDB) constructRecordQuery(
 	ctx context.Context,
+	ownerQueryString string,
 	pageSize int64,
 	pageToken string,
 	filter filtering.Filter,
@@ -107,12 +108,14 @@ func (i *influxDB) constructRecordQuery(
 			|> filter(fn: (r) => r["_measurement"] == "%v")
 			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
 			%v
+			%v
 			|> group()
 			|> sort(columns: ["%v"])`,
 		i.bucket,
 		start,
 		stop,
 		measurement,
+		ownerQueryString,
 		expr,
 		sortKey,
 	)
@@ -144,11 +147,11 @@ func (i *influxDB) constructRecordQuery(
 	return query, total, nil
 }
 
-func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error) {
+func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error) {
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	query, total, err := i.constructRecordQuery(ctx, pageSize, pageToken, filter, constant.PipelineTriggerMeasurement, constant.TriggerTime)
+	query, total, err := i.constructRecordQuery(ctx, ownerQueryString, pageSize, pageToken, filter, constant.PipelineTriggerMeasurement, constant.TriggerTime)
 	if err != nil {
 		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
 	}
@@ -231,7 +234,7 @@ func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string
 	return records, int64(len(records)), pageToken, nil
 }
 
-func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerTableRecord, totalSize int64, nextPageToken string, err error) {
+func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerTableRecord, totalSize int64, nextPageToken string, err error) {
 
 	logger, _ := logger.GetZapLogger(ctx)
 
@@ -283,6 +286,7 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 				|> filter(fn: (r) => r["_measurement"] == "pipeline.trigger")
 				|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
 				%v
+				%v
 		triggerRank =
 			base
 				|> drop(
@@ -329,6 +333,7 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 		i.bucket,
 		start,
 		stop,
+		ownerQueryString,
 		expr,
 		mostRecetTimeFilter,
 	)
@@ -418,7 +423,7 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 	return records, int64(len(records)), pageToken, nil
 }
 
-func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerChartRecord, err error) {
+func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner string, ownerQueryString string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerChartRecord, err error) {
 
 	logger, _ := logger.GetZapLogger(ctx)
 
@@ -457,6 +462,7 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 				|> filter(fn: (r) => r["_measurement"] == "pipeline.trigger")
 				|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
 				%v
+				%v
 		bucketBase =
 			base
 				|> group(columns: ["pipeline_uid"])
@@ -492,6 +498,7 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 		i.bucket,
 		start,
 		stop,
+		ownerQueryString,
 		expr,
 		aggregationWindow,
 		aggregationWindow,
@@ -557,11 +564,11 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 	return records, nil
 }
 
-func (i *influxDB) QueryConnectorExecuteRecords(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.ConnectorExecuteRecord, totalSize int64, nextPageToken string, err error) {
+func (i *influxDB) QueryConnectorExecuteRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.ConnectorExecuteRecord, totalSize int64, nextPageToken string, err error) {
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	query, total, err := i.constructRecordQuery(ctx, pageSize, pageToken, filter, constant.ConnectorExecuteMeasurement, "execute_time")
+	query, total, err := i.constructRecordQuery(ctx, ownerQueryString, pageSize, pageToken, filter, constant.ConnectorExecuteMeasurement, "execute_time")
 	if err != nil {
 		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
 	}
@@ -637,7 +644,7 @@ func (i *influxDB) QueryConnectorExecuteRecords(ctx context.Context, owner strin
 	return records, int64(len(records)), pageToken, nil
 }
 
-func (i *influxDB) QueryConnectorExecuteTableRecords(ctx context.Context, owner string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.ConnectorExecuteTableRecord, totalSize int64, nextPageToken string, err error) {
+func (i *influxDB) QueryConnectorExecuteTableRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.ConnectorExecuteTableRecord, totalSize int64, nextPageToken string, err error) {
 
 	logger, _ := logger.GetZapLogger(ctx)
 
@@ -689,6 +696,7 @@ func (i *influxDB) QueryConnectorExecuteTableRecords(ctx context.Context, owner 
 				|> filter(fn: (r) => r["_measurement"] == "connector.execute")
 				|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
 				%v
+				%v
 		executeRank =
 			base
 				|> drop(
@@ -735,6 +743,7 @@ func (i *influxDB) QueryConnectorExecuteTableRecords(ctx context.Context, owner 
 		i.bucket,
 		start,
 		stop,
+		ownerQueryString,
 		expr,
 		mostRecetTimeFilter,
 	)
@@ -818,7 +827,7 @@ func (i *influxDB) QueryConnectorExecuteTableRecords(ctx context.Context, owner 
 	return records, int64(len(records)), pageToken, nil
 }
 
-func (i *influxDB) QueryConnectorExecuteChartRecords(ctx context.Context, owner string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtPB.ConnectorExecuteChartRecord, err error) {
+func (i *influxDB) QueryConnectorExecuteChartRecords(ctx context.Context, owner string, ownerQueryString string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtPB.ConnectorExecuteChartRecord, err error) {
 
 	logger, _ := logger.GetZapLogger(ctx)
 
@@ -857,6 +866,7 @@ func (i *influxDB) QueryConnectorExecuteChartRecords(ctx context.Context, owner 
 				|> filter(fn: (r) => r["_measurement"] == "connector.execute")
 				|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
 				%v
+				%v
 		bucketBase =
 			base
 				|> group(columns: ["connector_uid"])
@@ -892,6 +902,7 @@ func (i *influxDB) QueryConnectorExecuteChartRecords(ctx context.Context, owner 
 		i.bucket,
 		start,
 		stop,
+		ownerQueryString,
 		expr,
 		aggregationWindow,
 		aggregationWindow,
