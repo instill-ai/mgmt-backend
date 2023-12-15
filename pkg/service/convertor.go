@@ -95,8 +95,8 @@ func (s *service) PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.Owner, error) {
 		if err != nil {
 			return nil, err
 		}
-		if len(b) > 2*1024*1024 {
-			return nil, status.Errorf(codes.InvalidArgument, "Avatar image size should less than 2MB")
+		if len(b) > 1*1024*1024 {
+			return nil, status.Errorf(codes.InvalidArgument, "Avatar image size should less than 1MB")
 		}
 	}
 
@@ -232,8 +232,8 @@ func (s *service) PBOrg2DBOrg(pbOrg *mgmtPB.Organization) (*datamodel.Owner, err
 		if err != nil {
 			return nil, err
 		}
-		if len(b) > 2*1024*1024 {
-			return nil, status.Errorf(codes.InvalidArgument, "Avatar image size should less than 2MB")
+		if len(b) > 1*1024*1024 {
+			return nil, status.Errorf(codes.InvalidArgument, "Avatar image size should less than 1MB")
 		}
 	}
 
