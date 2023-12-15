@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.8.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.7.0-alpha...v0.8.0-beta) (2023-12-15)
+
+
+### Features
+
+* **datamodel:** add profile_avatar and profile_data fields ([#144](https://github.com/instill-ai/mgmt-backend/issues/144)) ([fa8a18a](https://github.com/instill-ai/mgmt-backend/commit/fa8a18afb61e3c4614788c4bfad8a6e5036ac0da))
+* **organization:** add organization and membership rules ([#146](https://github.com/instill-ai/mgmt-backend/issues/146)) ([a264412](https://github.com/instill-ai/mgmt-backend/commit/a26441225490c3f2f066a39933a6d8e3349fa2e3))
+
+
+### Bug Fixes
+
+* **handler:** fix organization can not revoke user membership ([#154](https://github.com/instill-ai/mgmt-backend/issues/154)) ([348f222](https://github.com/instill-ai/mgmt-backend/commit/348f222dd4eeb1ad344d5e26cd7313c087d4c2dd))
+
+
+### Miscellaneous Chores
+
+* release v0.8.0-beta ([d2007d6](https://github.com/instill-ai/mgmt-backend/commit/d2007d6394d550a48353e840e648c951274c2897))
+
 ## [0.7.0-alpha](https://github.com/instill-ai/mgmt-backend/compare/v0.6.2-alpha...v0.7.0-alpha) (2023-11-28)
 
 
