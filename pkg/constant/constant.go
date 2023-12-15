@@ -33,6 +33,7 @@ const MaxPayloadSize = 1024 * 1024 * 32
 const (
 	Start              string = "start"
 	Stop               string = "stop"
+	OwnerID            string = "owner_id"
 	PipelineID         string = "pipeline_id"
 	PipelineUID        string = "pipeline_uid"
 	PipelineReleaseID  string = "pipeline_release_id"

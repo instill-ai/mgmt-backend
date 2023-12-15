@@ -3,10 +3,13 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"go.einride.tech/aip/filtering"
 	"google.golang.org/grpc/metadata"
 
+	"github.com/gofrs/uuid"
+	"github.com/instill-ai/mgmt-backend/internal/resource"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 
@@ -17,6 +20,36 @@ import (
 func InjectOwnerToContext(ctx context.Context, owner *mgmtPB.User) context.Context {
 	ctx = metadata.AppendToOutgoingContext(ctx, "Jwt-Sub", owner.GetUid())
 	return ctx
+}
+
+func (s *service) checkOwnership(ctx context.Context, filter filtering.Filter, owner *mgmtPB.User) (filtering.Filter, error) {
+
+	if len(filter.CheckedExpr.GetExpr().GetCallExpr().GetArgs()) > 0 {
+		ownerID, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerID, false)
+
+		if strings.HasPrefix(ownerID, "users") {
+			if ownerID != owner.Id {
+				return filter, ErrNoPermission
+			}
+		} else if strings.HasPrefix(ownerID, "organizations") {
+			id, err := resource.GetRscNameID(ownerID)
+			if err != nil {
+				return filter, err
+			}
+			org, err := s.GetOrganizationAdmin(ctx, id)
+			if err != nil {
+				return filter, err
+			}
+			granted, err := s.GetACLClient().CheckPermission("organization", uuid.FromStringOrNil(org.Uid), "user", uuid.FromStringOrNil(owner.GetUid()), "", "member")
+			if err != nil {
+				return filter, err
+			}
+			if !granted {
+				return filter, ErrNoPermission
+			}
+		}
+	}
+	return filter, nil
 }
 
 func (s *service) pipelineUIDLookup(ctx context.Context, filter filtering.Filter, owner *mgmtPB.User) (filtering.Filter, error) {
@@ -76,6 +109,11 @@ func (s *service) connectorUIDLookup(ctx context.Context, filter filtering.Filte
 func (s *service) ListPipelineTriggerRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerRecord, int64, string, error) {
 
 	var err error
+	filter, err = s.checkOwnership(ctx, filter, owner)
+	if err != nil {
+		return []*mgmtPB.PipelineTriggerRecord{}, 0, "", err
+	}
+
 	filter, err = s.pipelineUIDLookup(ctx, filter, owner)
 	if err != nil {
 		return []*mgmtPB.PipelineTriggerRecord{}, 0, "", nil
@@ -92,6 +130,11 @@ func (s *service) ListPipelineTriggerRecords(ctx context.Context, owner *mgmtPB.
 func (s *service) ListPipelineTriggerTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerTableRecord, int64, string, error) {
 
 	var err error
+	filter, err = s.checkOwnership(ctx, filter, owner)
+	if err != nil {
+		return []*mgmtPB.PipelineTriggerTableRecord{}, 0, "", err
+	}
+
 	filter, err = s.pipelineUIDLookup(ctx, filter, owner)
 	if err != nil {
 		return []*mgmtPB.PipelineTriggerTableRecord{}, 0, "", nil
@@ -108,6 +151,11 @@ func (s *service) ListPipelineTriggerTableRecords(ctx context.Context, owner *mg
 func (s *service) ListPipelineTriggerChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerChartRecord, error) {
 
 	var err error
+	filter, err = s.checkOwnership(ctx, filter, owner)
+	if err != nil {
+		return []*mgmtPB.PipelineTriggerChartRecord{}, err
+	}
+
 	filter, err = s.pipelineUIDLookup(ctx, filter, owner)
 	if err != nil {
 		return []*mgmtPB.PipelineTriggerChartRecord{}, nil
@@ -124,6 +172,11 @@ func (s *service) ListPipelineTriggerChartRecords(ctx context.Context, owner *mg
 func (s *service) ListConnectorExecuteRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteRecord, int64, string, error) {
 
 	var err error
+	filter, err = s.checkOwnership(ctx, filter, owner)
+	if err != nil {
+		return []*mgmtPB.ConnectorExecuteRecord{}, 0, "", err
+	}
+
 	filter, err = s.pipelineUIDLookup(ctx, filter, owner)
 	if err != nil {
 		return []*mgmtPB.ConnectorExecuteRecord{}, 0, "", nil
@@ -145,6 +198,11 @@ func (s *service) ListConnectorExecuteRecords(ctx context.Context, owner *mgmtPB
 func (s *service) ListConnectorExecuteTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteTableRecord, int64, string, error) {
 
 	var err error
+	filter, err = s.checkOwnership(ctx, filter, owner)
+	if err != nil {
+		return []*mgmtPB.ConnectorExecuteTableRecord{}, 0, "", err
+	}
+
 	filter, err = s.connectorUIDLookup(ctx, filter, owner)
 	if err != nil {
 		return []*mgmtPB.ConnectorExecuteTableRecord{}, 0, "", nil
@@ -161,6 +219,11 @@ func (s *service) ListConnectorExecuteTableRecords(ctx context.Context, owner *m
 func (s *service) ListConnectorExecuteChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteChartRecord, error) {
 
 	var err error
+	filter, err = s.checkOwnership(ctx, filter, owner)
+	if err != nil {
+		return []*mgmtPB.ConnectorExecuteChartRecord{}, err
+	}
+
 	filter, err = s.pipelineUIDLookup(ctx, filter, owner)
 	if err != nil {
 		return []*mgmtPB.ConnectorExecuteChartRecord{}, nil
