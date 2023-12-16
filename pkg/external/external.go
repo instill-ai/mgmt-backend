@@ -16,6 +16,7 @@ import (
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 
 	"github.com/instill-ai/mgmt-backend/config"
+	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 
 	usagePB "github.com/instill-ai/protogen-go/core/usage/v1beta"
@@ -37,7 +38,7 @@ func InitPipelinePublicServiceClient(ctx context.Context, appConfig *config.AppC
 		clientDialOpts = grpc.WithTransportCredentials(insecure.NewCredentials())
 	}
 
-	clientConn, err := grpc.Dial(fmt.Sprintf("%v:%v", appConfig.PipelineBackend.Host, appConfig.PipelineBackend.PublicPort), clientDialOpts)
+	clientConn, err := grpc.Dial(fmt.Sprintf("%v:%v", appConfig.PipelineBackend.Host, appConfig.PipelineBackend.PublicPort), clientDialOpts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(constant.MaxPayloadSize), grpc.MaxCallSendMsgSize(constant.MaxPayloadSize)))
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, nil
@@ -58,7 +59,7 @@ func InitUsageServiceClient(ctx context.Context, serverConfig *config.ServerConf
 		clientDialOpts = grpc.WithTransportCredentials(insecure.NewCredentials())
 	}
 
-	clientConn, err := grpc.Dial(fmt.Sprintf("%v:%v", serverConfig.Usage.Host, serverConfig.Usage.Port), clientDialOpts)
+	clientConn, err := grpc.Dial(fmt.Sprintf("%v:%v", serverConfig.Usage.Host, serverConfig.Usage.Port), clientDialOpts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(constant.MaxPayloadSize), grpc.MaxCallSendMsgSize(constant.MaxPayloadSize)))
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, nil
