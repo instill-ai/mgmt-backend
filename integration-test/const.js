@@ -32,13 +32,13 @@ const randomUUID = uuidv4();
 export const restParamsWithJwtSub = {
   headers: {
     "Content-Type": "application/json",
-    "Jwt-Sub": randomUUID,
+    "instill-user-uid": randomUUID,
   },
 }
 
 export const grpcParamsWithJwtSub = {
   metadata: {
-    "Jwt-Sub": randomUUID,
+    "instill-user-uid": randomUUID,
   },
 }
 

@@ -45,7 +45,7 @@ export default function (header) {
     mgmtPrivate.CheckPrivateLookUpUserAdmin();
 
   } else {
-    // ======== Public API with jwt-sub
+    // ======== Public API with instill-user-uid
     mgmtPublicWithJwt.CheckPublicGetUser();
     mgmtPublicWithJwt.CheckPublicPatchAuthenticatedUser();
     // ======== Public API
