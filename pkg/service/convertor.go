@@ -1,14 +1,21 @@
 package service
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/base64"
 	"fmt"
+	"image"
+	"image/jpeg"
+	"image/png"
 	"strings"
 	"time"
 
+	"github.com/gabriel-vasile/mimetype"
 	"github.com/gofrs/uuid"
+	"golang.org/x/image/draw"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -33,6 +40,42 @@ var (
 		"organization": mgmtPB.OwnerType_OWNER_TYPE_ORGANIZATION,
 	}
 )
+
+func (s *service) compressAvatar(profileAvatar string) (string, error) {
+	profileAvatarStrs := strings.Split(profileAvatar, ",")
+	b, err := base64.StdEncoding.DecodeString(profileAvatarStrs[len(profileAvatarStrs)-1])
+	if err != nil {
+		return "", err
+	}
+	if len(b) > 200*1024 {
+		mimeType := strings.Split(mimetype.Detect(b).String(), ";")[0]
+
+		var src image.Image
+		switch mimeType {
+		case "image/png":
+			src, _ = png.Decode(bytes.NewReader(b))
+		case "image/jpeg":
+			src, _ = jpeg.Decode(bytes.NewReader(b))
+		default:
+			return "", status.Errorf(codes.InvalidArgument, "only support avatar image in jpeg and png formats")
+		}
+
+		// Set the expected size that you want:
+		dst := image.NewRGBA(image.Rect(0, 0, 256, 256*src.Bounds().Max.Y/src.Bounds().Max.X))
+
+		// Resize:
+		draw.NearestNeighbor.Scale(dst, dst.Rect, src, src.Bounds(), draw.Over, nil)
+
+		var buf bytes.Buffer
+		encoder := png.Encoder{CompressionLevel: png.BestCompression}
+		err = encoder.Encode(bufio.NewWriter(&buf), dst)
+		if err != nil {
+			return "", status.Errorf(codes.InvalidArgument, "avatar image error")
+		}
+		profileAvatar = fmt.Sprintf("data:%s;base64,%s", "image/png", base64.StdEncoding.EncodeToString(buf.Bytes()))
+	}
+	return profileAvatar, nil
+}
 
 // DBUser2PBUser converts a database user instance to proto user
 func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*mgmtPB.User, error) {
@@ -88,16 +131,9 @@ func (s *service) PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.Owner, error) {
 	orgName := pbUser.GetOrgName()
 	role := pbUser.GetRole()
 	cookieToken := pbUser.GetCookieToken()
-	profileAvatar := pbUser.GetProfileAvatar()
-	if profileAvatar != "" {
-		profileAvatarStrs := strings.Split(profileAvatar, ",")
-		b, err := base64.StdEncoding.DecodeString(profileAvatarStrs[len(profileAvatarStrs)-1])
-		if err != nil {
-			return nil, err
-		}
-		if len(b) > 1*1024*1024 {
-			return nil, status.Errorf(codes.InvalidArgument, "Avatar image size should less than 1MB")
-		}
+	profileAvatar, err := s.compressAvatar(pbUser.GetProfileAvatar())
+	if err != nil {
+		return nil, err
 	}
 
 	return &datamodel.Owner{
@@ -225,16 +261,9 @@ func (s *service) PBOrg2DBOrg(pbOrg *mgmtPB.Organization) (*datamodel.Owner, err
 	userType := "organization"
 	customerId := pbOrg.GetCustomerId()
 	orgName := pbOrg.GetOrgName()
-	profileAvatar := pbOrg.GetProfileAvatar()
-	if profileAvatar != "" {
-		profileAvatarStrs := strings.Split(profileAvatar, ",")
-		b, err := base64.StdEncoding.DecodeString(profileAvatarStrs[len(profileAvatarStrs)-1])
-		if err != nil {
-			return nil, err
-		}
-		if len(b) > 1*1024*1024 {
-			return nil, status.Errorf(codes.InvalidArgument, "Avatar image size should less than 1MB")
-		}
+	profileAvatar, err := s.compressAvatar(pbOrg.GetProfileAvatar())
+	if err != nil {
+		return nil, err
 	}
 
 	return &datamodel.Owner{
