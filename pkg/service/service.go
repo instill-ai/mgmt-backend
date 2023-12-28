@@ -24,7 +24,7 @@ import (
 
 // Service interface
 type Service interface {
-	AuthenticateUser(ctx context.Context, allowVisitor bool) (userID string, userUID uuid.UUID, err error)
+	ExtractCtxUser(ctx context.Context, allowVisitor bool) (userUID uuid.UUID, err error)
 
 	ListRole() []string
 	CreateUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.User) (*mgmtPB.User, error)
@@ -119,33 +119,38 @@ func (s *service) GetACLClient() *acl.ACLClient {
 	return s.aclClient
 }
 
-// GetUser returns the api user
-func (s *service) AuthenticateUser(ctx context.Context, allowVisitor bool) (userID string, userUID uuid.UUID, err error) {
-	// Verify if "jwt-sub" is in the header
-	headerCtxUserUID := resource.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)
+func (s *service) convertUserIDAlias(ctx context.Context, userUid uuid.UUID, id string) (string, error) {
+	if id == "me" {
+		user, err := s.GetUserByUIDAdmin(ctx, userUid)
+		if err != nil {
+			return "", ErrUnauthenticated
+		}
+		return user.Id, nil
+	}
+	return id, nil
+}
 
-	if headerCtxUserUID != "" {
-		if allowVisitor && strings.HasPrefix(headerCtxUserUID, "visitor:") {
-			_, err := uuid.FromString(strings.Split(headerCtxUserUID, ":")[1])
-			if err != nil {
-				return "", uuid.Nil, ErrUnauthenticated
-			}
-			return "", uuid.FromStringOrNil(strings.Split(headerCtxUserUID, ":")[1]), nil
-		} else {
-			_, err := uuid.FromString(headerCtxUserUID)
-			if err != nil {
-				return "", uuid.Nil, ErrUnauthenticated
-			}
-			user, err := s.repository.GetUserByUID(ctx, uuid.FromStringOrNil(headerCtxUserUID))
-			if err != nil {
-				return "", uuid.Nil, ErrUnauthenticated
-			}
-			return user.ID, uuid.FromStringOrNil(headerCtxUserUID), nil
+// GetUser returns the api user
+func (s *service) ExtractCtxUser(ctx context.Context, allowVisitor bool) (userUID uuid.UUID, err error) {
+	// Verify if "instill-user-uid" is in the header
+	authType := resource.GetRequestSingleHeader(ctx, constant.HeaderAuthType)
+	if authType == "user" {
+		headerCtxUserUID := resource.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)
+		if headerCtxUserUID == "" {
+			return uuid.Nil, ErrUnauthenticated
+		}
+		return uuid.FromStringOrNil(headerCtxUserUID), nil
+	} else {
+		if !allowVisitor {
+			return uuid.Nil, ErrUnauthenticated
+		}
+		headerCtxVisitorUID := resource.GetRequestSingleHeader(ctx, constant.HeaderVisitorUIDKey)
+		if headerCtxVisitorUID == "" {
+			return uuid.Nil, ErrUnauthenticated
 		}
 
+		return uuid.FromStringOrNil(headerCtxVisitorUID), nil
 	}
-
-	return "", uuid.Nil, ErrUnauthenticated
 
 }
 
@@ -178,39 +183,76 @@ func (s *service) CreateUser(ctx context.Context, ctxUserUID uuid.UUID, user *mg
 		return nil, err
 	}
 
-	dbCreatedUser, err := s.repository.GetUser(ctx, dbUser.ID)
-	if err != nil {
-		return nil, fmt.Errorf("users/%s: %w", dbUser.ID, err)
-	}
-
-	return s.DBUser2PBUser(ctx, dbCreatedUser)
+	return s.GetUser(ctx, ctxUserUID, user.Id)
 }
 
 func (s *service) GetUser(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.User, error) {
 
+	id, err := s.convertUserIDAlias(ctx, ctxUserUID, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if pbUser := s.getUserFromCacheByID(ctx, id); pbUser != nil {
+		return pbUser, nil
+	}
+
 	dbUser, err := s.repository.GetUser(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("users/%s: %w", id, err)
 	}
-	return s.DBUser2PBUser(ctx, dbUser)
+
+	pbUser, err := s.DBUser2PBUser(ctx, dbUser)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.setUserToCache(ctx, pbUser)
+	if err != nil {
+		return nil, err
+	}
+
+	return pbUser, nil
 }
 
 func (s *service) GetUserAdmin(ctx context.Context, id string) (*mgmtPB.User, error) {
 
+	if pbUser := s.getUserFromCacheByID(ctx, id); pbUser != nil {
+		return pbUser, nil
+	}
 	dbUser, err := s.repository.GetUser(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("users/%s: %w", id, err)
 	}
-	return s.DBUser2PBUser(ctx, dbUser)
+	pbUser, err := s.DBUser2PBUser(ctx, dbUser)
+	if err != nil {
+		return nil, err
+	}
+	err = s.setUserToCache(ctx, pbUser)
+	if err != nil {
+		return nil, err
+	}
+	return pbUser, nil
 }
 
 func (s *service) GetUserByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtPB.User, error) {
 
+	if pbUser := s.getUserFromCacheByUID(ctx, uid); pbUser != nil {
+		return pbUser, nil
+	}
 	dbUser, err := s.repository.GetUserByUID(ctx, uid)
 	if err != nil {
 		return nil, fmt.Errorf("users/%s: %w", uid, err)
 	}
-	return s.DBUser2PBUser(ctx, dbUser)
+	pbUser, err := s.DBUser2PBUser(ctx, dbUser)
+	if err != nil {
+		return nil, err
+	}
+	err = s.setUserToCache(ctx, pbUser)
+	if err != nil {
+		return nil, err
+	}
+	return pbUser, nil
 }
 
 func (s *service) ListUsersAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.User, int64, string, error) {
@@ -224,6 +266,11 @@ func (s *service) ListUsersAdmin(ctx context.Context, pageSize int, pageToken st
 
 // UpdateUser updates a user by UUID
 func (s *service) UpdateUser(ctx context.Context, ctxUserUID uuid.UUID, id string, user *mgmtPB.User) (*mgmtPB.User, error) {
+
+	id, err := s.convertUserIDAlias(ctx, ctxUserUID, id)
+	if err != nil {
+		return nil, err
+	}
 
 	// Check if the user exists
 	if _, err := s.repository.GetUser(ctx, id); err != nil {
@@ -241,22 +288,26 @@ func (s *service) UpdateUser(ctx context.Context, ctxUserUID uuid.UUID, id strin
 			return nil, ErrInvalidRole
 		}
 	}
+	err = s.deleteUserFromCacheByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
 	if err := s.repository.UpdateUser(ctx, id, dbUser); err != nil {
 		return nil, fmt.Errorf("users/%s: %w", id, err)
 	}
 
-	dbUserUpdated, err := s.repository.GetUser(ctx, id)
-	if err != nil {
-		return nil, fmt.Errorf("users/%s: %w", id, err)
-	}
-	return s.DBUser2PBUser(ctx, dbUserUpdated)
+	return s.GetUser(ctx, ctxUserUID, id)
 
 }
 
 // DeleteUser deletes a user by ID
 func (s *service) DeleteUser(ctx context.Context, ctxUserUID uuid.UUID, id string) error {
 
-	err := s.repository.DeleteUser(ctx, id)
+	err := s.deleteUserFromCacheByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	err = s.repository.DeleteUser(ctx, id)
 	if err != nil {
 		return fmt.Errorf("users/%s: %w", id, err)
 	}
@@ -286,26 +337,32 @@ func (s *service) CreateOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 		return nil, err
 	}
 
-	dbCreatedOrg, err := s.repository.GetOrganization(ctx, dbOrg.ID)
-	if err != nil {
-		return nil, fmt.Errorf("organizations/%s: %w", dbOrg.ID, err)
-	}
-
 	err = s.aclClient.SetOrganizationUserMembership(dbOrg.UID, ctxUserUID, "owner")
 	if err != nil {
 		return nil, err
 	}
-
-	return s.DBOrg2PBOrg(ctx, dbCreatedOrg)
+	return s.GetOrganization(ctx, ctxUserUID, org.Id)
 }
 
 func (s *service) GetOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.Organization, error) {
+
+	if pbOrg := s.getOrganizationFromCacheByID(ctx, id); pbOrg != nil {
+		return pbOrg, nil
+	}
 
 	dbOrg, err := s.repository.GetOrganization(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("organizations/%s: %w", id, err)
 	}
-	return s.DBOrg2PBOrg(ctx, dbOrg)
+	pbOrg, err := s.DBOrg2PBOrg(ctx, dbOrg)
+	if err != nil {
+		return nil, err
+	}
+	err = s.setOrganizationToCache(ctx, pbOrg)
+	if err != nil {
+		return nil, err
+	}
+	return pbOrg, nil
 }
 
 func (s *service) UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string, org *mgmtPB.Organization) (*mgmtPB.Organization, error) {
@@ -327,16 +384,16 @@ func (s *service) UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 	if err != nil {
 		return nil, err
 	}
+	err = s.deleteOrganizationFromCacheByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
 
 	if err := s.repository.UpdateOrganization(ctx, id, dbOrg); err != nil {
 		return nil, fmt.Errorf("organizations/%s: %w", id, err)
 	}
 
-	dbOrgUpdated, err := s.repository.GetOrganization(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return s.DBOrg2PBOrg(ctx, dbOrgUpdated)
+	return s.GetOrganization(ctx, ctxUserUID, org.Id)
 
 }
 
@@ -354,6 +411,11 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 		return ErrNoPermission
 	}
 
+	err = s.deleteOrganizationFromCacheByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
 	err = s.repository.DeleteOrganization(ctx, id)
 	if err != nil {
 		return fmt.Errorf("organizations/%s: %w", id, err)
@@ -363,20 +425,45 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 
 func (s *service) GetOrganizationAdmin(ctx context.Context, id string) (*mgmtPB.Organization, error) {
 
+	if pbOrg := s.getOrganizationFromCacheByID(ctx, id); pbOrg != nil {
+		return pbOrg, nil
+	}
+
 	dbOrganization, err := s.repository.GetOrganization(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("organizations/%s: %w", id, err)
 	}
-	return s.DBOrg2PBOrg(ctx, dbOrganization)
+
+	pbOrg, err := s.DBOrg2PBOrg(ctx, dbOrganization)
+	if err != nil {
+		return nil, err
+	}
+	err = s.setOrganizationToCache(ctx, pbOrg)
+	if err != nil {
+		return nil, err
+	}
+	return pbOrg, nil
 }
 
 func (s *service) GetOrganizationByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtPB.Organization, error) {
+
+	if pbOrg := s.getOrganizationFromCacheByUID(ctx, uid); pbOrg != nil {
+		return pbOrg, nil
+	}
 
 	dbOrganization, err := s.repository.GetOrganizationByUID(ctx, uid)
 	if err != nil {
 		return nil, fmt.Errorf("organizations/%s: %w", uid, err)
 	}
-	return s.DBOrg2PBOrg(ctx, dbOrganization)
+	pbOrg, err := s.DBOrg2PBOrg(ctx, dbOrganization)
+	if err != nil {
+		return nil, err
+	}
+	err = s.setOrganizationToCache(ctx, pbOrg)
+	if err != nil {
+		return nil, err
+	}
+	return pbOrg, nil
 }
 
 func (s *service) ListOrganizationsAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.Organization, int64, string, error) {
@@ -389,9 +476,14 @@ func (s *service) ListOrganizationsAdmin(ctx context.Context, pageSize int, page
 }
 
 func (s *service) CheckUserPassword(ctx context.Context, uid uuid.UUID, password string) error {
-	passwordHash, _, err := s.repository.GetUserPasswordHash(ctx, uid)
-	if err != nil {
-		return err
+	var err error
+	passwordHash := s.getUserPasswordHashFromCache(ctx, uid)
+	if passwordHash == "" {
+		passwordHash, _, err = s.repository.GetUserPasswordHash(ctx, uid)
+		if err != nil {
+			return err
+		}
+		_ = s.setUserPasswordHashToCache(ctx, uid, passwordHash)
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
@@ -406,6 +498,7 @@ func (s *service) UpdateUserPassword(ctx context.Context, uid uuid.UUID, newPass
 	if err != nil {
 		return err
 	}
+	_ = s.deleteUserPasswordHashFromCache(ctx, uid)
 	return s.repository.UpdateUserPasswordHash(ctx, uid, string(passwordBytes), time.Now())
 }
 
@@ -496,6 +589,12 @@ func (s *service) ValidateToken(accessToken string) (string, error) {
 }
 
 func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID, userID string) ([]*mgmtPB.UserMembership, error) {
+
+	userID, err := s.convertUserIDAlias(ctx, ctxUserUID, userID)
+	if err != nil {
+		return nil, err
+	}
+
 	user, err := s.repository.GetUser(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("users/%s: %w", userID, err)
@@ -544,6 +643,12 @@ func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID,
 }
 
 func (s *service) GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) (*mgmtPB.UserMembership, error) {
+
+	userID, err := s.convertUserIDAlias(ctx, ctxUserUID, userID)
+	if err != nil {
+		return nil, err
+	}
+
 	user, err := s.repository.GetUser(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("users/%s: %w", userID, err)
@@ -585,6 +690,12 @@ func (s *service) GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, u
 }
 
 func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string, membership *mgmtPB.UserMembership) (*mgmtPB.UserMembership, error) {
+
+	userID, err := s.convertUserIDAlias(ctx, ctxUserUID, userID)
+	if err != nil {
+		return nil, err
+	}
+
 	user, err := s.repository.GetUser(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("users/%s: %w", userID, err)
@@ -635,6 +746,11 @@ func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 }
 
 func (s *service) DeleteUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) error {
+	userID, err := s.convertUserIDAlias(ctx, ctxUserUID, userID)
+	if err != nil {
+		return err
+	}
+
 	user, err := s.repository.GetUser(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("users/%s: %w", userID, err)
@@ -712,6 +828,12 @@ func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uu
 }
 
 func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) (*mgmtPB.OrganizationMembership, error) {
+
+	userID, err := s.convertUserIDAlias(ctx, ctxUserUID, userID)
+	if err != nil {
+		return nil, err
+	}
+
 	user, err := s.repository.GetUser(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("users/%s: %w", userID, err)
@@ -769,6 +891,12 @@ func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid
 }
 
 func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string, membership *mgmtPB.OrganizationMembership) (*mgmtPB.OrganizationMembership, error) {
+
+	userID, err := s.convertUserIDAlias(ctx, ctxUserUID, userID)
+	if err != nil {
+		return nil, err
+	}
+
 	user, err := s.repository.GetUser(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("users/%s: %w", userID, err)
@@ -835,6 +963,11 @@ func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID u
 
 func (s *service) DeleteOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) error {
 
+	userID, err := s.convertUserIDAlias(ctx, ctxUserUID, userID)
+	if err != nil {
+		return err
+	}
+
 	user, err := s.repository.GetUser(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("users/%s: %w", userID, err)
@@ -868,7 +1001,7 @@ func (s *service) ListUserPipelines(ctx context.Context, id string) ([]*pipeline
 	pipelines := []*pipelinePB.Pipeline{}
 	for {
 		resp, err := s.pipelinePublicServiceClient.ListUserPipelines(
-			metadata.AppendToOutgoingContext(ctx, "Jwt-Sub", resource.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)),
+			metadata.AppendToOutgoingContext(ctx, "instill-user-uid", resource.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)),
 			&pipelinePB.ListUserPipelinesRequest{
 				PageSize:  &pageSize,
 				PageToken: &pageToken,
@@ -896,7 +1029,7 @@ func (s *service) ListOrganizationPipelines(ctx context.Context, id string) ([]*
 	pipelines := []*pipelinePB.Pipeline{}
 	for {
 		resp, err := s.pipelinePublicServiceClient.ListOrganizationPipelines(
-			metadata.AppendToOutgoingContext(ctx, "Jwt-Sub", resource.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)),
+			metadata.AppendToOutgoingContext(ctx, "instill-user-uid", resource.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)),
 			&pipelinePB.ListOrganizationPipelinesRequest{
 				PageSize:  &pageSize,
 				PageToken: &pageToken,

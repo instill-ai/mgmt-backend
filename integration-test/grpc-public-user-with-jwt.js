@@ -15,14 +15,14 @@ client.load(['proto/core/mgmt/v1beta'], 'mgmt_public_service.proto');
 
 export function CheckPublicGetUser() {
 
-  group(`Management Public API: Get authenticated user [with random "jwt-sub" header]`, () => {
+  group(`Management Public API: Get authenticated user [with random "instill-user-uid" header]`, () => {
 
     client.connect(constant.mgmtPublicGRPCHost, {
       plaintext: true
     });
 
-    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/GetUser', {name: "users/me"}, constant.grpcParamsWithJwtSub), {
-      '[with random "jwt-sub" header] core.mgmt.v1beta.MgmtPublicService/GetUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
+    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/GetUser', {name: "users/me"}, constant.grpcParamsWithInstillUserUid), {
+      '[with random "instill-user-uid" header] core.mgmt.v1beta.MgmtPublicService/GetUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
     });
 
     client.close();
@@ -35,7 +35,7 @@ export function CheckPublicPatchAuthenticatedUser() {
     plaintext: true
   });
 
-  group(`Management Public API: Update authenticated user [with random "jwt-sub" header]`, () => {
+  group(`Management Public API: Update authenticated user [with random "instill-user-uid" header]`, () => {
     var userUpdate = {
       name: `users/${constant.defaultUser.id}`,
       email: "test@foo.bar",
@@ -51,8 +51,8 @@ export function CheckPublicPatchAuthenticatedUser() {
     check(client.invoke('core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser', {
       user: userUpdate,
       update_mask: "email,firstName,lastName,orgName,role,newsletterSubscription,cookieToken"
-    }, constant.grpcParamsWithJwtSub), {
-      '[with random "jwt-sub" header] core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
+    }, constant.grpcParamsWithInstillUserUid), {
+      '[with random "instill-user-uid" header] core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
     });
   });
 

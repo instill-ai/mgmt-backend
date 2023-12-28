@@ -6,11 +6,11 @@ import * as helper from "./helper.js";
 
 
 export function CheckPublicGetUser() {
-  group(`Management Public API: Get authenticated user [with random "jwt-sub" header]`, () => {
+  group(`Management Public API: Get authenticated user [with random "instill-user-uid" header]`, () => {
 
-    check(http.request("GET", `${constant.mgmtPublicHost}/users/me`, {}, constant.restParamsWithJwtSub),
+    check(http.request("GET", `${constant.mgmtPublicHost}/users/me`, {}, constant.restParamsWithInstillUserUid),
       {
-        [`[with random "jwt-sub" header] GET /${constant.mgmtVersion}/users/me response status 401`]:
+        [`[with random "instill-user-uid" header] GET /${constant.mgmtVersion}/users/me response status 401`]:
           (r) => r.status === 401,
       }
     )
@@ -18,7 +18,7 @@ export function CheckPublicGetUser() {
 }
 
 export function CheckPublicPatchAuthenticatedUser() {
-  group(`Management Public API: Update authenticated user [with random "jwt-sub" header]`, () => {
+  group(`Management Public API: Update authenticated user [with random "instill-user-uid" header]`, () => {
     var userUpdate = {
       email: "test@foo.bar",
       customer_id: "new_customer_id",
@@ -32,9 +32,9 @@ export function CheckPublicPatchAuthenticatedUser() {
       update_time: "2000-01-01T00:00:00.000000Z",
     };
 
-    check(http.request("PATCH", `${constant.mgmtPublicHost}/users/me`, JSON.stringify(userUpdate), constant.restParamsWithJwtSub),
+    check(http.request("PATCH", `${constant.mgmtPublicHost}/users/me`, JSON.stringify(userUpdate), constant.restParamsWithInstillUserUid),
       {
-        [`[with random "jwt-sub" header] PATCH /${constant.mgmtVersion}/users/me response status 401`]: (r) => r.status === 401,
+        [`[with random "instill-user-uid" header] PATCH /${constant.mgmtVersion}/users/me response status 401`]: (r) => r.status === 401,
       }
     );
   });

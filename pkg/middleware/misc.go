@@ -16,7 +16,6 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 )
 
@@ -34,11 +33,12 @@ func CustomMatcher(key string) (string, bool) {
 	if strings.HasPrefix(strings.ToLower(key), "jwt-") {
 		return key, true
 	}
+	if strings.HasPrefix(strings.ToLower(key), "instill-") {
+		return key, true
+	}
 
 	switch key {
 	case "request-id":
-		return key, true
-	case constant.HeaderUserIDKey:
 		return key, true
 	case "X-B3-Traceid", "X-B3-Spanid", "X-B3-Sampled":
 		return key, true

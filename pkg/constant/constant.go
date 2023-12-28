@@ -15,10 +15,13 @@ const DefaultJwtIssuer = "http://localhost:8080"
 const DefaultJwtAudience = "http://localhost:8080"
 
 // HeaderUserIDKey is the header key for the User ID
-const HeaderUserIDKey = "user-id"
+const HeaderUserIDKey = "Instill-User-Id"
 
 // HeaderUserUIDKey is the header key for the User UID
-const HeaderUserUIDKey = "jwt-sub"
+const HeaderUserUIDKey = "Instill-User-Uid"
+const HeaderVisitorUIDKey = "Instill-Visitor-Uid"
+
+const HeaderAuthType = "Instill-Auth-Type"
 
 // MaxApiKeyNum is the maximum number of API keys
 const MaxApiKeyNum = 10
