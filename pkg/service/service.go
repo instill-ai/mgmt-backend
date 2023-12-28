@@ -535,9 +535,8 @@ func (s *service) CreateToken(ctx context.Context, ctxUserUID uuid.UUID, token *
 	if err != nil {
 		return err
 	}
-	// TODO: should be more robust
-	s.redisClient.Set(context.Background(), fmt.Sprintf(constant.AccessTokenKeyFormat, dbToken.AccessToken), dbToken.Owner, 0)
-	s.redisClient.ExpireAt(context.Background(), fmt.Sprintf(constant.AccessTokenKeyFormat, dbToken.AccessToken), dbToken.ExpireTime)
+
+	_ = s.setAPITokenToCache(ctx, dbToken.AccessToken, ctxUserUID, dbToken.ExpireTime)
 
 	return nil
 }
@@ -573,7 +572,7 @@ func (s *service) DeleteToken(ctx context.Context, ctxUserUID uuid.UUID, id stri
 	accessToken := token.AccessToken
 
 	// TODO: should be more robust
-	s.redisClient.Del(context.Background(), fmt.Sprintf(constant.AccessTokenKeyFormat, accessToken))
+	_ = s.deleteAPITokenFromCache(ctx, accessToken)
 	err = s.repository.DeleteToken(ctx, ownerPermlink, id)
 	if err != nil {
 		return fmt.Errorf("tokens/%s: %w", id, err)
@@ -581,11 +580,21 @@ func (s *service) DeleteToken(ctx context.Context, ctxUserUID uuid.UUID, id stri
 	return nil
 }
 func (s *service) ValidateToken(accessToken string) (string, error) {
-	ownerPermalink, err := s.redisClient.Get(context.Background(), fmt.Sprintf(constant.AccessTokenKeyFormat, accessToken)).Result()
-	if err != nil {
-		return "", err
+	uid := s.getAPITokenFromCache(context.Background(), accessToken)
+	fmt.Println("ValidateToken", accessToken, uid)
+	if uid == uuid.Nil {
+		dbToken, err := s.repository.LookupToken(context.Background(), accessToken)
+		if err != nil {
+			return "", ErrUnauthenticated
+		}
+		uid = uuid.FromStringOrNil(strings.Split(dbToken.Owner, "/")[1])
+		_ = s.setAPITokenToCache(context.Background(), dbToken.AccessToken, uid, dbToken.ExpireTime)
+
 	}
-	return strings.Split(ownerPermalink, "/")[1], nil
+	if uid == uuid.Nil {
+		return "", ErrUnauthenticated
+	}
+	return uid.String(), nil
 }
 
 func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID, userID string) ([]*mgmtPB.UserMembership, error) {
