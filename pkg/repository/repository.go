@@ -48,6 +48,7 @@ type Repository interface {
 	ListTokens(ctx context.Context, owner string, pageSize int64, pageToken string) ([]*datamodel.Token, int64, string, error)
 	GetToken(ctx context.Context, owner string, id string) (*datamodel.Token, error)
 	DeleteToken(ctx context.Context, owner string, id string) error
+	LookupToken(ctx context.Context, token string) (*datamodel.Token, error)
 
 	ListAllValidTokens(ctx context.Context) ([]datamodel.Token, error)
 }
@@ -351,6 +352,15 @@ func (r *repository) CreateToken(ctx context.Context, token *datamodel.Token) er
 
 func (r *repository) GetToken(ctx context.Context, owner string, id string) (*datamodel.Token, error) {
 	queryBuilder := r.db.Model(&datamodel.Token{}).Where("id = ? AND owner = ?", id, owner)
+	var token datamodel.Token
+	if result := queryBuilder.First(&token); result.Error != nil {
+		return nil, result.Error
+	}
+	return &token, nil
+}
+
+func (r *repository) LookupToken(ctx context.Context, accessToken string) (*datamodel.Token, error) {
+	queryBuilder := r.db.Model(&datamodel.Token{}).Where("access_token = ?", accessToken)
 	var token datamodel.Token
 	if result := queryBuilder.First(&token); result.Error != nil {
 		return nil, result.Error

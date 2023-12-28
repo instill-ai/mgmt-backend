@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gofrs/uuid"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -11,6 +12,7 @@ import (
 )
 
 const CacheTargetUser = "user"
+const CacheTargetToken = "api_token"
 const CacheTargetOrganization = "organization"
 const CacheTargetUserPasswordHash = "user_password_hash"
 
@@ -169,6 +171,38 @@ func (s *service) setUserPasswordHashToCache(ctx context.Context, uid uuid.UUID,
 func (s *service) deleteUserPasswordHashFromCache(ctx context.Context, uid uuid.UUID) error {
 
 	setCmd := s.redisClient.Del(ctx, fmt.Sprintf("%s:%s", CacheTargetUserPasswordHash, uid))
+	if setCmd.Err() != nil {
+		return setCmd.Err()
+	}
+
+	return nil
+}
+
+func (s *service) getAPITokenFromCache(ctx context.Context, token string) uuid.UUID {
+	getCmd := s.redisClient.Get(ctx, fmt.Sprintf("%s:%s:user_uid", CacheTargetToken, token))
+	if getCmd.Err() == nil {
+		return uuid.FromStringOrNil(getCmd.Val())
+	}
+	return uuid.Nil
+}
+
+func (s *service) setAPITokenToCache(ctx context.Context, token string, userUID uuid.UUID, expire time.Time) error {
+
+	setCmd := s.redisClient.Set(ctx, fmt.Sprintf("%s:%s:user_uid", CacheTargetToken, token), userUID.String(), 0)
+	if setCmd.Err() != nil {
+		return setCmd.Err()
+	}
+	expCmd := s.redisClient.ExpireAt(ctx, fmt.Sprintf("%s:%s:user_uid", CacheTargetToken, token), expire)
+	if expCmd.Err() != nil {
+		return expCmd.Err()
+	}
+
+	return nil
+}
+
+func (s *service) deleteAPITokenFromCache(ctx context.Context, token string) error {
+
+	setCmd := s.redisClient.Del(ctx, fmt.Sprintf("%s:%s:user_uid", CacheTargetToken, token))
 	if setCmd.Err() != nil {
 		return setCmd.Err()
 	}
