@@ -219,7 +219,6 @@ func (h *PublicHandler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest)
 		logUUID.String(),
 		ctxUserUID,
 		eventName,
-		custom_otel.SetEventResource(pbUser),
 	)))
 
 	resp := mgmtPB.GetUserResponse{
@@ -484,7 +483,6 @@ func (h *PublicHandler) GetOrganization(ctx context.Context, req *mgmtPB.GetOrga
 		logUUID.String(),
 		ctxUserUID,
 		eventName,
-		custom_otel.SetEventResource(pbOrg),
 	)))
 
 	return resp, nil

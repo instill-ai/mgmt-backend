@@ -8,6 +8,7 @@ retract v0.3.2 // Published accidentally.
 
 require (
 	github.com/InfluxCommunity/influxdb3-go v0.1.0
+	github.com/gabriel-vasile/mimetype v1.4.3
 	github.com/gofrs/uuid v4.3.1+incompatible
 	github.com/golang-migrate/migrate/v4 v4.15.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
@@ -34,6 +35,7 @@ require (
 	go.temporal.io/sdk v1.21.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.14.0
+	golang.org/x/image v0.14.0
 	golang.org/x/net v0.17.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20230530153820-e85fd2cbaebc
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc
@@ -110,7 +112,7 @@ require (
 	golang.org/x/mod v0.8.0 // indirect
 	golang.org/x/sync v0.4.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.1.0 // indirect
 	golang.org/x/tools v0.6.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
