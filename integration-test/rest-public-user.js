@@ -152,23 +152,6 @@ export function CheckPublicPatchAuthenticatedUser(header) {
     );
   });
 
-  group(`Management Public API: Update authenticated user with a non-exist role`, () => {
-    var nonExistRole = "non-exist-role";
-    var userUpdate = {
-      role: nonExistRole,
-    };
-    check(
-      http.request(
-        "PATCH",
-        `${constant.mgmtPublicHost}/users/me`,
-        JSON.stringify(userUpdate), header),
-      {
-        [`PATCH /${constant.mgmtVersion}/users/me response status 400`]:
-          (r) => r.status === 400,
-      }
-    );
-  });
-
   group(`Management Public API: Update authenticated user ID [not allowed]`, () => {
     var userUpdate = {
       id: `test_${randomString(10)}`,

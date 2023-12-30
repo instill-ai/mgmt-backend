@@ -26,7 +26,6 @@ import (
 type Service interface {
 	ExtractCtxUser(ctx context.Context, allowVisitor bool) (userUID uuid.UUID, err error)
 
-	ListRole() []string
 	CreateUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.User) (*mgmtPB.User, error)
 	ListUsers(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.User, int64, string, error)
 	GetUser(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.User, error)
@@ -154,11 +153,6 @@ func (s *service) ExtractCtxUser(ctx context.Context, allowVisitor bool) (userUI
 
 }
 
-// ListRole lists names of all roles
-func (s *service) ListRole() []string {
-	return ListAllowedRoleName()
-}
-
 func (s *service) ListUsers(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) (users []*mgmtPB.User, totalSize int64, nextPageToken string, err error) {
 	dbUsers, totalSize, nextPageToken, err := s.repository.ListUsers(ctx, pageSize, pageToken, filter)
 	if err != nil {
@@ -174,11 +168,7 @@ func (s *service) CreateUser(ctx context.Context, ctxUserUID uuid.UUID, user *mg
 	if err != nil {
 		return nil, err
 	}
-	if dbUser.Role.Valid {
-		if r := Role(dbUser.Role.String); !ValidateRole(r) {
-			return nil, ErrInvalidRole
-		}
-	}
+
 	if err := s.repository.CreateUser(ctx, dbUser); err != nil {
 		return nil, err
 	}
@@ -282,12 +272,7 @@ func (s *service) UpdateUser(ctx context.Context, ctxUserUID uuid.UUID, id strin
 	if err != nil {
 		return nil, err
 	}
-	//Validation: role field
-	if dbUser.Role.Valid {
-		if r := Role(dbUser.Role.String); !ValidateRole(r) {
-			return nil, ErrInvalidRole
-		}
-	}
+
 	err = s.deleteUserFromCacheByID(ctx, id)
 	if err != nil {
 		return nil, err

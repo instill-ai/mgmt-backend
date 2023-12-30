@@ -132,15 +132,6 @@
       "type": "string",
       "title": "Your role",
       "description": "Pick a role closest to your job in your company",
-      "enum": [
-        "manager",
-        "ai-researcher",
-        "ai-engineer",
-        "data-engineer",
-        "data-scientist",
-        "analytics-engineer",
-        "hobbyist"
-      ],
       "ui_order": 12,
       "ui_component": "select",
       "ui_enum": [
