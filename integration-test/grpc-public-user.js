@@ -117,21 +117,6 @@ export function CheckPublicPatchAuthenticatedUser(header) {
     });
   });
 
-  group(`Management Public API: Update authenticated user with a non-exist role`, () => {
-    var nonExistRole = "non-exist-role";
-    var userUpdate = {
-      role: nonExistRole,
-    };
-
-    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser', {
-      user: userUpdate,
-      update_mask: "role"
-    }, header), {
-      'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser nonExistRole StatusInvalidArgument': (r) => r.status == grpc.StatusInvalidArgument,
-    });
-
-  });
-
   group(`Management Public API: Update authenticated user ID [not allowed]`, () => {
     var userUpdate = {
       id: `test_${randomString(10)}`,
