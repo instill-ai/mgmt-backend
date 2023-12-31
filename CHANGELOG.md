@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.9.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.8.0-beta...v0.9.0-beta) (2023-12-31)
+
+
+### Features
+
+* compress avatar image ([#167](https://github.com/instill-ai/mgmt-backend/issues/167)) ([fe9b3e7](https://github.com/instill-ai/mgmt-backend/commit/fe9b3e7fbee8fa1fd4e57c6706d946881924e60e))
+* implement cache mechanism ([#164](https://github.com/instill-ai/mgmt-backend/issues/164)) ([f3ef2ab](https://github.com/instill-ai/mgmt-backend/commit/f3ef2abff65a194582a97be92bed41d1bebf9bba))
+
+
+### Bug Fixes
+
+* fix `api_token` cache miss bug ([#166](https://github.com/instill-ai/mgmt-backend/issues/166)) ([ebc9acd](https://github.com/instill-ai/mgmt-backend/commit/ebc9acd14026913bee81e07986f8f96208a3378f))
+* remove user role enum ([#168](https://github.com/instill-ai/mgmt-backend/issues/168)) ([24187be](https://github.com/instill-ai/mgmt-backend/commit/24187be851fbdbd58ed0f0f7ba33e89e975ea6a9))
+
 ## [0.8.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.7.0-alpha...v0.8.0-beta) (2023-12-16)
 
 
