@@ -194,7 +194,7 @@ func main() {
 			logger.Info("try to start usage reporter")
 			go func() {
 				for {
-					usg = usage.NewUsage(ctx, service, usageServiceClient, config.Config.Server.Edition)
+					usg = usage.NewUsage(ctx, service, usageServiceClient, config.Config.Server.Edition, constant.DefaultUserID)
 					if usg != nil {
 						usg.StartReporter(ctx)
 						logger.Info("usage reporter started")
