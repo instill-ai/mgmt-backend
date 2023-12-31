@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 	"github.com/instill-ai/x/repo"
@@ -25,14 +24,15 @@ type Usage interface {
 }
 
 type usage struct {
-	service  service.Service
-	reporter usageReporter.Reporter
-	edition  string
-	version  string
+	service       service.Service
+	reporter      usageReporter.Reporter
+	edition       string
+	version       string
+	defaultUserID string
 }
 
 // NewUsage initiates a usage instance
-func NewUsage(ctx context.Context, s service.Service, usc usagePB.UsageServiceClient, edition string) Usage {
+func NewUsage(ctx context.Context, s service.Service, usc usagePB.UsageServiceClient, edition string, defaultUserID string) Usage {
 	logger, _ := logger.GetZapLogger(ctx)
 
 	version, err := repo.ReadReleaseManifest("release-please/manifest.json")
@@ -42,7 +42,7 @@ func NewUsage(ctx context.Context, s service.Service, usc usagePB.UsageServiceCl
 	}
 
 	var defaultOwnerUID string
-	if user, err := s.GetUserAdmin(ctx, constant.DefaultUserID); err == nil {
+	if user, err := s.GetUserAdmin(ctx, defaultUserID); err == nil {
 		defaultOwnerUID = *user.Uid
 	} else {
 		logger.Error(err.Error())
@@ -55,10 +55,11 @@ func NewUsage(ctx context.Context, s service.Service, usc usagePB.UsageServiceCl
 	}
 
 	return &usage{
-		service:  s,
-		reporter: reporter,
-		edition:  edition,
-		version:  version,
+		service:       s,
+		reporter:      reporter,
+		edition:       edition,
+		version:       version,
+		defaultUserID: defaultUserID,
 	}
 }
 
@@ -103,7 +104,7 @@ func (u *usage) StartReporter(ctx context.Context) {
 	logger, _ := logger.GetZapLogger(ctx)
 
 	var defaultOwnerUID string
-	if user, err := u.service.GetUserAdmin(ctx, constant.DefaultUserID); err == nil {
+	if user, err := u.service.GetUserAdmin(ctx, u.defaultUserID); err == nil {
 		defaultOwnerUID = *user.Uid
 	} else {
 		logger.Error(err.Error())
@@ -126,7 +127,7 @@ func (u *usage) TriggerSingleReporter(ctx context.Context) {
 	logger, _ := logger.GetZapLogger(ctx)
 
 	var defaultOwnerUID string
-	if user, err := u.service.GetUserAdmin(ctx, constant.DefaultUserID); err == nil {
+	if user, err := u.service.GetUserAdmin(ctx, u.defaultUserID); err == nil {
 		defaultOwnerUID = *user.Uid
 	} else {
 		logger.Error(err.Error())
