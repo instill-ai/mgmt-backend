@@ -48,6 +48,8 @@ func NewUsage(ctx context.Context, s service.Service, usc usagePB.UsageServiceCl
 		logger.Error(err.Error())
 	}
 
+	fmt.Println()
+	fmt.Println("usc, usagePB.Session_SERVICE_MGMT, edition, version, defaultOwnerUID", usc, usagePB.Session_SERVICE_MGMT, edition, version, defaultOwnerUID)
 	reporter, err := usageClient.InitReporter(ctx, usc, usagePB.Session_SERVICE_MGMT, edition, version, defaultOwnerUID)
 	if err != nil {
 		logger.Error(err.Error())
