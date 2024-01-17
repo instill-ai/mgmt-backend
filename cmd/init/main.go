@@ -39,8 +39,8 @@ func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 	// Generate a random uid to the user
 	var defaultUserUID uuid.UUID
 	var err error
-	if config.Config.Server.DefaultUserUid != "" {
-		defaultUserUID, err = uuid.FromString(config.Config.Server.DefaultUserUid)
+	if config.Config.Server.DefaultUserUID != "" {
+		defaultUserUID, err = uuid.FromString(config.Config.Server.DefaultUserUID)
 	} else {
 		defaultUserUID, err = uuid.NewV4()
 	}
@@ -60,7 +60,7 @@ func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 		ID:                     constant.DefaultUserID,
 		OwnerType:              sql.NullString{String: service.PBUserType2DBUserType[mgmtPB.OwnerType_OWNER_TYPE_USER], Valid: true},
 		Email:                  constant.DefaultUserEmail,
-		CustomerId:             constant.DefaultUserCustomerId,
+		CustomerID:             constant.DefaultUserCustomerID,
 		FirstName:              sql.NullString{String: constant.DefaultUserFirstName, Valid: true},
 		LastName:               sql.NullString{String: constant.DefaultUserLastName, Valid: true},
 		OrgName:                sql.NullString{String: constant.DefaultUserOrgName, Valid: true},
@@ -153,18 +153,18 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	storeId := ""
+	storeID := ""
 	if len(*stores.Stores) == 0 {
 		data, err := fgaClient.CreateStore(context.Background()).Body(openfga.ClientCreateStoreRequest{Name: "instill"}).Execute()
 		if err != nil {
 			panic(err)
 		}
-		storeId = *data.Id
+		storeID = *data.Id
 	} else {
-		storeId = *(*stores.Stores)[0].Id
+		storeID = *(*stores.Stores)[0].Id
 	}
 
-	fgaClient.SetStoreId(storeId)
+	fgaClient.SetStoreId(storeID)
 
 	models, err := fgaClient.ReadAuthorizationModels(context.Background()).Execute()
 	if err != nil {

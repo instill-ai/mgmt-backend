@@ -47,8 +47,8 @@ func GetRscPermalinkUID(path string) (uuid.UUID, error) {
 	return uuid.FromStringOrNil(splits[1]), nil
 }
 
-func UserUidToUserPermalink(userUid uuid.UUID) string {
-	return fmt.Sprintf("users/%s", userUid.String())
+func UserUIDToUserPermalink(userUID uuid.UUID) string {
+	return fmt.Sprintf("users/%s", userUID.String())
 }
 
 func ConvertConnectorToResourceName(connectorName string) string {

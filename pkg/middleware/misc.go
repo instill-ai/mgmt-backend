@@ -51,7 +51,7 @@ func CustomMatcher(key string) (string, bool) {
 }
 
 // HTTPResponseModifier is a callback function for gRPC-Gateway runtime.WithForwardResponseOption
-func HttpResponseModifier(ctx context.Context, w http.ResponseWriter, p proto.Message) error {
+func HTTPResponseModifier(ctx context.Context, w http.ResponseWriter, p proto.Message) error {
 	md, ok := runtime.ServerMetadataFromContext(ctx)
 	if !ok {
 		return nil
