@@ -16,11 +16,11 @@ type TokenState int32
 
 const (
 	// State: UNSPECIFIED
-	STATE_UNSPECIFIED TokenState = 0
+	StateUnspecified TokenState = 0
 	// State: INACTIVE
-	STATE_INACTIVE TokenState = 1
+	StateInactive TokenState = 1
 	// State: ACTIVE
-	STATE_ACTIVE TokenState = 2
+	StateActive TokenState = 2
 
 	// In db, we should use current_time < expire_tiem to determine expire or not
 	// We'll convert current_time > expire_tiem to pb's STATE_EXPIRED
@@ -43,7 +43,7 @@ type Owner struct {
 	ID                     string `gorm:"unique;not null;"`
 	OwnerType              sql.NullString
 	Email                  string `gorm:"unique;not null;"`
-	CustomerId             string
+	CustomerID             string
 	FirstName              sql.NullString
 	LastName               sql.NullString
 	OrgName                sql.NullString

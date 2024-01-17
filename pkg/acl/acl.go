@@ -12,7 +12,7 @@ import (
 
 type ACLClient struct {
 	client               *openfgaClient.OpenFgaClient
-	authorizationModelId *string
+	authorizationModelID *string
 }
 
 type Relation struct {
@@ -23,14 +23,14 @@ type Relation struct {
 func NewACLClient(c *openfgaClient.OpenFgaClient, a *string) ACLClient {
 	return ACLClient{
 		client:               c,
-		authorizationModelId: a,
+		authorizationModelID: a,
 	}
 }
 
 func (c *ACLClient) SetOrganizationUserMembership(orgUID uuid.UUID, userUID uuid.UUID, role string) error {
 	var err error
 	options := openfgaClient.ClientWriteOptions{
-		AuthorizationModelId: c.authorizationModelId,
+		AuthorizationModelId: c.authorizationModelID,
 	}
 
 	_ = c.DeleteOrganizationUserMembership(orgUID, userUID)
@@ -54,7 +54,7 @@ func (c *ACLClient) SetOrganizationUserMembership(orgUID uuid.UUID, userUID uuid
 func (c *ACLClient) DeleteOrganizationUserMembership(orgUID uuid.UUID, userUID uuid.UUID) error {
 	// var err error
 	options := openfgaClient.ClientWriteOptions{
-		AuthorizationModelId: c.authorizationModelId,
+		AuthorizationModelId: c.authorizationModelID,
 	}
 
 	for _, role := range []string{"owner", "member", "pending_owner", "pending_member"} {
@@ -74,7 +74,7 @@ func (c *ACLClient) DeleteOrganizationUserMembership(orgUID uuid.UUID, userUID u
 
 func (c *ACLClient) CheckOrganizationUserMembership(orgUID uuid.UUID, userUID uuid.UUID, role string) (bool, error) {
 	options := openfgaClient.ClientCheckOptions{
-		AuthorizationModelId: c.authorizationModelId,
+		AuthorizationModelId: c.authorizationModelID,
 	}
 	body := openfgaClient.ClientCheckRequest{
 		User:     fmt.Sprintf("user:%s", userUID.String()),
@@ -175,7 +175,7 @@ func (c *ACLClient) GetUserOrganizations(userUID uuid.UUID) ([]*Relation, error)
 func (c *ACLClient) CheckPermission(objectType string, objectUID uuid.UUID, userType string, userUID uuid.UUID, code string, role string) (bool, error) {
 
 	options := openfgaClient.ClientCheckOptions{
-		AuthorizationModelId: c.authorizationModelId,
+		AuthorizationModelId: c.authorizationModelID,
 	}
 	body := openfgaClient.ClientCheckRequest{
 		User:     fmt.Sprintf("%s:%s", userType, userUID.String()),

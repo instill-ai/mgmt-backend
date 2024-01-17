@@ -223,7 +223,7 @@ func main() {
 	)
 
 	privateServeMux := runtime.NewServeMux(
-		runtime.WithForwardResponseOption(middleware.HttpResponseModifier),
+		runtime.WithForwardResponseOption(middleware.HTTPResponseModifier),
 		runtime.WithIncomingHeaderMatcher(middleware.CustomMatcher),
 		runtime.WithErrorHandler(middleware.ErrorHandler),
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
@@ -240,7 +240,7 @@ func main() {
 
 	publicServeMux := runtime.NewServeMux(
 		runtime.WithIncomingHeaderMatcher(middleware.CustomMatcher),
-		runtime.WithForwardResponseOption(middleware.HttpResponseModifier),
+		runtime.WithForwardResponseOption(middleware.HTTPResponseModifier),
 		runtime.WithErrorHandler(middleware.ErrorHandler),
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
 			MarshalOptions: protojson.MarshalOptions{

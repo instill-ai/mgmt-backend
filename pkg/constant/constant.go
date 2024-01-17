@@ -4,7 +4,7 @@ package constant
 const DefaultUserID = "admin"
 const DefaultUserPassword = "password"
 const DefaultUserEmail = "hello@instill.tech"
-const DefaultUserCustomerId = ""
+const DefaultUserCustomerID = ""
 const DefaultUserOrgName = "Instill AI"
 const DefaultUserFirstName = "Instill"
 const DefaultUserLastName = "AI"
@@ -22,9 +22,6 @@ const HeaderUserUIDKey = "Instill-User-Uid"
 const HeaderVisitorUIDKey = "Instill-Visitor-Uid"
 
 const HeaderAuthType = "Instill-Auth-Type"
-
-// MaxApiKeyNum is the maximum number of API keys
-const MaxApiKeyNum = 10
 
 const DefaultTokenType = "Bearer"
 const AccessTokenKeyFormat = "access_token:%s:owner_permalink"

@@ -93,7 +93,7 @@ func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*
 		CreateTime:             timestamppb.New(dbUser.Base.CreateTime),
 		UpdateTime:             timestamppb.New(dbUser.Base.UpdateTime),
 		Email:                  dbUser.Email,
-		CustomerId:             dbUser.CustomerId,
+		CustomerId:             dbUser.CustomerID,
 		FirstName:              &dbUser.FirstName.String,
 		LastName:               &dbUser.LastName.String,
 		OrgName:                &dbUser.OrgName.String,
@@ -125,7 +125,7 @@ func (s *service) PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.Owner, error) {
 
 	userType := "user"
 	email := pbUser.GetEmail()
-	customerId := pbUser.GetCustomerId()
+	customerID := pbUser.GetCustomerId()
 	firstName := pbUser.GetFirstName()
 	lastName := pbUser.GetLastName()
 	orgName := pbUser.GetOrgName()
@@ -146,7 +146,7 @@ func (s *service) PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.Owner, error) {
 			Valid:  len(userType) > 0,
 		},
 		Email:      email,
-		CustomerId: customerId,
+		CustomerID: customerID,
 		FirstName: sql.NullString{
 			String: firstName,
 			Valid:  len(firstName) > 0,
@@ -232,7 +232,7 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 		Id:            id,
 		CreateTime:    timestamppb.New(dbOrg.Base.CreateTime),
 		UpdateTime:    timestamppb.New(dbOrg.Base.UpdateTime),
-		CustomerId:    dbOrg.CustomerId,
+		CustomerId:    dbOrg.CustomerID,
 		OrgName:       &dbOrg.OrgName.String,
 		ProfileAvatar: &dbOrg.ProfileAvatar.String,
 		ProfileData: func() *structpb.Struct {
@@ -259,7 +259,7 @@ func (s *service) PBOrg2DBOrg(pbOrg *mgmtPB.Organization) (*datamodel.Owner, err
 	}
 
 	userType := "organization"
-	customerId := pbOrg.GetCustomerId()
+	customerID := pbOrg.GetCustomerId()
 	orgName := pbOrg.GetOrgName()
 	profileAvatar, err := s.compressAvatar(pbOrg.GetProfileAvatar())
 	if err != nil {
@@ -275,7 +275,7 @@ func (s *service) PBOrg2DBOrg(pbOrg *mgmtPB.Organization) (*datamodel.Owner, err
 			String: userType,
 			Valid:  len(userType) > 0,
 		},
-		CustomerId: customerId,
+		CustomerID: customerID,
 		OrgName: sql.NullString{
 			String: orgName,
 			Valid:  len(orgName) > 0,

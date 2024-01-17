@@ -118,9 +118,9 @@ func (s *service) GetACLClient() *acl.ACLClient {
 	return s.aclClient
 }
 
-func (s *service) convertUserIDAlias(ctx context.Context, userUid uuid.UUID, id string) (string, error) {
+func (s *service) convertUserIDAlias(ctx context.Context, userUID uuid.UUID, id string) (string, error) {
 	if id == "me" {
-		user, err := s.GetUserByUIDAdmin(ctx, userUid)
+		user, err := s.GetUserByUIDAdmin(ctx, userUID)
 		if err != nil {
 			return "", ErrUnauthenticated
 		}
