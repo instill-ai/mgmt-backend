@@ -15,8 +15,8 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/influxdata/influxdb-client-go/v2 v2.12.3
-	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20231210131526-67e990838339
-	github.com/instill-ai/usage-client v0.2.4-alpha.0.20231206035716-4c05f872df97
+	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20240122214718-7d090df83765
+	github.com/instill-ai/usage-client v0.2.4-alpha.0.20240123081026-6c78d9a5197a
 	github.com/instill-ai/x v0.3.0-alpha
 	github.com/knadh/koanf v1.4.4
 	github.com/mennanov/fieldmask-utils v0.5.0
@@ -39,7 +39,7 @@ require (
 	golang.org/x/net v0.17.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20230530153820-e85fd2cbaebc
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc
-	google.golang.org/grpc v1.56.0
+	google.golang.org/grpc v1.56.3
 	google.golang.org/protobuf v1.30.0
 	gorm.io/datatypes v1.2.0
 	gorm.io/driver/postgres v1.5.0

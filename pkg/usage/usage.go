@@ -85,13 +85,31 @@ func (u *usage) RetrieveUsageData() interface{} {
 		}
 	}
 
-	logger.Debug(fmt.Sprintf("[mgmt-backend] usage data length: %v", len(allUsers)))
+	allOrgs := []*mgmtPB.Organization{}
+	pageToken = ""
+	for {
+		orgs, _, token, err := u.service.ListOrganizationsAdmin(ctx, 100, pageToken, filtering.Filter{})
+		if err != nil {
+			logger.Error(fmt.Sprintf("%s", err))
+			break
+		}
+
+		pageToken = token
+		allOrgs = append(allOrgs, orgs...)
+		if token == "" {
+			break
+		}
+	}
+
+	logger.Debug(fmt.Sprintf("[mgmt-backend] user usage data length: %v", len(allUsers)))
+	logger.Debug(fmt.Sprintf("[mgmt-backend] org usage data length: %v", len(allOrgs)))
 
 	logger.Debug("[mgmt-backend] send usage data...")
 
 	return &usagePB.SessionReport_MgmtUsageData{
 		MgmtUsageData: &usagePB.MgmtUsageData{
-			Usages: allUsers,
+			UserUsages: allUsers,
+			OrgUsages:  allOrgs,
 		},
 	}
 }
