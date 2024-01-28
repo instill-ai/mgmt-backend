@@ -38,8 +38,17 @@ package acl
 //     define executor: [user, user:*] or writer or member from owner
 //     define reader: [user, user:*] or executor or member from owner
 
+// type model_
+//   relations
+//   define owner: [organization, user]
+//     define admin: [user] or owner or member from owner
+//     define writer: [user] or admin or member from owner
+//     define executor: [user, user:*, code] or writer or member from owner
+//     define reader: [user, user:*, code, visitor:*] or executor or member from owner
+
 const ACLModel = `
   {
+	"schema_version": "1.1",
 	"type_definitions": [
 	  {
 		"type": "visitor",
@@ -70,7 +79,6 @@ const ACLModel = `
 				},
 				{
 				  "computedUserset": {
-					"object": "",
 					"relation": "owner"
 				  }
 				}
@@ -85,13 +93,11 @@ const ACLModel = `
 		  },
 		  "can_create_organization": {
 			"computedUserset": {
-			  "object": "",
 			  "relation": "owner"
 			}
 		  },
 		  "can_delete_organization": {
 			"computedUserset": {
-			  "object": "",
 			  "relation": "owner"
 			}
 		  },
@@ -100,13 +106,11 @@ const ACLModel = `
 			  "child": [
 				{
 				  "computedUserset": {
-					"object": "",
 					"relation": "owner"
 				  }
 				},
 				{
 				  "computedUserset": {
-					"object": "",
 					"relation": "member"
 				  }
 				}
@@ -115,19 +119,16 @@ const ACLModel = `
 		  },
 		  "can_remove_membership": {
 			"computedUserset": {
-			  "object": "",
 			  "relation": "owner"
 			}
 		  },
 		  "can_set_membership": {
 			"computedUserset": {
-			  "object": "",
 			  "relation": "owner"
 			}
 		  },
 		  "can_update_organization": {
 			"computedUserset": {
-			  "object": "",
 			  "relation": "owner"
 			}
 		  }
@@ -197,18 +198,15 @@ const ACLModel = `
 				},
 				{
 				  "computedUserset": {
-					"object": "",
 					"relation": "owner"
 				  }
 				},
 				{
 				  "tupleToUserset": {
 					"computedUserset": {
-					  "object": "",
 					  "relation": "member"
 					},
 					"tupleset": {
-					  "object": "",
 					  "relation": "owner"
 					}
 				  }
@@ -224,18 +222,15 @@ const ACLModel = `
 				},
 				{
 				  "computedUserset": {
-					"object": "",
 					"relation": "admin"
 				  }
 				},
 				{
 				  "tupleToUserset": {
 					"computedUserset": {
-					  "object": "",
 					  "relation": "member"
 					},
 					"tupleset": {
-					  "object": "",
 					  "relation": "owner"
 					}
 				  }
@@ -251,18 +246,15 @@ const ACLModel = `
 				},
 				{
 				  "computedUserset": {
-					"object": "",
 					"relation": "writer"
 				  }
 				},
 				{
 				  "tupleToUserset": {
 					"computedUserset": {
-					  "object": "",
 					  "relation": "member"
 					},
 					"tupleset": {
-					  "object": "",
 					  "relation": "owner"
 					}
 				  }
@@ -278,18 +270,15 @@ const ACLModel = `
 				},
 				{
 				  "computedUserset": {
-					"object": "",
 					"relation": "executor"
 				  }
 				},
 				{
 				  "tupleToUserset": {
 					"computedUserset": {
-					  "object": "",
 					  "relation": "member"
 					},
 					"tupleset": {
-					  "object": "",
 					  "relation": "owner"
 					}
 				  }
@@ -373,18 +362,15 @@ const ACLModel = `
 				},
 				{
 				  "computedUserset": {
-					"object": "",
 					"relation": "owner"
 				  }
 				},
 				{
 				  "tupleToUserset": {
 					"computedUserset": {
-					  "object": "",
 					  "relation": "member"
 					},
 					"tupleset": {
-					  "object": "",
 					  "relation": "owner"
 					}
 				  }
@@ -400,18 +386,15 @@ const ACLModel = `
 				},
 				{
 				  "computedUserset": {
-					"object": "",
 					"relation": "admin"
 				  }
 				},
 				{
 				  "tupleToUserset": {
 					"computedUserset": {
-					  "object": "",
 					  "relation": "member"
 					},
 					"tupleset": {
-					  "object": "",
 					  "relation": "owner"
 					}
 				  }
@@ -427,18 +410,15 @@ const ACLModel = `
 				},
 				{
 				  "computedUserset": {
-					"object": "",
 					"relation": "writer"
 				  }
 				},
 				{
 				  "tupleToUserset": {
 					"computedUserset": {
-					  "object": "",
 					  "relation": "member"
 					},
 					"tupleset": {
-					  "object": "",
 					  "relation": "owner"
 					}
 				  }
@@ -454,18 +434,15 @@ const ACLModel = `
 				},
 				{
 				  "computedUserset": {
-					"object": "",
 					"relation": "executor"
 				  }
 				},
 				{
 				  "tupleToUserset": {
 					"computedUserset": {
-					  "object": "",
 					  "relation": "member"
 					},
 					"tupleset": {
-					  "object": "",
 					  "relation": "owner"
 					}
 				  }
@@ -524,8 +501,171 @@ const ACLModel = `
 			}
 		  }
 		}
+	  },
+	  {
+		"type": "model_",
+		"relations": {
+		  "owner": {
+			"this": {}
+		  },
+		  "admin": {
+			"union": {
+			  "child": [
+				{
+				  "this": {}
+				},
+				{
+				  "computedUserset": {
+					"relation": "owner"
+				  }
+				},
+				{
+				  "tupleToUserset": {
+					"computedUserset": {
+					  "relation": "member"
+					},
+					"tupleset": {
+					  "relation": "owner"
+					}
+				  }
+				}
+			  ]
+			}
+		  },
+		  "writer": {
+			"union": {
+			  "child": [
+				{
+				  "this": {}
+				},
+				{
+				  "computedUserset": {
+					"relation": "admin"
+				  }
+				},
+				{
+				  "tupleToUserset": {
+					"computedUserset": {
+					  "relation": "member"
+					},
+					"tupleset": {
+					  "relation": "owner"
+					}
+				  }
+				}
+			  ]
+			}
+		  },
+		  "executor": {
+			"union": {
+			  "child": [
+				{
+				  "this": {}
+				},
+				{
+				  "computedUserset": {
+					"relation": "writer"
+				  }
+				},
+				{
+				  "tupleToUserset": {
+					"computedUserset": {
+					  "relation": "member"
+					},
+					"tupleset": {
+					  "relation": "owner"
+					}
+				  }
+				}
+			  ]
+			}
+		  },
+		  "reader": {
+			"union": {
+			  "child": [
+				{
+				  "this": {}
+				},
+				{
+				  "computedUserset": {
+					"relation": "executor"
+				  }
+				},
+				{
+				  "tupleToUserset": {
+					"computedUserset": {
+					  "relation": "member"
+					},
+					"tupleset": {
+					  "relation": "owner"
+					}
+				  }
+				}
+			  ]
+			}
+		  }
+		},
+		"metadata": {
+		  "relations": {
+			"owner": {
+			  "directly_related_user_types": [
+				{
+				  "type": "organization"
+				},
+				{
+				  "type": "user"
+				}
+			  ]
+			},
+			"admin": {
+			  "directly_related_user_types": [
+				{
+				  "type": "user"
+				}
+			  ]
+			},
+			"writer": {
+			  "directly_related_user_types": [
+				{
+				  "type": "user"
+				}
+			  ]
+			},
+			"executor": {
+			  "directly_related_user_types": [
+				{
+				  "type": "user"
+				},
+				{
+				  "type": "user",
+				  "wildcard": {}
+				},
+				{
+				  "type": "code"
+				}
+			  ]
+			},
+			"reader": {
+			  "directly_related_user_types": [
+				{
+				  "type": "user"
+				},
+				{
+				  "type": "user",
+				  "wildcard": {}
+				},
+				{
+				  "type": "code"
+				},
+				{
+				  "type": "visitor",
+				  "wildcard": {}
+				}
+			  ]
+			}
+		  }
+		}
 	  }
-	],
-	"schema_version": "1.1"
+	]
   }
 `
