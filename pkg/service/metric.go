@@ -18,6 +18,7 @@ import (
 )
 
 func InjectOwnerToContext(ctx context.Context, owner *mgmtPB.User) context.Context {
+	ctx = metadata.AppendToOutgoingContext(ctx, "instill-auth-type", "user")
 	ctx = metadata.AppendToOutgoingContext(ctx, "instill-user-uid", owner.GetUid())
 	return ctx
 }
