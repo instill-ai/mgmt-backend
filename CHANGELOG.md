@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.9.0-beta...v0.10.0-beta) (2024-01-30)
+
+
+### Features
+
+* add FGA model for Model ([#172](https://github.com/instill-ai/mgmt-backend/issues/172)) ([c7dbf67](https://github.com/instill-ai/mgmt-backend/commit/c7dbf67ed69cc53b34085ef40c587d0a50ad198e))
+
+
+### Bug Fixes
+
+* the `instill-auth-type` header was missing when request the pipeline ([#174](https://github.com/instill-ai/mgmt-backend/issues/174)) ([29190c2](https://github.com/instill-ai/mgmt-backend/commit/29190c2a7f54ecd3266dabdd36da1ed3276da6d5))
+
 ## [0.9.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.8.0-beta...v0.9.0-beta) (2023-12-31)
 
 
