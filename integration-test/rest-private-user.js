@@ -78,14 +78,12 @@ export function CheckPrivateGetUserAdmin() {
           (r) => r.json().user.first_name !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response last_name`]:
           (r) => r.json().user.last_name !== undefined,
-        [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response org_name`]:
-          (r) => r.json().user.org_name !== undefined,
+        [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response company_name`]:
+          (r) => r.json().user.company_name !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response role`]:
           (r) => r.json().user.role !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response newsletter_subscription`]:
           (r) => r.json().user.newsletter_subscription !== undefined,
-        [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response cookie_token`]:
-          (r) => r.json().user.cookie_token !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response create_time`]:
           (r) => r.json().user.create_time !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response update_time`]:
@@ -134,14 +132,12 @@ export function CheckPrivateLookUpUserAdmin() {
           (r) => r.json().user.first_name !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response last_name`]:
           (r) => r.json().user.last_name !== undefined,
-        [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response org_name`]:
-          (r) => r.json().user.org_name !== undefined,
+        [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response company_name`]:
+          (r) => r.json().user.company_name !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response role`]:
           (r) => r.json().user.role !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response newsletter_subscription`]:
           (r) => r.json().user.newsletter_subscription !== undefined,
-        [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response cookie_token`]:
-          (r) => r.json().user.cookie_token !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response create_time`]:
           (r) => r.json().user.create_time !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response update_time`]:

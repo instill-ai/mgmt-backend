@@ -27,38 +27,36 @@ export function CheckPublicGetUser(header) {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/users/me`, null, header
+        `${constant.mgmtPublicHost}/user`, null, header
       ),
       {
-        [`GET /${constant.mgmtVersion}/users/me response status is 200`]:
+        [`GET /${constant.mgmtVersion}/user response status is 200`]:
           (r) => r.status === 200,
-        [`GET /${constant.mgmtVersion}/users/me response name`]:
+        [`GET /${constant.mgmtVersion}/user response name`]:
           (r) => r.json().user.name !== undefined,
-        [`GET /${constant.mgmtVersion}/users/me response uid is UUID`]:
+        [`GET /${constant.mgmtVersion}/user response uid is UUID`]:
           (r) => helper.isUUID(r.json().user.uid),
-        [`GET /${constant.mgmtVersion}/users/me response id`]:
+        [`GET /${constant.mgmtVersion}/user response id`]:
           (r) => r.json().user.id !== undefined,
-        [`GET /${constant.mgmtVersion}/users/me response id`]:
+        [`GET /${constant.mgmtVersion}/user response id`]:
           (r) => r.json().user.id === constant.defaultUser.id,
-        [`GET /${constant.mgmtVersion}/users/me response email`]:
+        [`GET /${constant.mgmtVersion}/user response email`]:
           (r) => r.json().user.email !== undefined,
-        [`GET /${constant.mgmtVersion}/users/me response customer_id`]:
+        [`GET /${constant.mgmtVersion}/user response customer_id`]:
           (r) => r.json().user.customer_id !== undefined,
-        [`GET /${constant.mgmtVersion}/users/me response first_name`]:
+        [`GET /${constant.mgmtVersion}/user response first_name`]:
           (r) => r.json().user.first_name !== undefined,
-        [`GET /${constant.mgmtVersion}/users/me response last_name`]:
+        [`GET /${constant.mgmtVersion}/user response last_name`]:
           (r) => r.json().user.last_name !== undefined,
-        [`GET /${constant.mgmtVersion}/users/me response org_name`]:
-          (r) => r.json().user.org_name !== undefined,
-        [`GET /${constant.mgmtVersion}/users/me response role`]:
+        [`GET /${constant.mgmtVersion}/user response company_name`]:
+          (r) => r.json().user.company_name !== undefined,
+        [`GET /${constant.mgmtVersion}/user response role`]:
           (r) => r.json().user.role !== undefined,
-        [`GET /${constant.mgmtVersion}/users/me response newsletter_subscription`]:
+        [`GET /${constant.mgmtVersion}/user response newsletter_subscription`]:
           (r) => r.json().user.newsletter_subscription !== undefined,
-        [`GET /${constant.mgmtVersion}/users/me response cookie_token`]:
-          (r) => r.json().user.cookie_token !== undefined,
-        [`GET /${constant.mgmtVersion}/users/me response create_time`]:
+        [`GET /${constant.mgmtVersion}/user response create_time`]:
           (r) => r.json().user.create_time !== undefined,
-        [`GET /${constant.mgmtVersion}/users/me response update_time`]:
+        [`GET /${constant.mgmtVersion}/user response update_time`]:
           (r) => r.json().user.update_time !== undefined,
       }
     )
@@ -72,17 +70,16 @@ export function CheckPublicPatchAuthenticatedUser(header) {
       customer_id: "new_customer_id",
       first_name: "test",
       last_name: "foo",
-      org_name: "company",
+      company_name: "company",
       role: "ai-engineer",
       newsletter_subscription: true,
-      cookie_token: "f5730f62-7026-4e11-917a-d890da315d3b",
       create_time: "2000-01-01T00:00:00.000000Z",
       update_time: "2000-01-01T00:00:00.000000Z",
     };
 
     var res = http.request(
       "GET",
-      `${constant.mgmtPublicHost}/users/me`,
+      `${constant.mgmtPublicHost}/user`,
       null,
       header,
     );
@@ -90,38 +87,36 @@ export function CheckPublicPatchAuthenticatedUser(header) {
     check(
       http.request(
         "PATCH",
-        `${constant.mgmtPublicHost}/users/me`,
+        `${constant.mgmtPublicHost}/user`,
         JSON.stringify(userUpdate), header),
       {
-        [`PATCH /${constant.mgmtVersion}/users/me response 200`]:
+        [`PATCH /${constant.mgmtVersion}/user response 200`]:
           (r) => r.status === 200,
-        [`PATCH /${constant.mgmtVersion}/users/me response name unchanged`]:
+        [`PATCH /${constant.mgmtVersion}/user response name unchanged`]:
           (r) => r.json().user.name === res.json().user.name,
-        [`PATCH /${constant.mgmtVersion}/users/me response uid unchanged`]:
+        [`PATCH /${constant.mgmtVersion}/user response uid unchanged`]:
           (r) => r.json().user.uid === res.json().user.uid,
-        [`PATCH /${constant.mgmtVersion}/users/me response id unchanged`]:
+        [`PATCH /${constant.mgmtVersion}/user response id unchanged`]:
           (r) => r.json().user.id === res.json().user.id,
-        [`PATCH /${constant.mgmtVersion}/users/me response email updated`]:
+        [`PATCH /${constant.mgmtVersion}/user response email updated`]:
           (r) => r.json().user.email === userUpdate.email,
-        [`PATCH /${constant.mgmtVersion}/users/me response customer_id unchanged`]:
+        [`PATCH /${constant.mgmtVersion}/user response customer_id unchanged`]:
           (r) => r.json().user.customer_id === res.json().user.customer_id,
-        [`PATCH /${constant.mgmtVersion}/users/me response first_name updated`]:
+        [`PATCH /${constant.mgmtVersion}/user response first_name updated`]:
           (r) => r.json().user.first_name === userUpdate.first_name,
-        [`PATCH /${constant.mgmtVersion}/users/me response last_name updated`]:
+        [`PATCH /${constant.mgmtVersion}/user response last_name updated`]:
           (r) => r.json().user.last_name === userUpdate.last_name,
-        [`PATCH /${constant.mgmtVersion}/users/me response org_name updated`]:
-          (r) => r.json().user.org_name === userUpdate.org_name,
-        [`PATCH /${constant.mgmtVersion}/users/me response role updated`]:
+        [`PATCH /${constant.mgmtVersion}/user response company_name updated`]:
+          (r) => r.json().user.company_name === userUpdate.company_name,
+        [`PATCH /${constant.mgmtVersion}/user response role updated`]:
           (r) => r.json().user.role === userUpdate.role,
-        [`PATCH /${constant.mgmtVersion}/users/me response newsletter_subscription updated`]:
+        [`PATCH /${constant.mgmtVersion}/user response newsletter_subscription updated`]:
           (r) => r.json().user.newsletter_subscription === userUpdate.newsletter_subscription,
-        [`PATCH /${constant.mgmtVersion}/users/me response cookie_token updated`]:
-          (r) => r.json().user.cookie_token === userUpdate.cookie_token,
-        [`PATCH /${constant.mgmtVersion}/users/me response create_time unchanged`]:
+        [`PATCH /${constant.mgmtVersion}/user response create_time unchanged`]:
           (r) => r.json().user.create_time === res.json().user.create_time,
-        [`PATCH /${constant.mgmtVersion}/users/me response update_time updated`]:
+        [`PATCH /${constant.mgmtVersion}/user response update_time updated`]:
           (r) => r.json().user.update_time !== res.json().user.update_time,
-        [`PATCH /${constant.mgmtVersion}/users/me response update_time not updated with request value`]:
+        [`PATCH /${constant.mgmtVersion}/user response update_time not updated with request value`]:
           (r) => r.json().user.update_time !== userUpdate.update_time,
       }
     );
@@ -130,23 +125,23 @@ export function CheckPublicPatchAuthenticatedUser(header) {
     check(
       http.request(
         "PATCH",
-        `${constant.mgmtPublicHost}/users/me`,
+        `${constant.mgmtPublicHost}/user`,
         JSON.stringify(constant.defaultUser), header),
 
       {
-        [`PATCH /${constant.mgmtVersion}/users/me response status 200`]:
+        [`PATCH /${constant.mgmtVersion}/user response status 200`]:
           (r) => r.status === 200,
       }
     );
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/users/me`,
+        `${constant.mgmtPublicHost}/user`,
         null,
         header,
       ),
       {
-        [`GET /${constant.mgmtVersion}/users/me response status 200`]:
+        [`GET /${constant.mgmtVersion}/user response status 200`]:
           (r) => r.status === 200,
       }
     );
@@ -159,10 +154,10 @@ export function CheckPublicPatchAuthenticatedUser(header) {
     check(
       http.request(
         "PATCH",
-        `${constant.mgmtPublicHost}/users/me`,
+        `${constant.mgmtPublicHost}/user`,
         JSON.stringify(userUpdate), header),
       {
-        [`PATCH /${constant.mgmtVersion}/users/me response status 400`]:
+        [`PATCH /${constant.mgmtVersion}/user response status 400`]:
           (r) => r.status === 400,
       }
     );
@@ -176,10 +171,10 @@ export function CheckPublicPatchAuthenticatedUser(header) {
     check(
       http.request(
         "PATCH",
-        `${constant.mgmtPublicHost}/users/me`,
+        `${constant.mgmtPublicHost}/user`,
         JSON.stringify(userUpdate), header),
       {
-        [`PATCH /${constant.mgmtVersion}/users/me response status 400`]:
+        [`PATCH /${constant.mgmtVersion}/user response status 400`]:
           (r) => r.status === 400,
       }
     );

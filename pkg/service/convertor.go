@@ -87,20 +87,15 @@ func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*
 	uid := dbUser.Base.UID.String()
 
 	return &mgmtPB.User{
-		Name:                   fmt.Sprintf("users/%s", id),
-		Uid:                    &uid,
-		Id:                     id,
-		CreateTime:             timestamppb.New(dbUser.Base.CreateTime),
-		UpdateTime:             timestamppb.New(dbUser.Base.UpdateTime),
-		Email:                  dbUser.Email,
-		CustomerId:             dbUser.CustomerID,
-		FirstName:              &dbUser.FirstName.String,
-		LastName:               &dbUser.LastName.String,
-		OrgName:                &dbUser.OrgName.String,
-		Role:                   &dbUser.Role.String,
-		NewsletterSubscription: dbUser.NewsletterSubscription,
-		CookieToken:            &dbUser.CookieToken.String,
-		ProfileAvatar:          &dbUser.ProfileAvatar.String,
+		Name:          fmt.Sprintf("users/%s", id),
+		Uid:           &uid,
+		Id:            id,
+		CreateTime:    timestamppb.New(dbUser.Base.CreateTime),
+		UpdateTime:    timestamppb.New(dbUser.Base.UpdateTime),
+		CustomerId:    dbUser.CustomerID,
+		FirstName:     &dbUser.FirstName.String,
+		LastName:      &dbUser.LastName.String,
+		ProfileAvatar: &dbUser.ProfileAvatar.String,
 		ProfileData: func() *structpb.Struct {
 			str := &structpb.Struct{}
 			err := str.UnmarshalJSON(dbUser.ProfileData)
@@ -112,8 +107,43 @@ func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*
 	}, nil
 }
 
-// PBUser2DBUser converts a proto user instance to database user
-func (s *service) PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.Owner, error) {
+// DBUser2PBAuthenticatedUser converts a database user instance to proto authenticated user
+func (s *service) DBUser2PBAuthenticatedUser(ctx context.Context, dbUser *datamodel.Owner) (*mgmtPB.AuthenticatedUser, error) {
+	if dbUser == nil {
+		return nil, status.Error(codes.Internal, "can't convert a nil user")
+	}
+
+	id := dbUser.ID
+	uid := dbUser.Base.UID.String()
+
+	return &mgmtPB.AuthenticatedUser{
+		Name:                   fmt.Sprintf("users/%s", id),
+		Uid:                    &uid,
+		Id:                     id,
+		CreateTime:             timestamppb.New(dbUser.Base.CreateTime),
+		UpdateTime:             timestamppb.New(dbUser.Base.UpdateTime),
+		Email:                  dbUser.Email,
+		CustomerId:             dbUser.CustomerID,
+		FirstName:              &dbUser.FirstName.String,
+		LastName:               &dbUser.LastName.String,
+		CompanyName:            &dbUser.OrgName.String,
+		Role:                   &dbUser.Role.String,
+		NewsletterSubscription: dbUser.NewsletterSubscription,
+		ProfileAvatar:          &dbUser.ProfileAvatar.String,
+		ProfileData: func() *structpb.Struct {
+			str := &structpb.Struct{}
+			err := str.UnmarshalJSON(dbUser.ProfileData)
+			if err != nil {
+				return &structpb.Struct{}
+			}
+			return str
+		}(),
+		OnboardingStatus: mgmtPB.OnboardingStatus(dbUser.OnboardingStatus),
+	}, nil
+}
+
+// PBAuthenticatedUser2DBUser converts a proto user instance to database user
+func (s *service) PBAuthenticatedUser2DBUser(pbUser *mgmtPB.AuthenticatedUser) (*datamodel.Owner, error) {
 	if pbUser == nil {
 		return nil, status.Error(codes.Internal, "can't convert a nil user")
 	}
@@ -128,9 +158,8 @@ func (s *service) PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.Owner, error) {
 	customerID := pbUser.GetCustomerId()
 	firstName := pbUser.GetFirstName()
 	lastName := pbUser.GetLastName()
-	orgName := pbUser.GetOrgName()
+	orgName := pbUser.GetCompanyName()
 	role := pbUser.GetRole()
-	cookieToken := pbUser.GetCookieToken()
 	profileAvatar, err := s.compressAvatar(pbUser.GetProfileAvatar())
 	if err != nil {
 		return nil, err
@@ -164,10 +193,6 @@ func (s *service) PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.Owner, error) {
 			Valid:  len(role) > 0,
 		},
 		NewsletterSubscription: pbUser.GetNewsletterSubscription(),
-		CookieToken: sql.NullString{
-			String: cookieToken,
-			Valid:  len(cookieToken) > 0,
-		},
 		ProfileAvatar: sql.NullString{
 			String: profileAvatar,
 			Valid:  len(profileAvatar) > 0,
@@ -182,6 +207,7 @@ func (s *service) PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.Owner, error) {
 			}
 			return []byte{}
 		}(),
+		OnboardingStatus: datamodel.OnboardingStatus(pbUser.OnboardingStatus),
 	}, nil
 }
 
@@ -247,7 +273,7 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 	}, nil
 }
 
-// PBUser2DBUser converts a proto user instance to database user
+// PBOrg2DBOrg converts a proto user instance to database user
 func (s *service) PBOrg2DBOrg(pbOrg *mgmtPB.Organization) (*datamodel.Owner, error) {
 	if pbOrg == nil {
 		return nil, status.Error(codes.Internal, "can't convert a nil organization")

@@ -41,22 +41,21 @@ export function CheckPublicGetUser(header) {
       plaintext: true
     });
 
-    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/GetUser', {name: "users/me"}, header), {
-      'core.mgmt.v1beta.MgmtPublicService/GetUser status': (r) => { return r && r.status == grpc.StatusOK },
-      'core.mgmt.v1beta.MgmtPublicService/GetUser response name': (r) => r && r.message.user.name !== undefined,
-      'core.mgmt.v1beta.MgmtPublicService/GetUser response uid is UUID': (r) => r && helper.isUUID(r.message.user.uid),
-      'core.mgmt.v1beta.MgmtPublicService/GetUser response id': (r) => r && r.message.user.id !== undefined,
-      'core.mgmt.v1beta.MgmtPublicService/GetUser response id': (r) => r && r.message.user.id === constant.defaultUser.id,
-      'core.mgmt.v1beta.MgmtPublicService/GetUser response email': (r) => r && r.message.user.email !== undefined,
-      'core.mgmt.v1beta.MgmtPublicService/GetUser response customerId': (r) => r && r.message.user.customerId !== undefined,
-      'core.mgmt.v1beta.MgmtPublicService/GetUser response firstName': (r) => r && r.message.user.firstName !== undefined,
-      'core.mgmt.v1beta.MgmtPublicService/GetUser response lastName': (r) => r && r.message.user.lastName !== undefined,
-      'core.mgmt.v1beta.MgmtPublicService/GetUser response orgName': (r) => r && r.message.user.orgName !== undefined,
-      'core.mgmt.v1beta.MgmtPublicService/GetUser response role': (r) => r && r.message.user.role !== undefined,
-      'core.mgmt.v1beta.MgmtPublicService/GetUser response newsletterSubscription': (r) => r && r.message.user.newsletterSubscription !== undefined,
-      'core.mgmt.v1beta.MgmtPublicService/GetUser response cookieToken': (r) => r && r.message.user.cookieToken !== undefined,
-      'core.mgmt.v1beta.MgmtPublicService/GetUser response createTime': (r) => r && r.message.user.createTime !== undefined,
-      'core.mgmt.v1beta.MgmtPublicService/GetUser response updateTime': (r) => r && r.message.user.updateTime !== undefined,
+    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser', {}, header), {
+      'core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser status': (r) => { return r && r.status == grpc.StatusOK },
+      'core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser response name': (r) => r && r.message.user.name !== undefined,
+      'core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser response uid is UUID': (r) => r && helper.isUUID(r.message.user.uid),
+      'core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser response id': (r) => r && r.message.user.id !== undefined,
+      'core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser response id': (r) => r && r.message.user.id === constant.defaultUser.id,
+      'core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser response email': (r) => r && r.message.user.email !== undefined,
+      'core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser response customerId': (r) => r && r.message.user.customerId !== undefined,
+      'core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser response firstName': (r) => r && r.message.user.firstName !== undefined,
+      'core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser response lastName': (r) => r && r.message.user.lastName !== undefined,
+      'core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser response companyName': (r) => r && r.message.user.companyName !== undefined,
+      'core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser response role': (r) => r && r.message.user.role !== undefined,
+      'core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser response newsletterSubscription': (r) => r && r.message.user.newsletterSubscription !== undefined,
+      'core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser response createTime': (r) => r && r.message.user.createTime !== undefined,
+      'core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser response updateTime': (r) => r && r.message.user.updateTime !== undefined,
     });
 
     client.close();
@@ -76,17 +75,16 @@ export function CheckPublicPatchAuthenticatedUser(header) {
       customer_id: "new_customer_id",
       first_name: "test",
       last_name: "foo",
-      org_name: "company",
+      company_name: "company",
       role: "ai-engineer",
       newsletter_subscription: true,
-      cookie_token: "f5730f62-7026-4e11-917a-d890da315d3b",
     };
 
-    var res = client.invoke('core.mgmt.v1beta.MgmtPublicService/GetUser', {name: "users/me"}, header)
+    var res = client.invoke('core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser', {}, header)
 
     check(client.invoke('core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser', {
       user: userUpdate,
-      update_mask: "email,firstName,lastName,orgName,role,newsletterSubscription,cookieToken"
+      update_mask: "email,firstName,lastName,companyName,role,newsletterSubscription"
     }, header), {
       'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser status': (r) => r && r.status == grpc.StatusOK,
       'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response name unchanged': (r) => r && r.message.user.name === res.message.user.name,
@@ -96,10 +94,9 @@ export function CheckPublicPatchAuthenticatedUser(header) {
       'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response customerId unchanged': (r) => r && r.message.user.customerId === res.message.user.customerId,
       'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response firstName updated': (r) => r && r.message.user.firstName === userUpdate.first_name,
       'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response lastName updated': (r) => r && r.message.user.lastName === userUpdate.last_name,
-      'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response orgName updated': (r) => r && r.message.user.orgName === userUpdate.org_name,
+      'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response companyName updated': (r) => r && r.message.user.companyName === userUpdate.company_name,
       'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response role updated': (r) => r && r.message.user.role === userUpdate.role,
       'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response newsletterSubscription updated': (r) => r && r.message.user.newsletterSubscription === userUpdate.newsletter_subscription,
-      'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response cookieToken updated': (r) => r && r.message.user.cookieToken === userUpdate.cookie_token,
       'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response createTime unchanged': (r) => r && r.message.user.createTime === res.message.user.createTime,
       'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response updateTime updated': (r) => r && r.message.user.updateTime !== res.message.user.updateTime,
     });
@@ -107,13 +104,13 @@ export function CheckPublicPatchAuthenticatedUser(header) {
     // Restore to default user
     check(client.invoke('core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser', {
       user: constant.defaultUser,
-      update_mask: "email,firstName,lastName,orgName,role,newsletterSubscription,cookieToken"
+      update_mask: "email,firstName,lastName,companyName,role,newsletterSubscription"
     }, header), {
       [`[restore the default user] core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser status`]: (r) => r && r.status == grpc.StatusOK,
     });
 
-    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/GetUser', {name: "users/me"}, header), {
-      'core.mgmt.v1beta.MgmtPublicService/GetUser status': (r) => r && r.status == grpc.StatusOK,
+    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser', {}, header), {
+      'core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser status': (r) => r && r.status == grpc.StatusOK,
     });
   });
 

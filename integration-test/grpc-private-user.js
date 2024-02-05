@@ -80,10 +80,6 @@ export function CheckPrivateGetUserAdmin() {
       'core.mgmt.v1beta.MgmtPrivateService/GetUserAdmin response customerId': (r) => r && r.message.user.customerId !== undefined,
       'core.mgmt.v1beta.MgmtPrivateService/GetUserAdmin response firstName': (r) => r && r.message.user.firstName !== undefined,
       'core.mgmt.v1beta.MgmtPrivateService/GetUserAdmin response lastName': (r) => r && r.message.user.lastName !== undefined,
-      'core.mgmt.v1beta.MgmtPrivateService/GetUserAdmin response orgName': (r) => r && r.message.user.orgName !== undefined,
-      'core.mgmt.v1beta.MgmtPrivateService/GetUserAdmin response role': (r) => r && r.message.user.role !== undefined,
-      'core.mgmt.v1beta.MgmtPrivateService/GetUserAdmin response newsletterSubscription': (r) => r && r.message.user.newsletterSubscription !== undefined,
-      'core.mgmt.v1beta.MgmtPrivateService/GetUserAdmin response cookieToken': (r) => r && r.message.user.cookieToken !== undefined,
       'core.mgmt.v1beta.MgmtPrivateService/GetUserAdmin response createTime': (r) => r && r.message.user.createTime !== undefined,
       'core.mgmt.v1beta.MgmtPrivateService/GetUserAdmin response updateTime': (r) => r && r.message.user.updateTime !== undefined,
     });
@@ -131,10 +127,9 @@ export function CheckPrivateLookUpUserAdmin() {
       'core.mgmt.v1beta.MgmtPrivateService/LookUpUserAdmin response customerId': (r) => r && r.message.user.customerId !== undefined,
       'core.mgmt.v1beta.MgmtPrivateService/LookUpUserAdmin response firstName': (r) => r && r.message.user.firstName !== undefined,
       'core.mgmt.v1beta.MgmtPrivateService/LookUpUserAdmin response lastName': (r) => r && r.message.user.lastName !== undefined,
-      'core.mgmt.v1beta.MgmtPrivateService/LookUpUserAdmin response orgName': (r) => r && r.message.user.orgName !== undefined,
+      'core.mgmt.v1beta.MgmtPrivateService/LookUpUserAdmin response companyName': (r) => r && r.message.user.companyName !== undefined,
       'core.mgmt.v1beta.MgmtPrivateService/LookUpUserAdmin response role': (r) => r && r.message.user.role !== undefined,
       'core.mgmt.v1beta.MgmtPrivateService/LookUpUserAdmin response newsletterSubscription': (r) => r && r.message.user.newsletterSubscription !== undefined,
-      'core.mgmt.v1beta.MgmtPrivateService/LookUpUserAdmin response cookieToken': (r) => r && r.message.user.cookieToken !== undefined,
       'core.mgmt.v1beta.MgmtPrivateService/LookUpUserAdmin response createTime': (r) => r && r.message.user.createTime !== undefined,
       'core.mgmt.v1beta.MgmtPrivateService/LookUpUserAdmin response updateTime': (r) => r && r.message.user.updateTime !== undefined,
     });

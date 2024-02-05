@@ -29,6 +29,14 @@ const (
 	// STATE_EXPIRED TokenState = 3
 )
 
+type OnboardingStatus mgmtPB.OnboardingStatus
+
+const (
+	OnboardingStatusUnspecified OnboardingStatus = 0
+	OnboardingStatusInProgress  OnboardingStatus = 1
+	OnboardingStatusCompleted   OnboardingStatus = 2
+)
+
 // Base contains common columns for all tables
 type Base struct {
 	UID        uuid.UUID `gorm:"type:uuid;primary_key;<-:create"` // allow read and create, but not update
@@ -52,6 +60,7 @@ type Owner struct {
 	CookieToken            sql.NullString
 	ProfileAvatar          sql.NullString
 	ProfileData            datatypes.JSON `gorm:"type:jsonb"`
+	OnboardingStatus       OnboardingStatus
 }
 
 type Password struct {
@@ -94,4 +103,15 @@ func (s *TokenState) Scan(value interface{}) error {
 // Value function for custom GORM type PipelineMode
 func (s TokenState) Value() (driver.Value, error) {
 	return mgmtPB.ApiToken_State(s).String(), nil
+}
+
+// Scan function for custom GORM type OnboardingStatus
+func (o *OnboardingStatus) Scan(value interface{}) error {
+	*o = OnboardingStatus(mgmtPB.OnboardingStatus_value[value.(string)])
+	return nil
+}
+
+// Value function for custom GORM type OnboardingStatus
+func (o OnboardingStatus) Value() (driver.Value, error) {
+	return mgmtPB.OnboardingStatus(o).String(), nil
 }
