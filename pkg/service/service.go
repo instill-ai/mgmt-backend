@@ -25,10 +25,12 @@ import (
 type Service interface {
 	ExtractCtxUser(ctx context.Context, allowVisitor bool) (userUID uuid.UUID, err error)
 
-	CreateUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.User) (*mgmtPB.User, error)
+	CreateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.AuthenticatedUser) (*mgmtPB.AuthenticatedUser, error)
+	GetAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID) (*mgmtPB.AuthenticatedUser, error)
+	UpdateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.AuthenticatedUser) (*mgmtPB.AuthenticatedUser, error)
+
 	ListUsers(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.User, int64, string, error)
 	GetUser(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.User, error)
-	UpdateUser(ctx context.Context, ctxUserUID uuid.UUID, id string, user *mgmtPB.User) (*mgmtPB.User, error)
 	DeleteUser(ctx context.Context, ctxUserUID uuid.UUID, id string) error
 
 	ListUsersAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.User, int64, string, error)
@@ -73,7 +75,7 @@ type Service interface {
 
 	DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*mgmtPB.User, error)
 	DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtPB.User, error)
-	PBUser2DBUser(pbUser *mgmtPB.User) (*datamodel.Owner, error)
+	PBAuthenticatedUser2DBUser(pbUser *mgmtPB.AuthenticatedUser) (*datamodel.Owner, error)
 
 	DBToken2PBToken(ctx context.Context, dbToken *datamodel.Token) (*mgmtPB.ApiToken, error)
 	DBTokens2PBTokens(ctx context.Context, dbTokens []*datamodel.Token) ([]*mgmtPB.ApiToken, error)
@@ -159,9 +161,9 @@ func (s *service) ListUsers(ctx context.Context, ctxUserUID uuid.UUID, pageSize 
 	return users, totalSize, nextPageToken, err
 }
 
-func (s *service) CreateUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.User) (*mgmtPB.User, error) {
+func (s *service) CreateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.AuthenticatedUser) (*mgmtPB.AuthenticatedUser, error) {
 
-	dbUser, err := s.PBUser2DBUser(user)
+	dbUser, err := s.PBAuthenticatedUser2DBUser(user)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +172,7 @@ func (s *service) CreateUser(ctx context.Context, ctxUserUID uuid.UUID, user *mg
 		return nil, err
 	}
 
-	return s.GetUser(ctx, ctxUserUID, user.Id)
+	return s.GetAuthenticatedUser(ctx, ctxUserUID)
 }
 
 func (s *service) GetUser(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.User, error) {
@@ -251,34 +253,44 @@ func (s *service) ListUsersAdmin(ctx context.Context, pageSize int, pageToken st
 	return pbUsers, totalSize, nextPageToken, err
 }
 
-// UpdateUser updates a user by UUID
-func (s *service) UpdateUser(ctx context.Context, ctxUserUID uuid.UUID, id string, user *mgmtPB.User) (*mgmtPB.User, error) {
+func (s *service) GetAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID) (*mgmtPB.AuthenticatedUser, error) {
 
-	id, err := s.convertUserIDAlias(ctx, ctxUserUID, id)
+	dbUser, err := s.repository.GetUserByUID(ctx, ctxUserUID)
 	if err != nil {
 		return nil, err
 	}
 
+	pbUser, err := s.DBUser2PBAuthenticatedUser(ctx, dbUser)
+	if err != nil {
+		return nil, err
+	}
+
+	return pbUser, nil
+}
+
+// UpdateUser updates a user by UUID
+func (s *service) UpdateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.AuthenticatedUser) (*mgmtPB.AuthenticatedUser, error) {
+
 	// Check if the user exists
-	if _, err := s.repository.GetUser(ctx, id); err != nil {
-		return nil, fmt.Errorf("users/%s: %w", id, err)
+	if _, err := s.repository.GetUserByUID(ctx, ctxUserUID); err != nil {
+		return nil, err
 	}
 
 	// Update the user
-	dbUser, err := s.PBUser2DBUser(user)
+	dbUser, err := s.PBAuthenticatedUser2DBUser(user)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.deleteUserFromCacheByID(ctx, id)
+	err = s.deleteUserFromCacheByID(ctx, dbUser.ID)
 	if err != nil {
 		return nil, err
 	}
-	if err := s.repository.UpdateUser(ctx, id, dbUser); err != nil {
-		return nil, fmt.Errorf("users/%s: %w", id, err)
+	if err := s.repository.UpdateUser(ctx, dbUser.ID, dbUser); err != nil {
+		return nil, fmt.Errorf("users/%s: %w", dbUser.ID, err)
 	}
 
-	return s.GetUser(ctx, ctxUserUID, id)
+	return s.GetAuthenticatedUser(ctx, ctxUserUID)
 
 }
 

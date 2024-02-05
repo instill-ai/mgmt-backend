@@ -49,10 +49,9 @@ export const defaultUser = {
   customer_id: "",
   first_name: "Instill",
   last_name: "AI",
-  org_name: "Instill AI",
+  company_name: "Instill AI",
   role: "hobbyist",
   newsletter_subscription: true,
-  cookie_token: ""
 };
 
 export const testToken = {

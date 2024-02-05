@@ -227,6 +227,44 @@ func (h *PublicHandler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest)
 	return &resp, nil
 }
 
+// GetAuthenticatedUser gets the authenticated user.
+func (h *PublicHandler) GetAuthenticatedUser(ctx context.Context, req *mgmtPB.GetAuthenticatedUserRequest) (*mgmtPB.GetAuthenticatedUserResponse, error) {
+
+	eventName := "GetAuthenticatedUser"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	pbUser, err := h.Service.GetAuthenticatedUser(ctx, ctxUserUID)
+
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, err
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		ctxUserUID,
+		eventName,
+	)))
+
+	resp := mgmtPB.GetAuthenticatedUserResponse{
+		User: pbUser,
+	}
+	return &resp, nil
+}
+
 // PatchAuthenticatedUser updates the authenticated user.
 // Note: this endpoint assumes the ID of the authenticated user is the default user.
 func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.PatchAuthenticatedUserRequest) (*mgmtPB.PatchAuthenticatedUserResponse, error) {
@@ -273,7 +311,7 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 		return nil, err
 	}
 
-	pbUserToUpdate, err := h.Service.GetUserByUIDAdmin(ctx, ctxUserUID)
+	pbUserToUpdate, err := h.Service.GetAuthenticatedUser(ctx, ctxUserUID)
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +336,7 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtPB.
 		return nil, ErrFieldMask
 	}
 
-	pbUserUpdated, err := h.Service.UpdateUser(ctx, ctxUserUID, pbUserToUpdate.Id, pbUserToUpdate)
+	pbUserUpdated, err := h.Service.UpdateAuthenticatedUser(ctx, ctxUserUID, pbUserToUpdate)
 	if err != nil {
 		return nil, err
 	}

@@ -8,9 +8,9 @@ import * as helper from "./helper.js";
 export function CheckPublicGetUser() {
   group(`Management Public API: Get authenticated user [with random "instill-user-uid" header]`, () => {
 
-    check(http.request("GET", `${constant.mgmtPublicHost}/users/me`, {}, constant.restParamsWithInstillUserUid),
+    check(http.request("GET", `${constant.mgmtPublicHost}/user`, {}, constant.restParamsWithInstillUserUid),
       {
-        [`[with random "instill-user-uid" header] GET /${constant.mgmtVersion}/users/me response status 401`]:
+        [`[with random "instill-user-uid" header] GET /${constant.mgmtVersion}/user response status 401`]:
           (r) => r.status === 401,
       }
     )
@@ -24,17 +24,16 @@ export function CheckPublicPatchAuthenticatedUser() {
       customer_id: "new_customer_id",
       first_name: "test",
       last_name: "foo",
-      org_name: "company",
+      company_name: "company",
       role: "ai-engineer",
       newsletter_subscription: true,
-      cookie_token: "f5730f62-7026-4e11-917a-d890da315d3b",
       create_time: "2000-01-01T00:00:00.000000Z",
       update_time: "2000-01-01T00:00:00.000000Z",
     };
 
-    check(http.request("PATCH", `${constant.mgmtPublicHost}/users/me`, JSON.stringify(userUpdate), constant.restParamsWithInstillUserUid),
+    check(http.request("PATCH", `${constant.mgmtPublicHost}/user`, JSON.stringify(userUpdate), constant.restParamsWithInstillUserUid),
       {
-        [`[with random "instill-user-uid" header] PATCH /${constant.mgmtVersion}/users/me response status 401`]: (r) => r.status === 401,
+        [`[with random "instill-user-uid" header] PATCH /${constant.mgmtVersion}/user response status 401`]: (r) => r.status === 401,
       }
     );
   });

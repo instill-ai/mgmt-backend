@@ -21,8 +21,8 @@ export function CheckPublicGetUser() {
       plaintext: true
     });
 
-    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/GetUser', {name: "users/me"}, constant.grpcParamsWithInstillUserUid), {
-      '[with random "instill-user-uid" header] core.mgmt.v1beta.MgmtPublicService/GetUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
+    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser', {}, constant.grpcParamsWithInstillUserUid), {
+      '[with random "instill-user-uid" header] core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
     });
 
     client.close();
@@ -42,15 +42,14 @@ export function CheckPublicPatchAuthenticatedUser() {
       customer_id: "new_customer_id",
       first_name: "test",
       last_name: "foo",
-      org_name: "company",
+      company_name: "company",
       role: "ai-engineer",
       newsletter_subscription: true,
-      cookie_token: "f5730f62-7026-4e11-917a-d890da315d3b",
     };
 
     check(client.invoke('core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser', {
       user: userUpdate,
-      update_mask: "email,firstName,lastName,orgName,role,newsletterSubscription,cookieToken"
+      update_mask: "email,firstName,lastName,companyName,role,newsletterSubscription"
     }, constant.grpcParamsWithInstillUserUid), {
       '[with random "instill-user-uid" header] core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
     });

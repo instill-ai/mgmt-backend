@@ -6,6 +6,7 @@ import "../../../core/mgmt/v1beta/mgmt.proto";
 // Google API
 import "google/api/annotations.proto";
 import "google/api/client.proto";
+import "google/api/visibility.proto";
 
 // Mgmt service responds to internal access
 service MgmtPrivateService {
@@ -48,4 +49,18 @@ service MgmtPrivateService {
     option (google.api.http) = {get: "/v1beta/admin/{permalink=organizations/*}/lookUp"};
     option (google.api.method_signature) = "permalink";
   }
+
+  // GetUserSubscriptionAdmin
+  rpc GetUserSubscriptionAdmin(GetUserSubscriptionAdminRequest) returns (GetUserSubscriptionAdminResponse) {
+    option (google.api.http) = {get: "/v1beta/admin/{parent=users/*}/subscription"};
+    option (google.api.method_signature) = "parent";
+  }
+
+  // GetOrganizationSubscriptionAdmin
+  rpc GetOrganizationSubscriptionAdmin(GetOrganizationSubscriptionAdminRequest) returns (GetOrganizationSubscriptionAdminResponse) {
+    option (google.api.http) = {get: "/v1beta/admin/{parent=organizations/*}/subscription"};
+    option (google.api.method_signature) = "parent";
+  }
+
+  option (google.api.api_visibility).restriction = "INTERNAL";
 }

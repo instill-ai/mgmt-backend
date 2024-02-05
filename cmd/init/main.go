@@ -67,6 +67,7 @@ func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 		Role:                   sql.NullString{String: constant.DefaultUserRole, Valid: true},
 		NewsletterSubscription: constant.DefaultUserNewsletterSubscription,
 		CookieToken:            sql.NullString{String: "", Valid: false},
+		OnboardingStatus:       datamodel.OnboardingStatusInProgress,
 	}
 
 	user, err := r.GetUser(context.Background(), constant.DefaultUserID)
