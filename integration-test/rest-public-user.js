@@ -44,12 +44,10 @@ export function CheckPublicGetUser(header) {
           (r) => r.json().user.email !== undefined,
         [`GET /${constant.mgmtVersion}/user response customer_id`]:
           (r) => r.json().user.customer_id !== undefined,
-        [`GET /${constant.mgmtVersion}/user response first_name`]:
-          (r) => r.json().user.first_name !== undefined,
-        [`GET /${constant.mgmtVersion}/user response last_name`]:
-          (r) => r.json().user.last_name !== undefined,
+        [`GET /${constant.mgmtVersion}/user response display_name`]:
+          (r) => r.json().user.profile.display_name !== undefined,
         [`GET /${constant.mgmtVersion}/user response company_name`]:
-          (r) => r.json().user.company_name !== undefined,
+          (r) => r.json().user.profile.company_name !== undefined,
         [`GET /${constant.mgmtVersion}/user response role`]:
           (r) => r.json().user.role !== undefined,
         [`GET /${constant.mgmtVersion}/user response newsletter_subscription`]:
@@ -68,9 +66,10 @@ export function CheckPublicPatchAuthenticatedUser(header) {
     var userUpdate = {
       email: "test@foo.bar",
       customer_id: "new_customer_id",
-      first_name: "test",
-      last_name: "foo",
-      company_name: "company",
+      profile: {
+        display_name: "test",
+        company_name: "company",
+      },
       role: "ai-engineer",
       newsletter_subscription: true,
       create_time: "2000-01-01T00:00:00.000000Z",
@@ -102,12 +101,10 @@ export function CheckPublicPatchAuthenticatedUser(header) {
           (r) => r.json().user.email === userUpdate.email,
         [`PATCH /${constant.mgmtVersion}/user response customer_id unchanged`]:
           (r) => r.json().user.customer_id === res.json().user.customer_id,
-        [`PATCH /${constant.mgmtVersion}/user response first_name updated`]:
-          (r) => r.json().user.first_name === userUpdate.first_name,
-        [`PATCH /${constant.mgmtVersion}/user response last_name updated`]:
-          (r) => r.json().user.last_name === userUpdate.last_name,
+        [`PATCH /${constant.mgmtVersion}/user response display_name updated`]:
+          (r) => r.json().user.profile.display_name === userUpdate.profile.display_name,
         [`PATCH /${constant.mgmtVersion}/user response company_name updated`]:
-          (r) => r.json().user.company_name === userUpdate.company_name,
+          (r) => r.json().user.profile.company_name === userUpdate.profile.company_name,
         [`PATCH /${constant.mgmtVersion}/user response role updated`]:
           (r) => r.json().user.role === userUpdate.role,
         [`PATCH /${constant.mgmtVersion}/user response newsletter_subscription updated`]:

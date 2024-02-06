@@ -47,9 +47,10 @@ export const defaultUser = {
   id: "admin",
   email: "hello@instill.tech",
   customer_id: "",
-  first_name: "Instill",
-  last_name: "AI",
-  company_name: "Instill AI",
+  profile: {
+    display_name: "Instill AI",
+    company_name: "Instill AI",
+  },
   role: "hobbyist",
   newsletter_subscription: true,
 };

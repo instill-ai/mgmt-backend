@@ -52,14 +52,15 @@ type Owner struct {
 	OwnerType              sql.NullString
 	Email                  string `gorm:"unique;not null;"`
 	CustomerID             string
-	FirstName              sql.NullString
-	LastName               sql.NullString
-	OrgName                sql.NullString
+	DisplayName            sql.NullString
+	CompanyName            sql.NullString
+	PublicEmail            sql.NullString
+	Bio                    sql.NullString
 	Role                   sql.NullString
 	NewsletterSubscription bool `gorm:"default:false"`
 	CookieToken            sql.NullString
 	ProfileAvatar          sql.NullString
-	ProfileData            datatypes.JSON `gorm:"type:jsonb"`
+	SocialProfileLinks     datatypes.JSON `gorm:"type:jsonb"`
 	OnboardingStatus       OnboardingStatus
 }
 
