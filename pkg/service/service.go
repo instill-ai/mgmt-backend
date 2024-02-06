@@ -575,7 +575,6 @@ func (s *service) DeleteToken(ctx context.Context, ctxUserUID uuid.UUID, id stri
 }
 func (s *service) ValidateToken(accessToken string) (string, error) {
 	uid := s.getAPITokenFromCache(context.Background(), accessToken)
-	fmt.Println("ValidateToken", accessToken, uid)
 	if uid == uuid.Nil {
 		dbToken, err := s.repository.LookupToken(context.Background(), accessToken)
 		if err != nil {

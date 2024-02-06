@@ -40,16 +40,17 @@ export function CheckPublicPatchAuthenticatedUser() {
       name: `users/${constant.defaultUser.id}`,
       email: "test@foo.bar",
       customer_id: "new_customer_id",
-      first_name: "test",
-      last_name: "foo",
-      company_name: "company",
+      profile: {
+        display_name: "test",
+        company_name: "company",
+      },
       role: "ai-engineer",
       newsletter_subscription: true,
     };
 
     check(client.invoke('core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser', {
       user: userUpdate,
-      update_mask: "email,firstName,lastName,companyName,role,newsletterSubscription"
+      update_mask: "email,profile,role,newsletterSubscription"
     }, constant.grpcParamsWithInstillUserUid), {
       '[with random "instill-user-uid" header] core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser status StatusUnauthenticated': (r) => r && r.status == grpc.StatusUnauthenticated,
     });

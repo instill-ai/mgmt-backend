@@ -70,20 +70,10 @@ export function CheckPrivateGetUserAdmin() {
           (r) => r.json().user.id !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response id`]:
           (r) => r.json().user.id === constant.defaultUser.id,
-        [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response email`]:
-          (r) => r.json().user.email !== undefined,
-        [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response customer_id`]:
-          (r) => r.json().user.customer_id !== undefined,
-        [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response first_name`]:
-          (r) => r.json().user.first_name !== undefined,
-        [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response last_name`]:
-          (r) => r.json().user.last_name !== undefined,
+        [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response display_name`]:
+          (r) => r.json().user.profile.display_name !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response company_name`]:
-          (r) => r.json().user.company_name !== undefined,
-        [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response role`]:
-          (r) => r.json().user.role !== undefined,
-        [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response newsletter_subscription`]:
-          (r) => r.json().user.newsletter_subscription !== undefined,
+          (r) => r.json().user.profile.company_name !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response create_time`]:
           (r) => r.json().user.create_time !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${constant.defaultUser.id} response update_time`]:
@@ -124,20 +114,10 @@ export function CheckPrivateLookUpUserAdmin() {
           (r) => r.json().user.id !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response id`]:
           (r) => r.json().user.id === constant.defaultUser.id,
-        [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response email`]:
-          (r) => r.json().user.email !== undefined,
-        [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response customer_id`]:
-          (r) => r.json().user.customer_id !== undefined,
-        [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response first_name`]:
-          (r) => r.json().user.first_name !== undefined,
-        [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response last_name`]:
-          (r) => r.json().user.last_name !== undefined,
+        [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response display_name`]:
+          (r) => r.json().user.profile.display_name !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response company_name`]:
-          (r) => r.json().user.company_name !== undefined,
-        [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response role`]:
-          (r) => r.json().user.role !== undefined,
-        [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response newsletter_subscription`]:
-          (r) => r.json().user.newsletter_subscription !== undefined,
+          (r) => r.json().user.profile.company_name !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response create_time`]:
           (r) => r.json().user.create_time !== undefined,
         [`GET /${constant.mgmtVersion}/admin/users/${defaultUid} response update_time`]:

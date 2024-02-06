@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -18,7 +19,6 @@ import (
 	"golang.org/x/image/draw"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
@@ -86,24 +86,26 @@ func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*
 	id := dbUser.ID
 	uid := dbUser.Base.UID.String()
 
+	socialProfileLinks := map[string]string{}
+	if dbUser.SocialProfileLinks != nil {
+		b, _ := dbUser.SocialProfileLinks.MarshalJSON()
+		_ = json.Unmarshal(b, &socialProfileLinks)
+	}
+
 	return &mgmtPB.User{
-		Name:          fmt.Sprintf("users/%s", id),
-		Uid:           &uid,
-		Id:            id,
-		CreateTime:    timestamppb.New(dbUser.Base.CreateTime),
-		UpdateTime:    timestamppb.New(dbUser.Base.UpdateTime),
-		CustomerId:    dbUser.CustomerID,
-		FirstName:     &dbUser.FirstName.String,
-		LastName:      &dbUser.LastName.String,
-		ProfileAvatar: &dbUser.ProfileAvatar.String,
-		ProfileData: func() *structpb.Struct {
-			str := &structpb.Struct{}
-			err := str.UnmarshalJSON(dbUser.ProfileData)
-			if err != nil {
-				return &structpb.Struct{}
-			}
-			return str
-		}(),
+		Name:       fmt.Sprintf("users/%s", id),
+		Uid:        &uid,
+		Id:         id,
+		CreateTime: timestamppb.New(dbUser.Base.CreateTime),
+		UpdateTime: timestamppb.New(dbUser.Base.UpdateTime),
+		Profile: &mgmtPB.UserProfile{
+			DisplayName:        &dbUser.DisplayName.String,
+			CompanyName:        &dbUser.CompanyName.String,
+			PublicEmail:        &dbUser.PublicEmail.String,
+			Avatar:             &dbUser.ProfileAvatar.String,
+			Bio:                &dbUser.Bio.String,
+			SocialProfileLinks: socialProfileLinks,
+		},
 	}, nil
 }
 
@@ -115,6 +117,11 @@ func (s *service) DBUser2PBAuthenticatedUser(ctx context.Context, dbUser *datamo
 
 	id := dbUser.ID
 	uid := dbUser.Base.UID.String()
+	socialProfileLinks := map[string]string{}
+	if dbUser.SocialProfileLinks != nil {
+		b, _ := dbUser.SocialProfileLinks.MarshalJSON()
+		_ = json.Unmarshal(b, &socialProfileLinks)
+	}
 
 	return &mgmtPB.AuthenticatedUser{
 		Name:                   fmt.Sprintf("users/%s", id),
@@ -124,20 +131,17 @@ func (s *service) DBUser2PBAuthenticatedUser(ctx context.Context, dbUser *datamo
 		UpdateTime:             timestamppb.New(dbUser.Base.UpdateTime),
 		Email:                  dbUser.Email,
 		CustomerId:             dbUser.CustomerID,
-		FirstName:              &dbUser.FirstName.String,
-		LastName:               &dbUser.LastName.String,
-		CompanyName:            &dbUser.OrgName.String,
 		Role:                   &dbUser.Role.String,
+		CookieToken:            &dbUser.CookieToken.String,
 		NewsletterSubscription: dbUser.NewsletterSubscription,
-		ProfileAvatar:          &dbUser.ProfileAvatar.String,
-		ProfileData: func() *structpb.Struct {
-			str := &structpb.Struct{}
-			err := str.UnmarshalJSON(dbUser.ProfileData)
-			if err != nil {
-				return &structpb.Struct{}
-			}
-			return str
-		}(),
+		Profile: &mgmtPB.UserProfile{
+			DisplayName:        &dbUser.DisplayName.String,
+			CompanyName:        &dbUser.CompanyName.String,
+			PublicEmail:        &dbUser.PublicEmail.String,
+			Avatar:             &dbUser.ProfileAvatar.String,
+			Bio:                &dbUser.Bio.String,
+			SocialProfileLinks: socialProfileLinks,
+		},
 		OnboardingStatus: mgmtPB.OnboardingStatus(dbUser.OnboardingStatus),
 	}, nil
 }
@@ -155,12 +159,8 @@ func (s *service) PBAuthenticatedUser2DBUser(pbUser *mgmtPB.AuthenticatedUser) (
 
 	userType := "user"
 	email := pbUser.GetEmail()
-	customerID := pbUser.GetCustomerId()
-	firstName := pbUser.GetFirstName()
-	lastName := pbUser.GetLastName()
-	orgName := pbUser.GetCompanyName()
-	role := pbUser.GetRole()
-	profileAvatar, err := s.compressAvatar(pbUser.GetProfileAvatar())
+
+	profileAvatar, err := s.compressAvatar(pbUser.GetProfile().GetAvatar())
 	if err != nil {
 		return nil, err
 	}
@@ -175,31 +175,39 @@ func (s *service) PBAuthenticatedUser2DBUser(pbUser *mgmtPB.AuthenticatedUser) (
 			Valid:  len(userType) > 0,
 		},
 		Email:      email,
-		CustomerID: customerID,
-		FirstName: sql.NullString{
-			String: firstName,
-			Valid:  len(firstName) > 0,
+		CustomerID: pbUser.GetCustomerId(),
+		DisplayName: sql.NullString{
+			String: pbUser.GetProfile().GetDisplayName(),
+			Valid:  len(pbUser.GetProfile().GetDisplayName()) > 0,
 		},
-		LastName: sql.NullString{
-			String: lastName,
-			Valid:  len(lastName) > 0,
+		CompanyName: sql.NullString{
+			String: pbUser.GetProfile().GetCompanyName(),
+			Valid:  len(pbUser.GetProfile().GetCompanyName()) > 0,
 		},
-		OrgName: sql.NullString{
-			String: orgName,
-			Valid:  len(orgName) > 0,
+		PublicEmail: sql.NullString{
+			String: pbUser.GetProfile().GetPublicEmail(),
+			Valid:  len(pbUser.GetProfile().GetPublicEmail()) > 0,
+		},
+		Bio: sql.NullString{
+			String: pbUser.GetProfile().GetBio(),
+			Valid:  len(pbUser.GetProfile().GetBio()) > 0,
 		},
 		Role: sql.NullString{
-			String: role,
-			Valid:  len(role) > 0,
+			String: pbUser.GetRole(),
+			Valid:  len(pbUser.GetRole()) > 0,
+		},
+		CookieToken: sql.NullString{
+			String: pbUser.GetCookieToken(),
+			Valid:  len(pbUser.GetCookieToken()) > 0,
 		},
 		NewsletterSubscription: pbUser.GetNewsletterSubscription(),
 		ProfileAvatar: sql.NullString{
 			String: profileAvatar,
 			Valid:  len(profileAvatar) > 0,
 		},
-		ProfileData: func() []byte {
-			if pbUser.GetProfileData() != nil {
-				b, err := pbUser.GetProfileData().MarshalJSON()
+		SocialProfileLinks: func() []byte {
+			if pbUser.GetProfile().GetSocialProfileLinks() != nil {
+				b, err := json.Marshal(pbUser.GetProfile().GetSocialProfileLinks())
 				if err != nil {
 					return nil
 				}
@@ -252,23 +260,25 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 		}
 	}
 
+	socialProfileLinks := map[string]string{}
+	if dbOrg.SocialProfileLinks != nil {
+		b, _ := dbOrg.SocialProfileLinks.MarshalJSON()
+		_ = json.Unmarshal(b, &socialProfileLinks)
+	}
+
 	return &mgmtPB.Organization{
-		Name:          fmt.Sprintf("organizations/%s", id),
-		Uid:           uid,
-		Id:            id,
-		CreateTime:    timestamppb.New(dbOrg.Base.CreateTime),
-		UpdateTime:    timestamppb.New(dbOrg.Base.UpdateTime),
-		CustomerId:    dbOrg.CustomerID,
-		OrgName:       &dbOrg.OrgName.String,
-		ProfileAvatar: &dbOrg.ProfileAvatar.String,
-		ProfileData: func() *structpb.Struct {
-			str := &structpb.Struct{}
-			err := str.UnmarshalJSON(dbOrg.ProfileData)
-			if err != nil {
-				return &structpb.Struct{}
-			}
-			return str
-		}(),
+		Name:       fmt.Sprintf("organizations/%s", id),
+		Uid:        uid,
+		Id:         id,
+		CreateTime: timestamppb.New(dbOrg.Base.CreateTime),
+		UpdateTime: timestamppb.New(dbOrg.Base.UpdateTime),
+		Profile: &mgmtPB.OrganizationProfile{
+			DisplayName:        &dbOrg.DisplayName.String,
+			PublicEmail:        &dbOrg.PublicEmail.String,
+			Avatar:             &dbOrg.ProfileAvatar.String,
+			Bio:                &dbOrg.Bio.String,
+			SocialProfileLinks: socialProfileLinks,
+		},
 		Owner: owner,
 	}, nil
 }
@@ -285,9 +295,7 @@ func (s *service) PBOrg2DBOrg(pbOrg *mgmtPB.Organization) (*datamodel.Owner, err
 	}
 
 	userType := "organization"
-	customerID := pbOrg.GetCustomerId()
-	orgName := pbOrg.GetOrgName()
-	profileAvatar, err := s.compressAvatar(pbOrg.GetProfileAvatar())
+	profileAvatar, err := s.compressAvatar(pbOrg.GetProfile().GetAvatar())
 	if err != nil {
 		return nil, err
 	}
@@ -301,18 +309,26 @@ func (s *service) PBOrg2DBOrg(pbOrg *mgmtPB.Organization) (*datamodel.Owner, err
 			String: userType,
 			Valid:  len(userType) > 0,
 		},
-		CustomerID: customerID,
-		OrgName: sql.NullString{
-			String: orgName,
-			Valid:  len(orgName) > 0,
+		DisplayName: sql.NullString{
+			String: pbOrg.GetProfile().GetDisplayName(),
+			Valid:  len(pbOrg.GetProfile().GetDisplayName()) > 0,
+		},
+
+		PublicEmail: sql.NullString{
+			String: pbOrg.GetProfile().GetPublicEmail(),
+			Valid:  len(pbOrg.GetProfile().GetPublicEmail()) > 0,
+		},
+		Bio: sql.NullString{
+			String: pbOrg.GetProfile().GetBio(),
+			Valid:  len(pbOrg.GetProfile().GetBio()) > 0,
 		},
 		ProfileAvatar: sql.NullString{
 			String: profileAvatar,
 			Valid:  len(profileAvatar) > 0,
 		},
-		ProfileData: func() []byte {
-			if pbOrg.GetProfileData() != nil {
-				b, err := pbOrg.GetProfileData().MarshalJSON()
+		SocialProfileLinks: func() []byte {
+			if pbOrg.GetProfile().GetSocialProfileLinks() != nil {
+				b, err := json.Marshal(pbOrg.GetProfile().GetSocialProfileLinks())
 				if err != nil {
 					return nil
 				}

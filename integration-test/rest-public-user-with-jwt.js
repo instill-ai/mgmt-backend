@@ -22,9 +22,10 @@ export function CheckPublicPatchAuthenticatedUser() {
     var userUpdate = {
       email: "test@foo.bar",
       customer_id: "new_customer_id",
-      first_name: "test",
-      last_name: "foo",
-      company_name: "company",
+      profile: {
+        display_name: "test",
+        company_name: "company"
+      },
       role: "ai-engineer",
       newsletter_subscription: true,
       create_time: "2000-01-01T00:00:00.000000Z",
