@@ -618,28 +618,26 @@ func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID,
 	memberships := []*mgmtPB.UserMembership{}
 	for _, orgRelation := range orgRelations {
 		org, err := s.repository.GetOrganizationByUID(ctx, orgRelation.UID)
-		if err != nil {
-			return nil, fmt.Errorf("organizations/%s: %w", org.ID, err)
-		}
-		pbOrg, err := s.DBOrg2PBOrg(ctx, org)
-		if err != nil {
-			return nil, err
-		}
+		if err == nil {
+			pbOrg, err := s.DBOrg2PBOrg(ctx, org)
+			if err != nil {
+				return nil, err
+			}
+			role := orgRelation.Relation
+			state := mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE
+			if strings.HasPrefix(role, "pending") {
+				role = strings.Replace(role, "pending_", "", -1)
+				state = mgmtPB.MembershipState_MEMBERSHIP_STATE_PENDING
+			}
 
-		role := orgRelation.Relation
-		state := mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE
-		if strings.HasPrefix(role, "pending") {
-			role = strings.Replace(role, "pending_", "", -1)
-			state = mgmtPB.MembershipState_MEMBERSHIP_STATE_PENDING
+			memberships = append(memberships, &mgmtPB.UserMembership{
+				Name:         fmt.Sprintf("users/%s/memberships/%s", user.ID, org.ID),
+				Role:         role,
+				User:         pbUser,
+				Organization: pbOrg,
+				State:        state,
+			})
 		}
-
-		memberships = append(memberships, &mgmtPB.UserMembership{
-			Name:         fmt.Sprintf("users/%s/memberships/%s", user.ID, org.ID),
-			Role:         role,
-			User:         pbUser,
-			Organization: pbOrg,
-			State:        state,
-		})
 	}
 	return memberships, nil
 }
