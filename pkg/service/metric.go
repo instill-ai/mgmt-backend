@@ -17,9 +17,9 @@ import (
 	pipelinePB "github.com/instill-ai/protogen-go/vdp/pipeline/v1beta"
 )
 
-func InjectOwnerToContext(ctx context.Context, owner *mgmtPB.User) context.Context {
+func InjectOwnerToContext(ctx context.Context, uid string) context.Context {
 	ctx = metadata.AppendToOutgoingContext(ctx, "instill-auth-type", "user")
-	ctx = metadata.AppendToOutgoingContext(ctx, "instill-user-uid", owner.GetUid())
+	ctx = metadata.AppendToOutgoingContext(ctx, "instill-user-uid", uid)
 	return ctx
 }
 
@@ -121,7 +121,7 @@ func (s *service) checkConnectorOwnership(ctx context.Context, filter filtering.
 
 func (s *service) pipelineUIDLookup(ctx context.Context, ownerID string, ownerType string, filter filtering.Filter, owner *mgmtPB.User) (filtering.Filter, error) {
 
-	ctx = InjectOwnerToContext(ctx, owner)
+	ctx = InjectOwnerToContext(ctx, *owner.Uid)
 
 	// lookup pipeline uid
 	if len(filter.CheckedExpr.GetExpr().GetCallExpr().GetArgs()) > 0 {
@@ -173,7 +173,7 @@ func (s *service) pipelineUIDLookup(ctx context.Context, ownerID string, ownerTy
 
 func (s *service) connectorUIDLookup(ctx context.Context, filter filtering.Filter, owner *mgmtPB.User) (filtering.Filter, error) {
 
-	ctx = InjectOwnerToContext(ctx, owner)
+	ctx = InjectOwnerToContext(ctx, *owner.Uid)
 
 	// lookup connector uid
 	if len(filter.CheckedExpr.GetExpr().GetCallExpr().GetArgs()) > 0 {
