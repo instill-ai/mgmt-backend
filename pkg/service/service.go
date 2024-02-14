@@ -410,6 +410,58 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 		return err
 	}
 
+	// TODO: optimize this
+	pageToken := ""
+	pipelineIDList := []string{}
+	for {
+		resp, _ := s.pipelinePublicServiceClient.ListOrganizationPipelines(InjectOwnerToContext(ctx, ctxUserUID.String()),
+			&pipelinePB.ListOrganizationPipelinesRequest{
+				Parent:    fmt.Sprintf("organizations/%s", id),
+				PageToken: &pageToken})
+		for _, connector := range resp.Pipelines {
+			pipelineIDList = append(pipelineIDList, connector.Id)
+		}
+		pageToken = resp.NextPageToken
+		if pageToken == "" {
+			break
+		}
+	}
+
+	pageToken = ""
+	connectorIDList := []string{}
+	for {
+		resp, _ := s.pipelinePublicServiceClient.ListOrganizationConnectors(InjectOwnerToContext(ctx, ctxUserUID.String()),
+			&pipelinePB.ListOrganizationConnectorsRequest{
+				Parent:    fmt.Sprintf("organizations/%s", id),
+				PageToken: &pageToken})
+		for _, connector := range resp.Connectors {
+			connectorIDList = append(connectorIDList, connector.Id)
+		}
+		pageToken = resp.NextPageToken
+		if pageToken == "" {
+			break
+		}
+	}
+
+	for _, connectorID := range connectorIDList {
+		_, _ = s.pipelinePublicServiceClient.DeleteOrganizationConnector(InjectOwnerToContext(ctx, ctxUserUID.String()),
+			&pipelinePB.DeleteOrganizationConnectorRequest{
+				Name: fmt.Sprintf("organizations/%s/connectors/%s", id, connectorID),
+			})
+	}
+	for _, pipelineID := range pipelineIDList {
+		_, _ = s.pipelinePublicServiceClient.DeleteOrganizationPipeline(InjectOwnerToContext(ctx, ctxUserUID.String()),
+			&pipelinePB.DeleteOrganizationPipelineRequest{
+				Name: fmt.Sprintf("organizations/%s/pipelines/%s", id, pipelineID),
+			})
+	}
+
+	memberships, _ := s.aclClient.GetOrganizationUsers(org.UID)
+
+	for _, membership := range memberships {
+		_ = s.aclClient.DeleteOrganizationUserMembership(org.UID, membership.UID)
+	}
+
 	err = s.repository.DeleteOrganization(ctx, id)
 	if err != nil {
 		return fmt.Errorf("organizations/%s: %w", id, err)
