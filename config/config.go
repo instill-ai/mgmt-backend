@@ -52,6 +52,7 @@ type ServerConfig struct {
 type TemporalConfig struct {
 	HostPort   string `koanf:"hostport"`
 	Namespace  string `koanf:"namespace"`
+	Retention  string `koanf:"retention"`
 	Ca         string `koanf:"ca"`
 	Cert       string `koanf:"cert"`
 	Key        string `koanf:"key"`
