@@ -23,6 +23,9 @@ ARG SERVICE_NAME
 
 WORKDIR /${SERVICE_NAME}
 
+COPY --from=busybox:stable-musl --chown=nonroot:nonroot /bin/sh /bin/sh
+COPY --from=busybox:stable-musl --chown=nonroot:nonroot /bin/wget /bin/wget
+
 COPY --from=build --chown=nonroot:nonroot /src/config ./config
 COPY --from=build --chown=nonroot:nonroot /src/release-please ./release-please
 COPY --from=build --chown=nonroot:nonroot /src/pkg/db/migration ./pkg/db/migration
