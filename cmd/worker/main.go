@@ -4,20 +4,68 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
+	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 
-	custom_otel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
 	"github.com/instill-ai/x/temporal"
 	"github.com/instill-ai/x/zapadapter"
 
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 
+	custom_otel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
 	mgmtWorker "github.com/instill-ai/mgmt-backend/pkg/worker"
 )
+
+const namespace = "mgmt-backend"
+
+func initTemporalNamespace(ctx context.Context, client client.Client) {
+	logger, _ := logger.GetZapLogger(ctx)
+
+	resp, err := client.WorkflowService().ListNamespaces(ctx, &workflowservice.ListNamespacesRequest{})
+	if err != nil {
+		logger.Fatal(fmt.Sprintf("Unable to list namespaces: %s", err))
+	}
+
+	found := false
+	for _, n := range resp.GetNamespaces() {
+		if n.NamespaceInfo.Name == namespace {
+			found = true
+		}
+	}
+
+	if !found {
+		if _, err := client.WorkflowService().RegisterNamespace(ctx,
+			&workflowservice.RegisterNamespaceRequest{
+				Namespace: namespace,
+				WorkflowExecutionRetentionPeriod: func() *time.Duration {
+					// Check if the string ends with "d" for day.
+					s := config.Config.Temporal.Retention
+					if strings.HasSuffix(s, "d") {
+						// Parse the number of days.
+						days, err := strconv.Atoi(s[:len(s)-1])
+						if err != nil {
+							logger.Fatal(fmt.Sprintf("Unable to parse retention period in day: %s", err))
+						}
+						// Convert days to hours and then to a duration.
+						t := time.Hour * 24 * time.Duration(days)
+						return &t
+					}
+					logger.Fatal(fmt.Sprintf("Unable to parse retention period in day: %s", err))
+					return nil
+				}(),
+			},
+		); err != nil {
+			logger.Fatal(fmt.Sprintf("Unable to register namespace: %s", err))
+		}
+	}
+}
 
 func main() {
 
@@ -77,6 +125,8 @@ func main() {
 		logger.Fatal(fmt.Sprintf("Unable to create client: %s", err))
 	}
 	defer temporalClient.Close()
+
+	initTemporalNamespace(ctx, temporalClient)
 
 	w := worker.New(temporalClient, mgmtWorker.TaskQueue, worker.Options{
 		MaxConcurrentActivityExecutionSize: 2,
