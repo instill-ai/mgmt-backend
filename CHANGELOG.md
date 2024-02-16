@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.11.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.10.0-beta...v0.11.0-beta) (2024-02-16)
+
+
+### Features
+
+* delete related resources when an organization is deleted ([#180](https://github.com/instill-ai/mgmt-backend/issues/180)) ([313d942](https://github.com/instill-ai/mgmt-backend/commit/313d9427ed84113aa6d7074d2554619ed0c62ce8))
+* refactor AuthenticatedUser endpoints ([#175](https://github.com/instill-ai/mgmt-backend/issues/175)) ([fbf08af](https://github.com/instill-ai/mgmt-backend/commit/fbf08af9dcc2ea11ae6abf7163de87e17f490aeb))
+* refactor user and organization profile fields ([#177](https://github.com/instill-ai/mgmt-backend/issues/177)) ([94ff2df](https://github.com/instill-ai/mgmt-backend/commit/94ff2df41b4676d9b6e45c7e35cd2fe696d56e40))
+
+
+### Bug Fixes
+
+* fix the membership endpoint broken after organization deleted ([#178](https://github.com/instill-ai/mgmt-backend/issues/178)) ([59981c6](https://github.com/instill-ai/mgmt-backend/commit/59981c684ff2e05b6505ee9d7ff18c5372c54517))
+* **worker:** fix temporal cloud namespace init ([#181](https://github.com/instill-ai/mgmt-backend/issues/181)) ([1f7ec74](https://github.com/instill-ai/mgmt-backend/commit/1f7ec74af6d410f18f19afb50ec78a7028e473e7))
+
 ## [0.10.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.9.0-beta...v0.10.0-beta) (2024-01-30)
 
 
