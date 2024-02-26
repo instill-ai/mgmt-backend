@@ -414,10 +414,14 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 	pageToken := ""
 	pipelineIDList := []string{}
 	for {
-		resp, _ := s.pipelinePublicServiceClient.ListOrganizationPipelines(InjectOwnerToContext(ctx, ctxUserUID.String()),
+		// TODO: optimize this cascade delete
+		resp, err := s.pipelinePublicServiceClient.ListOrganizationPipelines(InjectOwnerToContext(ctx, ctxUserUID.String()),
 			&pipelinePB.ListOrganizationPipelinesRequest{
 				Parent:    fmt.Sprintf("organizations/%s", id),
 				PageToken: &pageToken})
+		if err != nil {
+			break
+		}
 		for _, connector := range resp.Pipelines {
 			pipelineIDList = append(pipelineIDList, connector.Id)
 		}
@@ -430,10 +434,14 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 	pageToken = ""
 	connectorIDList := []string{}
 	for {
-		resp, _ := s.pipelinePublicServiceClient.ListOrganizationConnectors(InjectOwnerToContext(ctx, ctxUserUID.String()),
+		// TODO: optimize this cascade delete
+		resp, err := s.pipelinePublicServiceClient.ListOrganizationConnectors(InjectOwnerToContext(ctx, ctxUserUID.String()),
 			&pipelinePB.ListOrganizationConnectorsRequest{
 				Parent:    fmt.Sprintf("organizations/%s", id),
 				PageToken: &pageToken})
+		if err != nil {
+			break
+		}
 		for _, connector := range resp.Connectors {
 			connectorIDList = append(connectorIDList, connector.Id)
 		}
