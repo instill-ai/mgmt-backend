@@ -69,10 +69,10 @@ func (u *usage) RetrieveUsageData() interface{} {
 	logger, _ := logger.GetZapLogger(ctx)
 	logger.Debug("[mgmt-backend] retrieve usage data...")
 
-	allUsers := []*mgmtPB.User{}
+	allUsers := []*mgmtPB.AuthenticatedUser{}
 	pageToken := ""
 	for {
-		users, _, token, err := u.service.ListUsersAdmin(ctx, 100, pageToken, filtering.Filter{})
+		users, _, token, err := u.service.ListAuthenticatedUsersAdmin(ctx, 100, pageToken, filtering.Filter{})
 		if err != nil {
 			logger.Error(fmt.Sprintf("%s", err))
 			break
