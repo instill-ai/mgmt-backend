@@ -34,6 +34,7 @@ type Service interface {
 	DeleteUser(ctx context.Context, ctxUserUID uuid.UUID, id string) error
 
 	ListUsersAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.User, int64, string, error)
+	ListAuthenticatedUsersAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.AuthenticatedUser, int64, string, error)
 	GetUserAdmin(ctx context.Context, id string) (*mgmtPB.User, error)
 	GetUserByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtPB.User, error)
 
@@ -76,6 +77,7 @@ type Service interface {
 	DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*mgmtPB.User, error)
 	DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtPB.User, error)
 	PBAuthenticatedUser2DBUser(pbUser *mgmtPB.AuthenticatedUser) (*datamodel.Owner, error)
+	DBUsers2PBAuthenticatedUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtPB.AuthenticatedUser, error)
 
 	DBToken2PBToken(ctx context.Context, dbToken *datamodel.Token) (*mgmtPB.ApiToken, error)
 	DBTokens2PBTokens(ctx context.Context, dbTokens []*datamodel.Token) ([]*mgmtPB.ApiToken, error)
@@ -250,6 +252,15 @@ func (s *service) ListUsersAdmin(ctx context.Context, pageSize int, pageToken st
 		return nil, 0, "", fmt.Errorf("users/ with page_size=%d page_token=%s: %w", pageSize, pageToken, err)
 	}
 	pbUsers, err := s.DBUsers2PBUsers(ctx, dbUsers)
+	return pbUsers, totalSize, nextPageToken, err
+}
+
+func (s *service) ListAuthenticatedUsersAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.AuthenticatedUser, int64, string, error) {
+	dbUsers, totalSize, nextPageToken, err := s.repository.ListUsers(ctx, pageSize, pageToken, filter)
+	if err != nil {
+		return nil, 0, "", fmt.Errorf("users/ with page_size=%d page_token=%s: %w", pageSize, pageToken, err)
+	}
+	pbUsers, err := s.DBUsers2PBAuthenticatedUsers(ctx, dbUsers)
 	return pbUsers, totalSize, nextPageToken, err
 }
 

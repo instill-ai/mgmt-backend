@@ -235,6 +235,22 @@ func (s *service) DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.Owne
 	return pbUsers, nil
 }
 
+func (s *service) DBUsers2PBAuthenticatedUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtPB.AuthenticatedUser, error) {
+	var err error
+	pbUsers := make([]*mgmtPB.AuthenticatedUser, len(dbUsers))
+	for idx := range dbUsers {
+		pbUsers[idx], err = s.DBUser2PBAuthenticatedUser(
+			ctx,
+			dbUsers[idx],
+		)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+	return pbUsers, nil
+}
+
 // DBUser2PBUser converts a database user instance to proto user
 func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgmtPB.Organization, error) {
 	if dbOrg == nil {
