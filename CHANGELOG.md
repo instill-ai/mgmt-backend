@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.12.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.11.0-beta...v0.12.0-beta) (2024-02-29)
+
+
+### Bug Fixes
+
+* **usage:** send usage report with `AuthenticatedUser` ([#185](https://github.com/instill-ai/mgmt-backend/issues/185)) ([9f54034](https://github.com/instill-ai/mgmt-backend/commit/9f5403479f4b88193751cf892688336e55f67713))
+
+
+### Miscellaneous Chores
+
+* release v0.12.0-beta ([cec252b](https://github.com/instill-ai/mgmt-backend/commit/cec252b024bb7fbd9bd95b2b281a7ff6780df757))
+
 ## [0.11.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.10.0-beta...v0.11.0-beta) (2024-02-16)
 
 
