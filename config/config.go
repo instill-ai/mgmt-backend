@@ -88,6 +88,12 @@ type DatabaseConfig struct {
 	Password string `koanf:"password"`
 	Host     string `koanf:"host"`
 	Port     int    `koanf:"port"`
+	Replica  struct {
+		Username string `koanf:"username"`
+		Password string `koanf:"password"`
+		Host     string `koanf:"host"`
+		Port     int    `koanf:"port"`
+	} `koanf:"replica"`
 	Name     string `koanf:"name"`
 	Version  uint   `koanf:"version"`
 	TimeZone string `koanf:"timezone"`
