@@ -182,7 +182,7 @@ func main() {
 	defer redisClient.Close()
 
 	influxDB := repository.NewInfluxDB(influxDBQueryAPI, config.Config.InfluxDB.Bucket)
-	repository := repository.NewRepository(db)
+	repository := repository.NewRepository(db, redisClient)
 	service := service.NewService(repository, redisClient, influxDB, pipelinePublicServiceClient, &aclClient)
 
 	// Start usage reporter
