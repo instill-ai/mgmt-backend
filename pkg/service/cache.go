@@ -95,11 +95,11 @@ func (s *service) setToCache(ctx context.Context, target string, src interface{}
 		uid = src.Uid
 	}
 
-	setCmd := s.redisClient.Set(ctx, fmt.Sprintf("%s:%s", target, id), b, 0)
+	setCmd := s.redisClient.Set(ctx, fmt.Sprintf("%s:%s", target, id), b, 1*time.Minute)
 	if setCmd.Err() != nil {
 		return setCmd.Err()
 	}
-	setCmd = s.redisClient.Set(ctx, fmt.Sprintf("%s:%s", target, uid), b, 0)
+	setCmd = s.redisClient.Set(ctx, fmt.Sprintf("%s:%s", target, uid), b, 1*time.Minute)
 	if setCmd.Err() != nil {
 		return setCmd.Err()
 	}
@@ -160,7 +160,7 @@ func (s *service) getUserPasswordHashFromCache(ctx context.Context, uid uuid.UUI
 
 func (s *service) setUserPasswordHashToCache(ctx context.Context, uid uuid.UUID, hash string) error {
 
-	setCmd := s.redisClient.Set(ctx, fmt.Sprintf("%s:%s", CacheTargetUserPasswordHash, uid), hash, 0)
+	setCmd := s.redisClient.Set(ctx, fmt.Sprintf("%s:%s", CacheTargetUserPasswordHash, uid), hash, 1*time.Minute)
 	if setCmd.Err() != nil {
 		return setCmd.Err()
 	}
@@ -188,13 +188,9 @@ func (s *service) getAPITokenFromCache(ctx context.Context, token string) uuid.U
 
 func (s *service) setAPITokenToCache(ctx context.Context, token string, userUID uuid.UUID, expire time.Time) error {
 
-	setCmd := s.redisClient.Set(ctx, fmt.Sprintf("%s:%s:user_uid", CacheTargetToken, token), userUID.String(), 0)
+	setCmd := s.redisClient.Set(ctx, fmt.Sprintf("%s:%s:user_uid", CacheTargetToken, token), userUID.String(), 1*time.Minute)
 	if setCmd.Err() != nil {
 		return setCmd.Err()
-	}
-	expCmd := s.redisClient.ExpireAt(ctx, fmt.Sprintf("%s:%s:user_uid", CacheTargetToken, token), expire)
-	if expCmd.Err() != nil {
-		return expCmd.Err()
 	}
 
 	return nil
