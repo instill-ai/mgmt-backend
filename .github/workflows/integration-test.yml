@@ -22,7 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         component: [mgmt-backend]
-    uses: instill-ai/core/.github/workflows/integration-test-backend.yml@main
+    uses: instill-ai/instill-core/.github/workflows/integration-test-backend.yml@main
     with:
       component: ${{ matrix.component }}
       target: latest
@@ -30,7 +30,7 @@ jobs:
     needs: build-push-image
     if: github.ref == 'refs/heads/main'
     name: Console
-    uses: instill-ai/core/.github/workflows/integration-test-console.yml@main
+    uses: instill-ai/instill-core/.github/workflows/integration-test-console.yml@main
     with:
       target: latest
 
@@ -90,19 +90,20 @@ jobs:
             GOLANG_VERSION=${{ env.GOLANG_VERSION }}
           tags: instill/mgmt-backend:latest
 
-      - name: Checkout (core)
+      - name: Checkout (instill-core)
         uses: actions/checkout@v3
         with:
-          repository: instill-ai/core
+          repository: instill-ai/instill-core
 
       - name: Launch Instill Core
         run: |
           COMPOSE_PROFILES=all \
           EDITION=local-ce:test \
-          docker compose -f docker-compose.yml -f docker-compose.latest.yml up -d --quiet-pull
+          RAY_LATEST_TAG=latest \
+          docker compose -f docker-compose.yml -f docker-compose-latest.yml up -d --quiet-pull
           COMPOSE_PROFILES=all \
           EDITION=local-ce:test \
-          docker compose -f docker-compose.yml -f docker-compose.latest.yml rm -f
+          docker compose -f docker-compose.yml -f docker-compose-latest.yml rm -f
 
       - name: Install k6
         run: |
