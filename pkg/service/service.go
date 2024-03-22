@@ -119,9 +119,12 @@ func (s *service) GetACLClient() *acl.ACLClient {
 	return s.aclClient
 }
 
-func (s *service) convertUserIDAlias(ctx context.Context, userUID uuid.UUID, id string) (string, error) {
+func (s *service) convertUserIDAlias(ctx context.Context, ctxUserUID uuid.UUID, id string) (string, error) {
+
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
+
 	if id == "me" {
-		user, err := s.GetUserByUIDAdmin(ctx, userUID)
+		user, err := s.GetUserByUIDAdmin(ctx, ctxUserUID)
 		if err != nil {
 			return "", ErrUnauthenticated
 		}
@@ -155,6 +158,7 @@ func (s *service) ExtractCtxUser(ctx context.Context, allowVisitor bool) (userUI
 }
 
 func (s *service) ListUsers(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) (users []*mgmtPB.User, totalSize int64, nextPageToken string, err error) {
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 	dbUsers, totalSize, nextPageToken, err := s.repository.ListUsers(ctx, pageSize, pageToken, filter)
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("users/ with page_size=%d page_token=%s: %w", pageSize, pageToken, err)
@@ -164,7 +168,7 @@ func (s *service) ListUsers(ctx context.Context, ctxUserUID uuid.UUID, pageSize 
 }
 
 func (s *service) CreateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.AuthenticatedUser) (*mgmtPB.AuthenticatedUser, error) {
-
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 	dbUser, err := s.PBAuthenticatedUser2DBUser(user)
 	if err != nil {
 		return nil, err
@@ -178,7 +182,7 @@ func (s *service) CreateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.U
 }
 
 func (s *service) GetUser(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.User, error) {
-
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 	id, err := s.convertUserIDAlias(ctx, ctxUserUID, id)
 	if err != nil {
 		return nil, err
@@ -265,7 +269,7 @@ func (s *service) ListAuthenticatedUsersAdmin(ctx context.Context, pageSize int,
 }
 
 func (s *service) GetAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID) (*mgmtPB.AuthenticatedUser, error) {
-
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 	dbUser, err := s.repository.GetUserByUID(ctx, ctxUserUID)
 	if err != nil {
 		return nil, err
@@ -281,6 +285,7 @@ func (s *service) GetAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID
 
 // UpdateUser updates a user by UUID
 func (s *service) UpdateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.AuthenticatedUser) (*mgmtPB.AuthenticatedUser, error) {
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
 	// Check if the user exists
 	if _, err := s.repository.GetUserByUID(ctx, ctxUserUID); err != nil {
@@ -307,6 +312,7 @@ func (s *service) UpdateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.U
 
 // DeleteUser deletes a user by ID
 func (s *service) DeleteUser(ctx context.Context, ctxUserUID uuid.UUID, id string) error {
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
 	err := s.deleteUserFromCacheByID(ctx, id)
 	if err != nil {
@@ -320,6 +326,7 @@ func (s *service) DeleteUser(ctx context.Context, ctxUserUID uuid.UUID, id strin
 }
 
 func (s *service) ListOrganizations(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.Organization, int64, string, error) {
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 	dbOrgs, totalSize, nextPageToken, err := s.repository.ListOrganizations(ctx, pageSize, pageToken, filter)
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("organizations/ with page_size=%d page_token=%s: %w", pageSize, pageToken, err)
@@ -329,6 +336,7 @@ func (s *service) ListOrganizations(ctx context.Context, ctxUserUID uuid.UUID, p
 }
 
 func (s *service) CreateOrganization(ctx context.Context, ctxUserUID uuid.UUID, org *mgmtPB.Organization) (*mgmtPB.Organization, error) {
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
 	uid, _ := uuid.NewV4()
 	uidStr := uid.String()
@@ -351,6 +359,8 @@ func (s *service) CreateOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 
 func (s *service) GetOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.Organization, error) {
 
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
+
 	if pbOrg := s.getOrganizationFromCacheByID(ctx, id); pbOrg != nil {
 		return pbOrg, nil
 	}
@@ -371,6 +381,8 @@ func (s *service) GetOrganization(ctx context.Context, ctxUserUID uuid.UUID, id 
 }
 
 func (s *service) UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string, org *mgmtPB.Organization) (*mgmtPB.Organization, error) {
+
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
 	oriOrg, err := s.repository.GetOrganization(ctx, id)
 	if err != nil {
@@ -403,6 +415,9 @@ func (s *service) UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 }
 
 func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string) error {
+
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
+
 	org, err := s.repository.GetOrganization(ctx, id)
 	if err != nil {
 		return fmt.Errorf("organizations/%s: %w", id, err)
@@ -532,6 +547,7 @@ func (s *service) GetOrganizationByUIDAdmin(ctx context.Context, uid uuid.UUID) 
 }
 
 func (s *service) ListOrganizationsAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.Organization, int64, string, error) {
+
 	dbOrganizations, totalSize, nextPageToken, err := s.repository.ListOrganizations(ctx, pageSize, pageToken, filter)
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("organizations/ with page_size=%d page_token=%s: %w", pageSize, pageToken, err)
@@ -541,6 +557,9 @@ func (s *service) ListOrganizationsAdmin(ctx context.Context, pageSize int, page
 }
 
 func (s *service) CheckUserPassword(ctx context.Context, uid uuid.UUID, password string) error {
+
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, uid)
+
 	var err error
 	passwordHash := s.getUserPasswordHashFromCache(ctx, uid)
 	if passwordHash == "" {
@@ -559,6 +578,9 @@ func (s *service) CheckUserPassword(ctx context.Context, uid uuid.UUID, password
 }
 
 func (s *service) UpdateUserPassword(ctx context.Context, uid uuid.UUID, newPassword string) error {
+
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, uid)
+
 	passwordBytes, err := bcrypt.GenerateFromPassword([]byte(newPassword), 10)
 	if err != nil {
 		return err
@@ -568,6 +590,8 @@ func (s *service) UpdateUserPassword(ctx context.Context, uid uuid.UUID, newPass
 }
 
 func (s *service) CreateToken(ctx context.Context, ctxUserUID uuid.UUID, token *mgmtPB.ApiToken) error {
+
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
 	dbToken, err := s.PBToken2DBToken(ctx, token)
 	if err != nil {
@@ -606,6 +630,9 @@ func (s *service) CreateToken(ctx context.Context, ctxUserUID uuid.UUID, token *
 	return nil
 }
 func (s *service) ListTokens(ctx context.Context, ctxUserUID uuid.UUID, pageSize int64, pageToken string) ([]*mgmtPB.ApiToken, int64, string, error) {
+
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
+
 	ownerPermlink := fmt.Sprintf("users/%s", ctxUserUID.String())
 	dbTokens, pageSize, pageToken, err := s.repository.ListTokens(ctx, ownerPermlink, pageSize, pageToken)
 	if err != nil {
@@ -618,6 +645,8 @@ func (s *service) ListTokens(ctx context.Context, ctxUserUID uuid.UUID, pageSize
 }
 func (s *service) GetToken(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.ApiToken, error) {
 
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
+
 	ownerPermlink := fmt.Sprintf("users/%s", ctxUserUID.String())
 	dbToken, err := s.repository.GetToken(ctx, ownerPermlink, id)
 	if err != nil {
@@ -628,6 +657,8 @@ func (s *service) GetToken(ctx context.Context, ctxUserUID uuid.UUID, id string)
 
 }
 func (s *service) DeleteToken(ctx context.Context, ctxUserUID uuid.UUID, id string) error {
+
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
 	ownerPermlink := fmt.Sprintf("users/%s", ctxUserUID.String())
 	token, err := s.repository.GetToken(ctx, ownerPermlink, id)
@@ -662,6 +693,8 @@ func (s *service) ValidateToken(accessToken string) (string, error) {
 }
 
 func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID, userID string) ([]*mgmtPB.UserMembership, error) {
+
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
 	userID, err := s.convertUserIDAlias(ctx, ctxUserUID, userID)
 	if err != nil {
@@ -715,6 +748,8 @@ func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID,
 
 func (s *service) GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) (*mgmtPB.UserMembership, error) {
 
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
+
 	userID, err := s.convertUserIDAlias(ctx, ctxUserUID, userID)
 	if err != nil {
 		return nil, err
@@ -761,6 +796,8 @@ func (s *service) GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, u
 }
 
 func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string, membership *mgmtPB.UserMembership) (*mgmtPB.UserMembership, error) {
+
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
 	userID, err := s.convertUserIDAlias(ctx, ctxUserUID, userID)
 	if err != nil {
@@ -817,6 +854,9 @@ func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 }
 
 func (s *service) DeleteUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) error {
+
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
+
 	userID, err := s.convertUserIDAlias(ctx, ctxUserUID, userID)
 	if err != nil {
 		return err
@@ -841,6 +881,9 @@ func (s *service) DeleteUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 }
 
 func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uuid.UUID, orgID string) ([]*mgmtPB.OrganizationMembership, error) {
+
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
+
 	org, err := s.repository.GetOrganization(ctx, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("organizations/%s: %w", orgID, err)
@@ -899,6 +942,8 @@ func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uu
 }
 
 func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) (*mgmtPB.OrganizationMembership, error) {
+
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
 	userID, err := s.convertUserIDAlias(ctx, ctxUserUID, userID)
 	if err != nil {
@@ -962,6 +1007,8 @@ func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid
 }
 
 func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string, membership *mgmtPB.OrganizationMembership) (*mgmtPB.OrganizationMembership, error) {
+
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
 	userID, err := s.convertUserIDAlias(ctx, ctxUserUID, userID)
 	if err != nil {
@@ -1033,6 +1080,8 @@ func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID u
 }
 
 func (s *service) DeleteOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) error {
+
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
 	userID, err := s.convertUserIDAlias(ctx, ctxUserUID, userID)
 	if err != nil {

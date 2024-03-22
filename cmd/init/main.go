@@ -17,6 +17,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
+	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
@@ -48,7 +49,9 @@ func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 		return status.Errorf(codes.Internal, "uuid generation error %v", err)
 	}
 
-	r := repository.NewRepository(db)
+	redisClient := redis.NewClient(&config.Config.Cache.Redis.RedisOptions)
+	defer redisClient.Close()
+	r := repository.NewRepository(db, redisClient)
 
 	passwordBytes, err := bcrypt.GenerateFromPassword([]byte(constant.DefaultUserPassword), 10)
 	if err != nil {
