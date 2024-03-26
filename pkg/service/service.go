@@ -62,7 +62,7 @@ type Service interface {
 	ListTokens(ctx context.Context, ctxUserUID uuid.UUID, pageSize int64, pageToken string) ([]*mgmtPB.ApiToken, int64, string, error)
 	GetToken(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.ApiToken, error)
 	DeleteToken(ctx context.Context, ctxUserUID uuid.UUID, id string) error
-	ValidateToken(accessToken string) (string, error)
+	ValidateToken(ctx context.Context, accessToken string) (string, error)
 
 	CheckUserPassword(ctx context.Context, uid uuid.UUID, password string) error
 	UpdateUserPassword(ctx context.Context, uid uuid.UUID, newPassword string) error
@@ -76,7 +76,7 @@ type Service interface {
 
 	DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*mgmtPB.User, error)
 	DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtPB.User, error)
-	PBAuthenticatedUser2DBUser(pbUser *mgmtPB.AuthenticatedUser) (*datamodel.Owner, error)
+	PBAuthenticatedUser2DBUser(ctx context.Context, pbUser *mgmtPB.AuthenticatedUser) (*datamodel.Owner, error)
 	DBUsers2PBAuthenticatedUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtPB.AuthenticatedUser, error)
 
 	DBToken2PBToken(ctx context.Context, dbToken *datamodel.Token) (*mgmtPB.ApiToken, error)
@@ -169,7 +169,7 @@ func (s *service) ListUsers(ctx context.Context, ctxUserUID uuid.UUID, pageSize 
 
 func (s *service) CreateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.AuthenticatedUser) (*mgmtPB.AuthenticatedUser, error) {
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
-	dbUser, err := s.PBAuthenticatedUser2DBUser(user)
+	dbUser, err := s.PBAuthenticatedUser2DBUser(ctx, user)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +293,7 @@ func (s *service) UpdateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.U
 	}
 
 	// Update the user
-	dbUser, err := s.PBAuthenticatedUser2DBUser(user)
+	dbUser, err := s.PBAuthenticatedUser2DBUser(ctx, user)
 	if err != nil {
 		return nil, err
 	}
@@ -341,7 +341,7 @@ func (s *service) CreateOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 	uid, _ := uuid.NewV4()
 	uidStr := uid.String()
 	org.Uid = uidStr
-	dbOrg, err := s.PBOrg2DBOrg(org)
+	dbOrg, err := s.PBOrg2DBOrg(ctx, org)
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +350,7 @@ func (s *service) CreateOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 		return nil, err
 	}
 
-	err = s.aclClient.SetOrganizationUserMembership(dbOrg.UID, ctxUserUID, "owner")
+	err = s.aclClient.SetOrganizationUserMembership(ctx, dbOrg.UID, ctxUserUID, "owner")
 	if err != nil {
 		return nil, err
 	}
@@ -388,7 +388,7 @@ func (s *service) UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 	if err != nil {
 		return nil, fmt.Errorf("organizations/%s: %w", id, err)
 	}
-	canUpdateOrganization, err := s.aclClient.CheckOrganizationUserMembership(oriOrg.UID, ctxUserUID, "can_update_organization")
+	canUpdateOrganization, err := s.aclClient.CheckOrganizationUserMembership(ctx, oriOrg.UID, ctxUserUID, "can_update_organization")
 	if err != nil {
 		return nil, err
 	}
@@ -397,7 +397,7 @@ func (s *service) UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 	}
 
 	// Update the user
-	dbOrg, err := s.PBOrg2DBOrg(org)
+	dbOrg, err := s.PBOrg2DBOrg(ctx, org)
 	if err != nil {
 		return nil, err
 	}
@@ -423,7 +423,7 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 		return fmt.Errorf("organizations/%s: %w", id, err)
 	}
 
-	canDeleteOrganization, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "can_delete_organization")
+	canDeleteOrganization, err := s.aclClient.CheckOrganizationUserMembership(ctx, org.UID, ctxUserUID, "can_delete_organization")
 	if err != nil {
 		return err
 	}
@@ -490,10 +490,10 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 			})
 	}
 
-	memberships, _ := s.aclClient.GetOrganizationUsers(org.UID)
+	memberships, _ := s.aclClient.GetOrganizationUsers(ctx, org.UID)
 
 	for _, membership := range memberships {
-		_ = s.aclClient.DeleteOrganizationUserMembership(org.UID, membership.UID)
+		_ = s.aclClient.DeleteOrganizationUserMembership(ctx, org.UID, membership.UID)
 	}
 
 	err = s.repository.DeleteOrganization(ctx, id)
@@ -675,15 +675,15 @@ func (s *service) DeleteToken(ctx context.Context, ctxUserUID uuid.UUID, id stri
 	}
 	return nil
 }
-func (s *service) ValidateToken(accessToken string) (string, error) {
-	uid := s.getAPITokenFromCache(context.Background(), accessToken)
+func (s *service) ValidateToken(ctx context.Context, accessToken string) (string, error) {
+	uid := s.getAPITokenFromCache(ctx, accessToken)
 	if uid == uuid.Nil {
-		dbToken, err := s.repository.LookupToken(context.Background(), accessToken)
+		dbToken, err := s.repository.LookupToken(ctx, accessToken)
 		if err != nil {
 			return "", ErrUnauthenticated
 		}
 		uid = uuid.FromStringOrNil(strings.Split(dbToken.Owner, "/")[1])
-		_ = s.setAPITokenToCache(context.Background(), dbToken.AccessToken, uid, dbToken.ExpireTime)
+		_ = s.setAPITokenToCache(ctx, dbToken.AccessToken, uid, dbToken.ExpireTime)
 
 	}
 	if uid == uuid.Nil {
@@ -709,7 +709,7 @@ func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID,
 		return nil, ErrNoPermission
 	}
 
-	orgRelations, err := s.aclClient.GetUserOrganizations(user.UID)
+	orgRelations, err := s.aclClient.GetUserOrganizations(ctx, user.UID)
 	if err != nil {
 		return nil, err
 	}
@@ -766,7 +766,7 @@ func (s *service) GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, u
 	if err != nil {
 		return nil, fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
-	role, err := s.aclClient.GetOrganizationUserMembership(org.UID, user.UID)
+	role, err := s.aclClient.GetOrganizationUserMembership(ctx, org.UID, user.UID)
 	if err != nil {
 		return nil, err
 	}
@@ -826,7 +826,7 @@ func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 	}
 
 	if membership.State == mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE {
-		curRole, err := s.aclClient.GetOrganizationUserMembership(org.UID, user.UID)
+		curRole, err := s.aclClient.GetOrganizationUserMembership(ctx, org.UID, user.UID)
 		if err != nil {
 			return nil, err
 		}
@@ -835,7 +835,7 @@ func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 		if len(curRoleSplits) == 2 {
 			curRole = curRoleSplits[1]
 		}
-		err = s.aclClient.SetOrganizationUserMembership(org.UID, user.UID, curRole)
+		err = s.aclClient.SetOrganizationUserMembership(ctx, org.UID, user.UID, curRole)
 		if err != nil {
 			return nil, err
 		}
@@ -873,7 +873,7 @@ func (s *service) DeleteUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 	if err != nil {
 		return fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
-	err = s.aclClient.DeleteOrganizationUserMembership(org.UID, user.UID)
+	err = s.aclClient.DeleteOrganizationUserMembership(ctx, org.UID, user.UID)
 	if err != nil {
 		return err
 	}
@@ -889,7 +889,7 @@ func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uu
 		return nil, fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
 
-	canGetMembership, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "can_get_membership")
+	canGetMembership, err := s.aclClient.CheckOrganizationUserMembership(ctx, org.UID, ctxUserUID, "can_get_membership")
 	if err != nil {
 		return nil, err
 	}
@@ -897,12 +897,12 @@ func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uu
 		return nil, ErrNoPermission
 	}
 
-	canSetMembership, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "can_set_membership")
+	canSetMembership, err := s.aclClient.CheckOrganizationUserMembership(ctx, org.UID, ctxUserUID, "can_set_membership")
 	if err != nil {
 		return nil, err
 	}
 
-	userRelations, err := s.aclClient.GetOrganizationUsers(org.UID)
+	userRelations, err := s.aclClient.GetOrganizationUsers(ctx, org.UID)
 	if err != nil {
 		return nil, err
 	}
@@ -959,19 +959,19 @@ func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid
 		return nil, fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
 
-	canGetMembership, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "can_get_membership")
+	canGetMembership, err := s.aclClient.CheckOrganizationUserMembership(ctx, org.UID, ctxUserUID, "can_get_membership")
 	if err != nil {
 		return nil, err
 	}
 	if !canGetMembership {
 		return nil, ErrNoPermission
 	}
-	canSetMembership, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "can_set_membership")
+	canSetMembership, err := s.aclClient.CheckOrganizationUserMembership(ctx, org.UID, ctxUserUID, "can_set_membership")
 	if err != nil {
 		return nil, err
 	}
 
-	role, err := s.aclClient.GetOrganizationUserMembership(org.UID, user.UID)
+	role, err := s.aclClient.GetOrganizationUserMembership(ctx, org.UID, user.UID)
 	if err != nil {
 		return nil, err
 	}
@@ -1024,7 +1024,7 @@ func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID u
 		return nil, fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
 
-	canSetMembership, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "can_set_membership")
+	canSetMembership, err := s.aclClient.CheckOrganizationUserMembership(ctx, org.UID, ctxUserUID, "can_set_membership")
 	if err != nil {
 		return nil, err
 	}
@@ -1046,9 +1046,9 @@ func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID u
 		return nil, err
 	}
 
-	curRole, err := s.aclClient.GetOrganizationUserMembership(org.UID, user.UID)
+	curRole, err := s.aclClient.GetOrganizationUserMembership(ctx, org.UID, user.UID)
 	if err == nil && !strings.HasPrefix(curRole, "pending") {
-		err = s.aclClient.SetOrganizationUserMembership(org.UID, user.UID, membership.Role)
+		err = s.aclClient.SetOrganizationUserMembership(ctx, org.UID, user.UID, membership.Role)
 		if err != nil {
 			return nil, err
 		}
@@ -1062,7 +1062,7 @@ func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID u
 		}
 		return updatedMembership, nil
 	} else {
-		err = s.aclClient.SetOrganizationUserMembership(org.UID, user.UID, "pending_"+membership.Role)
+		err = s.aclClient.SetOrganizationUserMembership(ctx, org.UID, user.UID, "pending_"+membership.Role)
 		if err != nil {
 			return nil, err
 		}
@@ -1097,7 +1097,7 @@ func (s *service) DeleteOrganizationMembership(ctx context.Context, ctxUserUID u
 		return fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
 
-	canRemoveMembership, err := s.aclClient.CheckOrganizationUserMembership(org.UID, ctxUserUID, "can_remove_membership")
+	canRemoveMembership, err := s.aclClient.CheckOrganizationUserMembership(ctx, org.UID, ctxUserUID, "can_remove_membership")
 	if err != nil {
 		return err
 	}
@@ -1107,7 +1107,7 @@ func (s *service) DeleteOrganizationMembership(ctx context.Context, ctxUserUID u
 	if canRemoveMembership && ctxUserUID == user.UID {
 		return ErrCanNotRemoveOwnerFromOrganization
 	}
-	err = s.aclClient.DeleteOrganizationUserMembership(org.UID, user.UID)
+	err = s.aclClient.DeleteOrganizationUserMembership(ctx, org.UID, user.UID)
 	if err != nil {
 		return err
 	}

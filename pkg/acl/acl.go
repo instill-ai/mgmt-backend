@@ -2,16 +2,26 @@ package acl
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gofrs/uuid"
+	"github.com/redis/go-redis/v9"
+
 	openfga "github.com/openfga/go-sdk"
 	openfgaClient "github.com/openfga/go-sdk/client"
+
+	"github.com/instill-ai/mgmt-backend/config"
+	"github.com/instill-ai/mgmt-backend/internal/resource"
+	"github.com/instill-ai/mgmt-backend/pkg/constant"
 )
 
 type ACLClient struct {
-	client               *openfgaClient.OpenFgaClient
+	writeClient          *openfgaClient.OpenFgaClient
+	readClient           *openfgaClient.OpenFgaClient
+	redisClient          *redis.Client
 	authorizationModelID *string
 }
 
@@ -20,20 +30,53 @@ type Relation struct {
 	Relation string
 }
 
-func NewACLClient(c *openfgaClient.OpenFgaClient, a *string) ACLClient {
+type Mode string
+
+const (
+	ReadMode  Mode = "read"
+	WriteMode Mode = "write"
+)
+
+func NewACLClient(wc *openfgaClient.OpenFgaClient, rc *openfgaClient.OpenFgaClient, redisClient *redis.Client, a *string) ACLClient {
+	if rc == nil {
+		rc = wc
+	}
+
 	return ACLClient{
-		client:               c,
+		writeClient:          wc,
+		readClient:           rc,
+		redisClient:          redisClient,
 		authorizationModelID: a,
 	}
 }
 
-func (c *ACLClient) SetOrganizationUserMembership(orgUID uuid.UUID, userUID uuid.UUID, role string) error {
+func (c *ACLClient) getClient(ctx context.Context, mode Mode) *openfgaClient.OpenFgaClient {
+	userUID := resource.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)
+
+	if mode == WriteMode {
+		// To solve the read-after-write inconsistency problem,
+		// we will direct the user to read from the primary database for a certain time frame
+		// to ensure that the data is synchronized from the primary DB to the replica DB.
+		_ = c.redisClient.Set(ctx, fmt.Sprintf("db_pin_user:%s", userUID), time.Now(), time.Duration(config.Config.OpenFGA.Replica.ReplicationTimeFrame)*time.Second)
+	}
+
+	// If the user is pinned, we will use the primary database for querying.
+	if !errors.Is(c.redisClient.Get(ctx, fmt.Sprintf("db_pin_user:%s", userUID)).Err(), redis.Nil) {
+		return c.writeClient
+	}
+	if mode == ReadMode {
+		return c.readClient
+	}
+	return c.writeClient
+}
+
+func (c *ACLClient) SetOrganizationUserMembership(ctx context.Context, orgUID uuid.UUID, userUID uuid.UUID, role string) error {
 	var err error
 	options := openfgaClient.ClientWriteOptions{
 		AuthorizationModelId: c.authorizationModelID,
 	}
 
-	_ = c.DeleteOrganizationUserMembership(orgUID, userUID)
+	_ = c.DeleteOrganizationUserMembership(ctx, orgUID, userUID)
 
 	body := openfgaClient.ClientWriteRequest{
 		Writes: &[]openfgaClient.ClientTupleKey{
@@ -44,14 +87,14 @@ func (c *ACLClient) SetOrganizationUserMembership(orgUID uuid.UUID, userUID uuid
 			}},
 	}
 
-	_, err = c.client.Write(context.Background()).Body(body).Options(options).Execute()
+	_, err = c.getClient(ctx, WriteMode).Write(ctx).Body(body).Options(options).Execute()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *ACLClient) DeleteOrganizationUserMembership(orgUID uuid.UUID, userUID uuid.UUID) error {
+func (c *ACLClient) DeleteOrganizationUserMembership(ctx context.Context, orgUID uuid.UUID, userUID uuid.UUID) error {
 	// var err error
 	options := openfgaClient.ClientWriteOptions{
 		AuthorizationModelId: c.authorizationModelID,
@@ -65,14 +108,14 @@ func (c *ACLClient) DeleteOrganizationUserMembership(orgUID uuid.UUID, userUID u
 					Relation: role,
 					Object:   fmt.Sprintf("organization:%s", orgUID.String()),
 				}}}
-		_, _ = c.client.Write(context.Background()).Body(body).Options(options).Execute()
+		_, _ = c.getClient(ctx, WriteMode).Write(ctx).Body(body).Options(options).Execute()
 
 	}
 
 	return nil
 }
 
-func (c *ACLClient) CheckOrganizationUserMembership(orgUID uuid.UUID, userUID uuid.UUID, role string) (bool, error) {
+func (c *ACLClient) CheckOrganizationUserMembership(ctx context.Context, orgUID uuid.UUID, userUID uuid.UUID, role string) (bool, error) {
 	options := openfgaClient.ClientCheckOptions{
 		AuthorizationModelId: c.authorizationModelID,
 	}
@@ -81,7 +124,7 @@ func (c *ACLClient) CheckOrganizationUserMembership(orgUID uuid.UUID, userUID uu
 		Relation: role,
 		Object:   fmt.Sprintf("organization:%s", orgUID.String()),
 	}
-	data, err := c.client.Check(context.Background()).Body(body).Options(options).Execute()
+	data, err := c.getClient(ctx, ReadMode).Check(ctx).Body(body).Options(options).Execute()
 	if err != nil {
 		return false, err
 	}
@@ -89,7 +132,7 @@ func (c *ACLClient) CheckOrganizationUserMembership(orgUID uuid.UUID, userUID uu
 
 }
 
-func (c *ACLClient) GetOrganizationUserMembership(orgUID uuid.UUID, userUID uuid.UUID) (string, error) {
+func (c *ACLClient) GetOrganizationUserMembership(ctx context.Context, orgUID uuid.UUID, userUID uuid.UUID) (string, error) {
 	options := openfgaClient.ClientReadOptions{
 		PageSize: openfga.PtrInt32(1),
 	}
@@ -97,7 +140,7 @@ func (c *ACLClient) GetOrganizationUserMembership(orgUID uuid.UUID, userUID uuid
 		User:   openfga.PtrString(fmt.Sprintf("user:%s", userUID.String())),
 		Object: openfga.PtrString(fmt.Sprintf("organization:%s", orgUID.String())),
 	}
-	data, err := c.client.Read(context.Background()).Body(body).Options(options).Execute()
+	data, err := c.getClient(ctx, ReadMode).Read(ctx).Body(body).Options(options).Execute()
 	if err != nil {
 		return "", err
 	}
@@ -108,7 +151,7 @@ func (c *ACLClient) GetOrganizationUserMembership(orgUID uuid.UUID, userUID uuid
 	return "", ErrMembershipNotFound
 }
 
-func (c *ACLClient) GetOrganizationUsers(orgUID uuid.UUID) ([]*Relation, error) {
+func (c *ACLClient) GetOrganizationUsers(ctx context.Context, orgUID uuid.UUID) ([]*Relation, error) {
 	options := openfgaClient.ClientReadOptions{
 		PageSize: openfga.PtrInt32(1),
 	}
@@ -120,7 +163,7 @@ func (c *ACLClient) GetOrganizationUsers(orgUID uuid.UUID) ([]*Relation, error) 
 
 	relations := []*Relation{}
 	for {
-		data, err := c.client.Read(context.Background()).Body(body).Options(options).Execute()
+		data, err := c.getClient(ctx, ReadMode).Read(ctx).Body(body).Options(options).Execute()
 		if err != nil {
 			return nil, err
 		}
@@ -140,7 +183,7 @@ func (c *ACLClient) GetOrganizationUsers(orgUID uuid.UUID) ([]*Relation, error) 
 	return relations, nil
 }
 
-func (c *ACLClient) GetUserOrganizations(userUID uuid.UUID) ([]*Relation, error) {
+func (c *ACLClient) GetUserOrganizations(ctx context.Context, userUID uuid.UUID) ([]*Relation, error) {
 	options := openfgaClient.ClientReadOptions{
 		PageSize: openfga.PtrInt32(1),
 	}
@@ -152,7 +195,7 @@ func (c *ACLClient) GetUserOrganizations(userUID uuid.UUID) ([]*Relation, error)
 
 	relations := []*Relation{}
 	for {
-		data, err := c.client.Read(context.Background()).Body(body).Options(options).Execute()
+		data, err := c.getClient(ctx, ReadMode).Read(ctx).Body(body).Options(options).Execute()
 		if err != nil {
 			return nil, err
 		}
@@ -172,7 +215,7 @@ func (c *ACLClient) GetUserOrganizations(userUID uuid.UUID) ([]*Relation, error)
 	return relations, nil
 }
 
-func (c *ACLClient) CheckPermission(objectType string, objectUID uuid.UUID, userType string, userUID uuid.UUID, code string, role string) (bool, error) {
+func (c *ACLClient) CheckPermission(ctx context.Context, objectType string, objectUID uuid.UUID, userType string, userUID uuid.UUID, code string, role string) (bool, error) {
 
 	options := openfgaClient.ClientCheckOptions{
 		AuthorizationModelId: c.authorizationModelID,
@@ -182,7 +225,7 @@ func (c *ACLClient) CheckPermission(objectType string, objectUID uuid.UUID, user
 		Relation: role,
 		Object:   fmt.Sprintf("%s:%s", objectType, objectUID.String()),
 	}
-	data, err := c.client.Check(context.Background()).Body(body).Options(options).Execute()
+	data, err := c.getClient(ctx, ReadMode).Check(ctx).Body(body).Options(options).Execute()
 	if err != nil {
 		return false, err
 	}
@@ -198,7 +241,7 @@ func (c *ACLClient) CheckPermission(objectType string, objectUID uuid.UUID, user
 		Relation: role,
 		Object:   fmt.Sprintf("%s:%s", objectType, objectUID.String()),
 	}
-	data, err = c.client.Check(context.Background()).Body(body).Options(options).Execute()
+	data, err = c.getClient(ctx, ReadMode).Check(ctx).Body(body).Options(options).Execute()
 
 	if err != nil {
 		return false, err

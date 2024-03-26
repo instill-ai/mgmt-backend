@@ -857,7 +857,7 @@ func (h *PublicHandler) ValidateToken(ctx context.Context, req *mgmtPB.ValidateT
 	authorization := resource.GetRequestSingleHeader(ctx, constant.HeaderAuthorization)
 	apiToken := strings.Replace(authorization, "Bearer ", "", 1)
 
-	userUID, err := h.Service.ValidateToken(apiToken)
+	userUID, err := h.Service.ValidateToken(ctx, apiToken)
 
 	if err != nil {
 		span.SetStatus(1, err.Error())
