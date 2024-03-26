@@ -147,7 +147,7 @@ func (s *service) DBUser2PBAuthenticatedUser(ctx context.Context, dbUser *datamo
 }
 
 // PBAuthenticatedUser2DBUser converts a proto user instance to database user
-func (s *service) PBAuthenticatedUser2DBUser(pbUser *mgmtPB.AuthenticatedUser) (*datamodel.Owner, error) {
+func (s *service) PBAuthenticatedUser2DBUser(ctx context.Context, pbUser *mgmtPB.AuthenticatedUser) (*datamodel.Owner, error) {
 	if pbUser == nil {
 		return nil, status.Error(codes.Internal, "can't convert a nil user")
 	}
@@ -260,7 +260,7 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 	id := dbOrg.ID
 	uid := dbOrg.Base.UID.String()
 
-	relations, err := s.aclClient.GetOrganizationUsers(dbOrg.Base.UID)
+	relations, err := s.aclClient.GetOrganizationUsers(ctx, dbOrg.Base.UID)
 	if err != nil {
 		return nil, err
 	}
@@ -300,7 +300,7 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 }
 
 // PBOrg2DBOrg converts a proto user instance to database user
-func (s *service) PBOrg2DBOrg(pbOrg *mgmtPB.Organization) (*datamodel.Owner, error) {
+func (s *service) PBOrg2DBOrg(ctx context.Context, pbOrg *mgmtPB.Organization) (*datamodel.Owner, error) {
 	if pbOrg == nil {
 		return nil, status.Error(codes.Internal, "can't convert a nil organization")
 	}

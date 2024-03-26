@@ -134,6 +134,9 @@ func main() {
 	var tlsConfig *tls.Config
 	var err error
 
+	redisClient := redis.NewClient(&config.Config.Cache.Redis.RedisOptions)
+	defer redisClient.Close()
+
 	fgaClient, err := openfgaClient.NewSdkClient(&openfgaClient.ClientConfiguration{
 		ApiScheme: "http",
 		ApiHost:   fmt.Sprintf("%s:%d", config.Config.OpenFGA.Host, config.Config.OpenFGA.Port),
@@ -143,11 +146,26 @@ func main() {
 		panic(err)
 	}
 
+	var fgaReplicaClient *openfgaClient.OpenFgaClient
+	if config.Config.OpenFGA.Replica.Host != "" {
+
+		fgaReplicaClient, err = openfgaClient.NewSdkClient(&openfgaClient.ClientConfiguration{
+			ApiScheme: "http",
+			ApiHost:   fmt.Sprintf("%s:%d", config.Config.OpenFGA.Replica.Host, config.Config.OpenFGA.Replica.Port),
+		})
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	var aclClient acl.ACLClient
 	if stores, err := fgaClient.ListStores(context.Background()).Execute(); err == nil {
 		fgaClient.SetStoreId(*(*stores.Stores)[0].Id)
+		if fgaReplicaClient != nil {
+			fgaReplicaClient.SetStoreId(*(*stores.Stores)[0].Id)
+		}
 		if models, err := fgaClient.ReadAuthorizationModels(context.Background()).Execute(); err == nil {
-			aclClient = acl.NewACLClient(fgaClient, (*models.AuthorizationModels)[0].Id)
+			aclClient = acl.NewACLClient(fgaClient, fgaReplicaClient, redisClient, (*models.AuthorizationModels)[0].Id)
 		}
 		if err != nil {
 			panic(err)
@@ -177,9 +195,6 @@ func main() {
 
 	influxDBClient, influxDBQueryAPI := external.InitInfluxDBServiceClientV2(ctx, &config.Config)
 	defer influxDBClient.Close()
-
-	redisClient := redis.NewClient(&config.Config.Cache.Redis.RedisOptions)
-	defer redisClient.Close()
 
 	influxDB := repository.NewInfluxDB(influxDBQueryAPI, config.Config.InfluxDB.Bucket)
 	repository := repository.NewRepository(db, redisClient)

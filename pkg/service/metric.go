@@ -51,7 +51,7 @@ func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.F
 				if err != nil {
 					return nil, "", "", "", filter, err
 				}
-				granted, err := s.GetACLClient().CheckPermission("organization", uuid.FromStringOrNil(org.Uid), "user", uuid.FromStringOrNil(owner.GetUid()), "", "member")
+				granted, err := s.GetACLClient().CheckPermission(ctx, "organization", uuid.FromStringOrNil(org.Uid), "user", uuid.FromStringOrNil(owner.GetUid()), "", "member")
 				if err != nil {
 					return nil, "", "", "", filter, err
 				}
@@ -98,7 +98,7 @@ func (s *service) checkConnectorOwnership(ctx context.Context, filter filtering.
 				if err != nil {
 					return nil, "", "", "", filter, err
 				}
-				granted, err := s.GetACLClient().CheckPermission("organization", uuid.FromStringOrNil(org.Uid), "user", uuid.FromStringOrNil(owner.GetUid()), "", "member")
+				granted, err := s.GetACLClient().CheckPermission(ctx, "organization", uuid.FromStringOrNil(org.Uid), "user", uuid.FromStringOrNil(owner.GetUid()), "", "member")
 				if err != nil {
 					return nil, "", "", "", filter, err
 				}
