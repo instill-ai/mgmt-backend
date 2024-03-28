@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.13.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.12.0-beta...v0.13.0-beta) (2024-03-28)
+
+
+### Features
+
+* add configuration for read-replica database ([#189](https://github.com/instill-ai/mgmt-backend/issues/189)) ([afdcd5f](https://github.com/instill-ai/mgmt-backend/commit/afdcd5f656503d08734fc14cd965c31b4326d259))
+* pin the user to read from the primary database for a certain time frame after mutating the data ([#192](https://github.com/instill-ai/mgmt-backend/issues/192)) ([0f3f707](https://github.com/instill-ai/mgmt-backend/commit/0f3f70731e3cde9b65738a7c1c909c71704ddcae))
+* set TTL to owner cache ([#191](https://github.com/instill-ai/mgmt-backend/issues/191)) ([2222908](https://github.com/instill-ai/mgmt-backend/commit/2222908d893dfe6fe5cafa290012b8799252ed21))
+* support OpenFGA read replica ([#193](https://github.com/instill-ai/mgmt-backend/issues/193)) ([7ea8814](https://github.com/instill-ai/mgmt-backend/commit/7ea881454ec23309fc1f40c27f3f7cd9e58fa90d))
+
 ## [0.12.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.11.0-beta...v0.12.0-beta) (2024-02-29)
 
 
