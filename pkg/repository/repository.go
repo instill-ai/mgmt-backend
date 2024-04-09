@@ -60,6 +60,8 @@ type Repository interface {
 	LookupToken(ctx context.Context, token string) (*datamodel.Token, error)
 
 	ListAllValidTokens(ctx context.Context) ([]datamodel.Token, error)
+
+	AddCredit(ctx context.Context, credit datamodel.Credit) error
 }
 
 type repository struct {
@@ -455,4 +457,12 @@ func (r *repository) DeleteToken(ctx context.Context, owner string, id string) e
 	}
 
 	return nil
+}
+
+// AddCredit creates a credit entry.
+func (r *repository) AddCredit(ctx context.Context, credit datamodel.Credit) error {
+	r.pinUser(ctx)
+	db := r.checkPinnedUser(ctx, r.db)
+
+	return db.Create(credit).Error
 }
