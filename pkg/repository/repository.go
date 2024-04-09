@@ -61,7 +61,8 @@ type Repository interface {
 
 	ListAllValidTokens(ctx context.Context) ([]datamodel.Token, error)
 
-	AddCredit(ctx context.Context, credit datamodel.Credit) error
+	AddCredit(context.Context, datamodel.Credit) error
+	GetRemainingCredit(ctx context.Context, parent string) (float64, error)
 }
 
 type repository struct {
@@ -465,4 +466,28 @@ func (r *repository) AddCredit(ctx context.Context, credit datamodel.Credit) err
 	db := r.checkPinnedUser(ctx, r.db)
 
 	return db.Create(credit).Error
+}
+
+type remainingCredit struct {
+	Total float64
+}
+
+func (r *repository) GetRemainingCredit(ctx context.Context, parent string) (float64, error) {
+	db := r.checkPinnedUser(ctx, r.db)
+
+	var result remainingCredit
+	q := db.Model(datamodel.Credit{}).Select("sum(amount) as total").
+		Where("parent = ?", parent).
+		Where("amount > 0").
+		Where("expire_time is null or expire_time > ?", time.Now()).
+		Group("parent")
+
+	if err := q.First(&result).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return 0, err
+		}
+		return 0, nil
+	}
+
+	return result.Total, nil
 }
