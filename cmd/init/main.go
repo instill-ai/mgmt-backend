@@ -106,7 +106,7 @@ func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 }
 
 func main() {
-	if err := config.Init(); err != nil {
+	if err := config.Init(config.ParseConfigFlag()); err != nil {
 		log.Fatal(err.Error())
 	}
 
