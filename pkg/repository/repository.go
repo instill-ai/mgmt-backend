@@ -63,6 +63,7 @@ type Repository interface {
 
 	AddCredit(context.Context, datamodel.Credit) error
 	GetRemainingCredit(ctx context.Context, parent string) (float64, error)
+	SubtractCredit(ctx context.Context, parent string, amount float64) error
 }
 
 type repository struct {
@@ -460,7 +461,6 @@ func (r *repository) DeleteToken(ctx context.Context, owner string, id string) e
 	return nil
 }
 
-// AddCredit creates a credit entry.
 func (r *repository) AddCredit(ctx context.Context, credit datamodel.Credit) error {
 	r.pinUser(ctx)
 	db := r.checkPinnedUser(ctx, r.db)
@@ -490,4 +490,68 @@ func (r *repository) GetRemainingCredit(ctx context.Context, parent string) (flo
 	}
 
 	return result.Total, nil
+}
+
+// ErrNotEnoughCredit will be returned when trying to subtract more credit than
+// what's available. The parent's remaining credit will be set to zero.
+var ErrNotEnoughCredit = fmt.Errorf("not enough credit")
+
+func (r *repository) SubtractCredit(ctx context.Context, parent string, amount float64) error {
+	r.pinUser(ctx)
+	db := r.checkPinnedUser(ctx, r.db)
+
+	q := db.Model(datamodel.Credit{}).
+		Where("parent = ?", parent).
+		Where("amount > 0").
+		Where("expire_time is null or expire_time > ?", time.Now()).
+		Order("expire_time asc")
+
+	rows, err := q.Rows()
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	updatedRows := make([]*datamodel.Credit, 0)
+	for rows.Next() {
+		credit := new(datamodel.Credit)
+		if err := db.ScanRows(rows, credit); err != nil {
+			return err
+		}
+
+		updatedRows = append(updatedRows, credit)
+		diff := credit.Amount - amount
+		if diff >= 0 { // credit is enough.
+			updatedRows = append(updatedRows, credit)
+			credit.Amount = diff
+			amount = 0
+
+			rows.Close()
+			break
+		}
+
+		// set credit to zero and continue subtracting the remaining amount.
+		credit.Amount = 0
+		amount = -diff
+	}
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		for _, row := range updatedRows {
+			result := tx.Model(datamodel.Credit{}).Where("uid = ?", row.UID).Update("amount", row.Amount)
+			if result.Error != nil {
+				return result.Error
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if amount > 0 {
+		return ErrNotEnoughCredit
+	}
+
+	return nil
 }
