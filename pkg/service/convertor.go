@@ -48,13 +48,17 @@ func (s *service) compressAvatar(profileAvatar string) (string, error) {
 	if strings.HasPrefix(profileAvatar, "http") {
 		response, err := http.Get(profileAvatar)
 		if err == nil {
+			defer response.Body.Close()
 			body, err := io.ReadAll(response.Body)
 			if err == nil {
 				mimeType := strings.Split(mimetype.Detect(body).String(), ";")[0]
 				profileAvatar = fmt.Sprintf("data:%s;base64,%s", mimeType, base64.StdEncoding.EncodeToString(body))
+			} else {
+				return "", nil
 			}
+		} else {
+			return "", nil
 		}
-		defer response.Body.Close()
 	}
 
 	profileAvatarStrs := strings.Split(profileAvatar, ",")
