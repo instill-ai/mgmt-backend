@@ -12,6 +12,7 @@ server:
     port: 443
   debug: true
   defaultuseruid:
+  instillcorehost: http://localhost:8080
 pipelinebackend:
   host: pipeline-backend
   publicport: 8081

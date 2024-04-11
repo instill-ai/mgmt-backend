@@ -198,7 +198,7 @@ func main() {
 
 	influxDB := repository.NewInfluxDB(influxDBQueryAPI, config.Config.InfluxDB.Bucket)
 	repository := repository.NewRepository(db, redisClient)
-	service := service.NewService(repository, redisClient, influxDB, pipelinePublicServiceClient, &aclClient)
+	service := service.NewService(repository, redisClient, influxDB, pipelinePublicServiceClient, &aclClient, config.Config.Server.InstillCoreHost)
 
 	// Start usage reporter
 	var usg usage.Usage
@@ -268,6 +268,12 @@ func main() {
 			},
 		}),
 	)
+	if err := publicServeMux.HandlePath("GET", "/v1beta/{name=users/*}/avatar", middleware.AppendCustomHeaderMiddleware(publicServeMux, repository, middleware.HandleAvatar)); err != nil {
+		logger.Fatal(err.Error())
+	}
+	if err := publicServeMux.HandlePath("GET", "/v1beta/{name=organizations/*}/avatar", middleware.AppendCustomHeaderMiddleware(publicServeMux, repository, middleware.HandleAvatar)); err != nil {
+		logger.Fatal(err.Error())
+	}
 
 	// Start gRPC server
 	var dialOpts []grpc.DialOption

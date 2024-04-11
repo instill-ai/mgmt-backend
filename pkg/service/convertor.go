@@ -11,6 +11,8 @@ import (
 	"image"
 	"image/jpeg"
 	"image/png"
+	"io"
+	"net/http"
 	"strings"
 	"time"
 
@@ -42,6 +44,19 @@ var (
 )
 
 func (s *service) compressAvatar(profileAvatar string) (string, error) {
+
+	if strings.HasPrefix(profileAvatar, "http") {
+		response, err := http.Get(profileAvatar)
+		if err == nil {
+			body, err := io.ReadAll(response.Body)
+			if err == nil {
+				mimeType := strings.Split(mimetype.Detect(body).String(), ";")[0]
+				profileAvatar = fmt.Sprintf("data:%s;base64,%s", mimeType, base64.StdEncoding.EncodeToString(body))
+			}
+		}
+		defer response.Body.Close()
+	}
+
 	profileAvatarStrs := strings.Split(profileAvatar, ",")
 	b, err := base64.StdEncoding.DecodeString(profileAvatarStrs[len(profileAvatarStrs)-1])
 	if err != nil {
@@ -92,6 +107,7 @@ func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*
 		_ = json.Unmarshal(b, &socialProfileLinks)
 	}
 
+	avatar := fmt.Sprintf("%s/core/v1beta/users/%s/avatar", s.instillCoreHost, dbUser.ID)
 	return &mgmtPB.User{
 		Name:       fmt.Sprintf("users/%s", id),
 		Uid:        &uid,
@@ -102,7 +118,7 @@ func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*
 			DisplayName:        &dbUser.DisplayName.String,
 			CompanyName:        &dbUser.CompanyName.String,
 			PublicEmail:        &dbUser.PublicEmail.String,
-			Avatar:             &dbUser.ProfileAvatar.String,
+			Avatar:             &avatar,
 			Bio:                &dbUser.Bio.String,
 			SocialProfileLinks: socialProfileLinks,
 		},
@@ -123,6 +139,7 @@ func (s *service) DBUser2PBAuthenticatedUser(ctx context.Context, dbUser *datamo
 		_ = json.Unmarshal(b, &socialProfileLinks)
 	}
 
+	avatar := fmt.Sprintf("%s/core/v1beta/users/%s/avatar", s.instillCoreHost, dbUser.ID)
 	return &mgmtPB.AuthenticatedUser{
 		Name:                   fmt.Sprintf("users/%s", id),
 		Uid:                    &uid,
@@ -138,7 +155,7 @@ func (s *service) DBUser2PBAuthenticatedUser(ctx context.Context, dbUser *datamo
 			DisplayName:        &dbUser.DisplayName.String,
 			CompanyName:        &dbUser.CompanyName.String,
 			PublicEmail:        &dbUser.PublicEmail.String,
-			Avatar:             &dbUser.ProfileAvatar.String,
+			Avatar:             &avatar,
 			Bio:                &dbUser.Bio.String,
 			SocialProfileLinks: socialProfileLinks,
 		},
@@ -282,6 +299,8 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 		_ = json.Unmarshal(b, &socialProfileLinks)
 	}
 
+	avatar := fmt.Sprintf("%s/core/v1beta/organizations/%s/avatar", s.instillCoreHost, dbOrg.ID)
+
 	return &mgmtPB.Organization{
 		Name:       fmt.Sprintf("organizations/%s", id),
 		Uid:        uid,
@@ -291,7 +310,7 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 		Profile: &mgmtPB.OrganizationProfile{
 			DisplayName:        &dbOrg.DisplayName.String,
 			PublicEmail:        &dbOrg.PublicEmail.String,
-			Avatar:             &dbOrg.ProfileAvatar.String,
+			Avatar:             &avatar,
 			Bio:                &dbOrg.Bio.String,
 			SocialProfileLinks: socialProfileLinks,
 		},

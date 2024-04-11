@@ -94,16 +94,18 @@ type service struct {
 	pipelinePublicServiceClient pipelinePB.PipelinePublicServiceClient
 	redisClient                 *redis.Client
 	aclClient                   *acl.ACLClient
+	instillCoreHost             string
 }
 
 // NewService initiates a service instance
-func NewService(r repository.Repository, rc *redis.Client, i repository.InfluxDB, p pipelinePB.PipelinePublicServiceClient, acl *acl.ACLClient) Service {
+func NewService(r repository.Repository, rc *redis.Client, i repository.InfluxDB, p pipelinePB.PipelinePublicServiceClient, acl *acl.ACLClient, h string) Service {
 	return &service{
 		repository:                  r,
 		influxDB:                    i,
 		pipelinePublicServiceClient: p,
 		redisClient:                 rc,
 		aclClient:                   acl,
+		instillCoreHost:             h,
 	}
 }
 
@@ -192,7 +194,7 @@ func (s *service) GetUser(ctx context.Context, ctxUserUID uuid.UUID, id string) 
 		return pbUser, nil
 	}
 
-	dbUser, err := s.repository.GetUser(ctx, id)
+	dbUser, err := s.repository.GetUser(ctx, id, false)
 	if err != nil {
 		return nil, fmt.Errorf("users/%s: %w", id, err)
 	}
@@ -215,7 +217,7 @@ func (s *service) GetUserAdmin(ctx context.Context, id string) (*mgmtPB.User, er
 	if pbUser := s.getUserFromCacheByID(ctx, id); pbUser != nil {
 		return pbUser, nil
 	}
-	dbUser, err := s.repository.GetUser(ctx, id)
+	dbUser, err := s.repository.GetUser(ctx, id, false)
 	if err != nil {
 		return nil, fmt.Errorf("users/%s: %w", id, err)
 	}
@@ -365,7 +367,7 @@ func (s *service) GetOrganization(ctx context.Context, ctxUserUID uuid.UUID, id 
 		return pbOrg, nil
 	}
 
-	dbOrg, err := s.repository.GetOrganization(ctx, id)
+	dbOrg, err := s.repository.GetOrganization(ctx, id, false)
 	if err != nil {
 		return nil, fmt.Errorf("organizations/%s: %w", id, err)
 	}
@@ -384,7 +386,7 @@ func (s *service) UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
-	oriOrg, err := s.repository.GetOrganization(ctx, id)
+	oriOrg, err := s.repository.GetOrganization(ctx, id, false)
 	if err != nil {
 		return nil, fmt.Errorf("organizations/%s: %w", id, err)
 	}
@@ -418,7 +420,7 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
-	org, err := s.repository.GetOrganization(ctx, id)
+	org, err := s.repository.GetOrganization(ctx, id, false)
 	if err != nil {
 		return fmt.Errorf("organizations/%s: %w", id, err)
 	}
@@ -509,7 +511,7 @@ func (s *service) GetOrganizationAdmin(ctx context.Context, id string) (*mgmtPB.
 		return pbOrg, nil
 	}
 
-	dbOrganization, err := s.repository.GetOrganization(ctx, id)
+	dbOrganization, err := s.repository.GetOrganization(ctx, id, false)
 	if err != nil {
 		return nil, fmt.Errorf("organizations/%s: %w", id, err)
 	}
@@ -701,7 +703,7 @@ func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID,
 		return nil, err
 	}
 
-	user, err := s.repository.GetUser(ctx, userID)
+	user, err := s.repository.GetUser(ctx, userID, false)
 	if err != nil {
 		return nil, fmt.Errorf("users/%s: %w", userID, err)
 	}
@@ -755,14 +757,14 @@ func (s *service) GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, u
 		return nil, err
 	}
 
-	user, err := s.repository.GetUser(ctx, userID)
+	user, err := s.repository.GetUser(ctx, userID, false)
 	if err != nil {
 		return nil, fmt.Errorf("users/%s: %w", userID, err)
 	}
 	if ctxUserUID != user.UID {
 		return nil, ErrNoPermission
 	}
-	org, err := s.repository.GetOrganization(ctx, orgID)
+	org, err := s.repository.GetOrganization(ctx, orgID, false)
 	if err != nil {
 		return nil, fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
@@ -804,14 +806,14 @@ func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 		return nil, err
 	}
 
-	user, err := s.repository.GetUser(ctx, userID)
+	user, err := s.repository.GetUser(ctx, userID, false)
 	if err != nil {
 		return nil, fmt.Errorf("users/%s: %w", userID, err)
 	}
 	if ctxUserUID != user.UID {
 		return nil, ErrNoPermission
 	}
-	org, err := s.repository.GetOrganization(ctx, orgID)
+	org, err := s.repository.GetOrganization(ctx, orgID, false)
 	if err != nil {
 		return nil, fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
@@ -862,14 +864,14 @@ func (s *service) DeleteUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 		return err
 	}
 
-	user, err := s.repository.GetUser(ctx, userID)
+	user, err := s.repository.GetUser(ctx, userID, false)
 	if err != nil {
 		return fmt.Errorf("users/%s: %w", userID, err)
 	}
 	if ctxUserUID != user.UID {
 		return ErrNoPermission
 	}
-	org, err := s.repository.GetOrganization(ctx, orgID)
+	org, err := s.repository.GetOrganization(ctx, orgID, false)
 	if err != nil {
 		return fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
@@ -884,7 +886,7 @@ func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uu
 
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
-	org, err := s.repository.GetOrganization(ctx, orgID)
+	org, err := s.repository.GetOrganization(ctx, orgID, false)
 	if err != nil {
 		return nil, fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
@@ -950,11 +952,11 @@ func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid
 		return nil, err
 	}
 
-	user, err := s.repository.GetUser(ctx, userID)
+	user, err := s.repository.GetUser(ctx, userID, false)
 	if err != nil {
 		return nil, fmt.Errorf("users/%s: %w", userID, err)
 	}
-	org, err := s.repository.GetOrganization(ctx, orgID)
+	org, err := s.repository.GetOrganization(ctx, orgID, false)
 	if err != nil {
 		return nil, fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
@@ -1015,11 +1017,11 @@ func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID u
 		return nil, err
 	}
 
-	user, err := s.repository.GetUser(ctx, userID)
+	user, err := s.repository.GetUser(ctx, userID, false)
 	if err != nil {
 		return nil, fmt.Errorf("users/%s: %w", userID, err)
 	}
-	org, err := s.repository.GetOrganization(ctx, orgID)
+	org, err := s.repository.GetOrganization(ctx, orgID, false)
 	if err != nil {
 		return nil, fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
@@ -1088,11 +1090,11 @@ func (s *service) DeleteOrganizationMembership(ctx context.Context, ctxUserUID u
 		return err
 	}
 
-	user, err := s.repository.GetUser(ctx, userID)
+	user, err := s.repository.GetUser(ctx, userID, false)
 	if err != nil {
 		return fmt.Errorf("users/%s: %w", userID, err)
 	}
-	org, err := s.repository.GetOrganization(ctx, orgID)
+	org, err := s.repository.GetOrganization(ctx, orgID, false)
 	if err != nil {
 		return fmt.Errorf("organizations/%s: %w", orgID, err)
 	}
