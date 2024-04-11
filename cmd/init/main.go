@@ -72,7 +72,7 @@ func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 		OnboardingStatus:       datamodel.OnboardingStatusInProgress,
 	}
 
-	user, err := r.GetUser(context.Background(), constant.DefaultUserID)
+	user, err := r.GetUser(context.Background(), constant.DefaultUserID, false)
 	// Default user already exists
 	if err == nil {
 		passwordHash, _, err := r.GetUserPasswordHash(ctx, user.UID)

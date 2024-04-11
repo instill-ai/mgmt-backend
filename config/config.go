@@ -45,8 +45,9 @@ type ServerConfig struct {
 		Host       string `koanf:"host"`
 		Port       int    `koanf:"port"`
 	}
-	Debug          bool   `koanf:"debug"`
-	DefaultUserUID string `koanf:"defaultuseruid"`
+	Debug           bool   `koanf:"debug"`
+	DefaultUserUID  string `koanf:"defaultuseruid"`
+	InstillCoreHost string `koanf:"instillcorehost"`
 }
 
 // TemporalConfig related to Temporal
