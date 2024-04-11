@@ -61,7 +61,7 @@ func TestRepository_CreateUser(t *testing.T) {
 	err := repo.CreateUser(ctx, user)
 	c.Check(err, qt.IsNil)
 
-	got, err := repo.GetUser(ctx, id)
+	got, err := repo.GetUser(ctx, id, false)
 	c.Check(err, qt.IsNil)
 	c.Check(got.CreateTime.After(t0), qt.IsTrue)
 	c.Check(got.UpdateTime.After(t0), qt.IsTrue)
