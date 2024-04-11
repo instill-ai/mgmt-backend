@@ -9,7 +9,7 @@ $$ language 'plpgsql';
 
 CREATE TABLE IF NOT EXISTS credit (
   uid         UUID          DEFAULT gen_random_uuid() PRIMARY KEY,
-  parent      VARCHAR(255)                            NOT NULL,
+  owner       VARCHAR(255)                            NOT NULL,
   amount      DECIMAL(16,8)                           NOT NULL,
   expire_time TIMESTAMPTZ,
   create_time TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS credit (
 );
 
 CREATE INDEX IF NOT EXISTS credit_index_remaining
-  ON credit (parent, (amount > 0), expire_time DESC)
+  ON credit (owner, (amount > 0), expire_time DESC)
   WHERE amount > 0;
 
 CREATE TRIGGER tg_update_time_credit

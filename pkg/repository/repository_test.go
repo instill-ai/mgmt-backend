@@ -80,14 +80,14 @@ func TestRepository_AddCredit(t *testing.T) {
 	repo := NewRepository(tx, cache)
 
 	credit := datamodel.Credit{
-		Parent: "users/muse-wombat",
+		Owner:  "users/muse-wombat",
 		Amount: 10.86850000,
 	}
 	err := repo.AddCredit(ctx, credit)
 	c.Check(err, qt.IsNil)
 
 	got := new(datamodel.Credit)
-	err = tx.Model(datamodel.Credit{}).Where("parent = ?", credit.Parent).First(got).Error
+	err = tx.Model(datamodel.Credit{}).Where("owner = ?", credit.Owner).First(got).Error
 	c.Check(err, qt.IsNil)
 	c.Check(got.UID, qt.Not(qt.Equals), uuid.UUID{})
 	c.Check(got.CreateTime.After(t0), qt.IsTrue)
@@ -99,13 +99,13 @@ func TestRepository_GetRemainingCredit(t *testing.T) {
 	ctx := context.Background()
 
 	cache, _ := redismock.NewClientMock()
-	parent := "users/boxing-wombat"
+	owner := "users/boxing-wombat"
 	c.Run("ok - no credit records", func(c *qt.C) {
 		tx := db.Begin()
 		c.Cleanup(func() { tx.Rollback() })
 		repo := NewRepository(tx, cache)
 
-		credit, err := repo.GetRemainingCredit(ctx, parent)
+		credit, err := repo.GetRemainingCredit(ctx, owner)
 		c.Check(err, qt.IsNil)
 		c.Check(credit, qt.Equals, float64(0))
 	})
@@ -118,20 +118,20 @@ func TestRepository_GetRemainingCredit(t *testing.T) {
 		now := time.Now().UTC()
 		onDB := []datamodel.Credit{
 			{
-				Parent: "users/shadow-wombat",
+				Owner:  "users/shadow-wombat",
 				Amount: 10,
 			},
 			{
-				Parent: parent,
+				Owner:  owner,
 				Amount: 20,
 				ExpireTime: sql.NullTime{
 					Time:  now.Add(-10 * time.Hour),
 					Valid: true,
 				},
 			},
-			{Parent: parent},
+			{Owner: owner},
 			{
-				Parent: parent,
+				Owner:  owner,
 				Amount: decimal,
 				ExpireTime: sql.NullTime{
 					Time:  now.Add(10 * time.Hour),
@@ -139,7 +139,7 @@ func TestRepository_GetRemainingCredit(t *testing.T) {
 				},
 			},
 			{
-				Parent: parent,
+				Owner:  owner,
 				Amount: 100,
 			},
 		}
@@ -149,7 +149,7 @@ func TestRepository_GetRemainingCredit(t *testing.T) {
 			c.Assert(err, qt.IsNil)
 		}
 
-		credit, err := repo.GetRemainingCredit(ctx, parent)
+		credit, err := repo.GetRemainingCredit(ctx, owner)
 		c.Check(err, qt.IsNil)
 		c.Check(credit, qt.Equals, decimal+100)
 	})
@@ -162,24 +162,24 @@ func TestRepository_SubtractCredit(t *testing.T) {
 
 	cache, _ := redismock.NewClientMock()
 
-	parent := "users/pinata-wombat"
+	owner := "users/pinata-wombat"
 
 	c.Run("nok - no records", func(c *qt.C) {
 		tx := db.Begin()
 		c.Cleanup(func() { tx.Rollback() })
 		repo := NewRepository(tx, cache)
 
-		err := repo.SubtractCredit(ctx, parent, 100)
+		err := repo.SubtractCredit(ctx, owner, 100)
 		c.Check(errors.Is(err, ErrNotEnoughCredit), qt.IsTrue)
 	})
 
 	existingCredit := []datamodel.Credit{
 		{ // different user
-			Parent: "users/shadow-wombat",
+			Owner:  "users/shadow-wombat",
 			Amount: 10,
 		},
 		{ // expired
-			Parent: parent,
+			Owner:  owner,
 			Amount: 20,
 			ExpireTime: sql.NullTime{
 				Time:  now.Add(-10 * time.Hour),
@@ -187,10 +187,10 @@ func TestRepository_SubtractCredit(t *testing.T) {
 			},
 		},
 		{ // used up
-			Parent: parent,
+			Owner: owner,
 		},
 		{ // with expiration
-			Parent: parent,
+			Owner:  owner,
 			Amount: 10,
 			ExpireTime: sql.NullTime{
 				Time:  now.Add(10 * time.Hour),
@@ -198,7 +198,7 @@ func TestRepository_SubtractCredit(t *testing.T) {
 			},
 		},
 		{ // without expiration
-			Parent: parent,
+			Owner:  owner,
 			Amount: 20,
 		},
 	}
@@ -212,10 +212,10 @@ func TestRepository_SubtractCredit(t *testing.T) {
 			err := repo.AddCredit(ctx, record)
 			c.Assert(err, qt.IsNil)
 		}
-		err := repo.SubtractCredit(ctx, parent, 100)
+		err := repo.SubtractCredit(ctx, owner, 100)
 		c.Check(errors.Is(err, ErrNotEnoughCredit), qt.IsTrue)
 
-		credit, err := repo.GetRemainingCredit(ctx, parent)
+		credit, err := repo.GetRemainingCredit(ctx, owner)
 		c.Check(err, qt.IsNil)
 		c.Check(credit, qt.Equals, float64(0))
 	})
@@ -229,15 +229,15 @@ func TestRepository_SubtractCredit(t *testing.T) {
 			err := repo.AddCredit(ctx, record)
 			c.Assert(err, qt.IsNil)
 		}
-		err := repo.SubtractCredit(ctx, parent, 25)
+		err := repo.SubtractCredit(ctx, owner, 25)
 		c.Check(err, qt.IsNil)
 
-		credit, err := repo.GetRemainingCredit(ctx, parent)
+		credit, err := repo.GetRemainingCredit(ctx, owner)
 		c.Check(err, qt.IsNil)
 		c.Check(credit, qt.Equals, float64(5))
 
 		// Check credit with expiration was used first.
-		q := tx.Model(datamodel.Credit{}).Where("parent = ?", parent).
+		q := tx.Model(datamodel.Credit{}).Where("owner = ?", owner).
 			Where("amount > 0").
 			Where("expire_time is null or expire_time > ?", time.Now())
 

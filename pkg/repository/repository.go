@@ -62,8 +62,8 @@ type Repository interface {
 	ListAllValidTokens(ctx context.Context) ([]datamodel.Token, error)
 
 	AddCredit(context.Context, datamodel.Credit) error
-	GetRemainingCredit(ctx context.Context, parent string) (float64, error)
-	SubtractCredit(ctx context.Context, parent string, amount float64) error
+	GetRemainingCredit(ctx context.Context, owner string) (float64, error)
+	SubtractCredit(ctx context.Context, owner string, amount float64) error
 }
 
 type repository struct {
@@ -472,15 +472,15 @@ type remainingCredit struct {
 	Total float64
 }
 
-func (r *repository) GetRemainingCredit(ctx context.Context, parent string) (float64, error) {
+func (r *repository) GetRemainingCredit(ctx context.Context, owner string) (float64, error) {
 	db := r.checkPinnedUser(ctx, r.db)
 
 	var result remainingCredit
 	q := db.Model(datamodel.Credit{}).Select("sum(amount) as total").
-		Where("parent = ?", parent).
+		Where("owner = ?", owner).
 		Where("amount > 0").
 		Where("expire_time is null or expire_time > ?", time.Now()).
-		Group("parent")
+		Group("owner")
 
 	if err := q.First(&result).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -493,15 +493,15 @@ func (r *repository) GetRemainingCredit(ctx context.Context, parent string) (flo
 }
 
 // ErrNotEnoughCredit will be returned when trying to subtract more credit than
-// what's available. The parent's remaining credit will be set to zero.
+// what's available. The owner's remaining credit will be set to zero.
 var ErrNotEnoughCredit = fmt.Errorf("not enough credit")
 
-func (r *repository) SubtractCredit(ctx context.Context, parent string, amount float64) error {
+func (r *repository) SubtractCredit(ctx context.Context, owner string, amount float64) error {
 	r.pinUser(ctx)
 	db := r.checkPinnedUser(ctx, r.db)
 
 	q := db.Model(datamodel.Credit{}).
-		Where("parent = ?", parent).
+		Where("owner = ?", owner).
 		Where("amount > 0").
 		Where("expire_time is null or expire_time > ?", time.Now()).
 		Order("expire_time asc")
