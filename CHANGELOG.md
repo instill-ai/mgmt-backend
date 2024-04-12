@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.14.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.13.0-beta...v0.14.0-beta) (2024-04-11)
+
+
+### Features
+
+* add credit datamodel and methods ([#194](https://github.com/instill-ai/mgmt-backend/issues/194)) ([a220469](https://github.com/instill-ai/mgmt-backend/commit/a2204690c479ebbf09b080d5a31771f4e1ea5a2d))
+* implement endpoints for user and organization avatars ([#195](https://github.com/instill-ai/mgmt-backend/issues/195)) ([28769fa](https://github.com/instill-ai/mgmt-backend/commit/28769fa667dc8e5b5577cf10e0efb0fdca79ba8e))
+
 ## [0.13.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.12.0-beta...v0.13.0-beta) (2024-03-28)
 
 
