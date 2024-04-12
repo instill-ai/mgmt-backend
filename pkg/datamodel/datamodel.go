@@ -119,7 +119,7 @@ func (o OnboardingStatus) Value() (driver.Value, error) {
 
 // Credit defines an amount of Instill Credit.
 type Credit struct {
-	Owner      string
+	OwnerUID   uuid.UUID
 	Amount     float64
 	ExpireTime sql.NullTime
 
