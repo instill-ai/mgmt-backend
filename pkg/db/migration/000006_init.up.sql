@@ -17,8 +17,7 @@ CREATE TABLE IF NOT EXISTS credit (
 );
 
 CREATE INDEX IF NOT EXISTS credit_index_remaining
-  ON credit (owner_uid, (amount > 0), expire_time DESC)
-  WHERE amount > 0;
+  ON credit (owner_uid, expire_time ASC);
 
 CREATE TRIGGER tg_update_time_credit
   BEFORE UPDATE ON credit
