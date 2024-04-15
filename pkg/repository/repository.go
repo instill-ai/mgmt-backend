@@ -595,7 +595,7 @@ func (r *repository) SubtractCredit(ctx context.Context, ownerUID uuid.UUID, amo
 }
 
 // Acquire an exclusive advisory lock for the provided key. This allows us to
-// lock a resource withouth having an associated row in the database, e.g.
+// lock a resource without having an associated row in the database, e.g.
 // locking the credit ledger of a user (where we fetch the records with a GROUP
 // BY statement, which doesn't allow for locks).
 func acquireTxLock(ctx context.Context, tx *gorm.DB, key string) error {
