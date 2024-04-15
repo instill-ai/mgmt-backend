@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"time"
 
 	"github.com/gofrs/uuid"
@@ -526,6 +527,10 @@ func (r *repository) SubtractCredit(ctx context.Context, ownerUID uuid.UUID, amo
 	db := r.checkPinnedUser(ctx, r.db).WithContext(ctx)
 
 	err := db.Transaction(func(tx *gorm.DB) error {
+		if err := acquireTxLock(ctx, tx, "credit:"+ownerUID.String()); err != nil {
+			return fmt.Errorf("cannot acquire lock: %w", err)
+		}
+
 		q := tx.Model(datamodel.Credit{}).
 			Select("sum(amount) as total", "expire_time").
 			Where("owner_uid = ?", ownerUID).
@@ -587,4 +592,18 @@ func (r *repository) SubtractCredit(ctx context.Context, ownerUID uuid.UUID, amo
 	}
 
 	return nil
+}
+
+// Acquire an exclusive advisory lock for the provided key. This allows us to
+// lock a resource withouth having an associated row in the database, e.g.
+// locking the credit ledger of a user (where we fetch the records with a GROUP
+// BY statement, which doesn't allow for locks).
+func acquireTxLock(ctx context.Context, tx *gorm.DB, key string) error {
+	hash := fnv.New64()
+	if _, err := hash.Write([]byte(key)); err != nil {
+		return err
+	}
+	hashedKey := int64(hash.Sum64())
+
+	return tx.WithContext(ctx).Exec("SELECT pg_advisory_xact_lock(?)", hashedKey).Error
 }

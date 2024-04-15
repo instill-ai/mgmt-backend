@@ -96,14 +96,64 @@ func TestRepository_AddCredit(t *testing.T) {
 func TestRepository_SubtractCredit(t *testing.T) {
 	c := qt.New(t)
 	ctx := context.Background()
-
 	cache, _ := redismock.NewClientMock()
-	tx := db.Begin()
-	c.Cleanup(func() { tx.Rollback() })
-	repo := NewRepository(tx, cache)
+	ownerUID := uuid.Must(uuid.NewV4())
 
-	err := repo.SubtractCredit(ctx, uuid.Must(uuid.NewV4()), -10)
-	c.Check(err, qt.ErrorMatches, "only positive amounts are allowed")
+	c.Run("nok - negative subtraction", func(c *qt.C) {
+		tx := db.Begin()
+		c.Cleanup(func() { tx.Rollback() })
+		repo := NewRepository(tx, cache)
+
+		err := repo.SubtractCredit(ctx, ownerUID, -10)
+		c.Check(err, qt.ErrorMatches, "only positive amounts are allowed")
+	})
+
+	c.Run("ok - subtract with lock", func(c *qt.C) {
+		// We need one committed record to assert the lock mechanism.
+		c.Cleanup(func() {
+			err := db.Exec("DELETE FROM credit WHERE owner_uid = ?", ownerUID).Error
+			c.Assert(err, qt.IsNil)
+		})
+		repo := NewRepository(db, cache)
+		err := repo.AddCredit(ctx, datamodel.Credit{
+			OwnerUID: ownerUID,
+			Amount:   100,
+		})
+		c.Assert(err, qt.IsNil)
+
+		tx1, tx2 := db.Begin(), db.Begin()
+		r1, r2 := NewRepository(tx1, cache), NewRepository(tx2, cache)
+		endOfTx1, endOfTx2 := tx1.Rollback, tx2.Rollback
+
+		err = r1.SubtractCredit(ctx, ownerUID, 80)
+		c.Check(err, qt.IsNil)
+
+		ch := make(chan struct{})
+		go func() {
+			_ = r2.SubtractCredit(ctx, ownerUID, 80)
+			c.Check(err, qt.IsNil)
+			endOfTx2()
+			close(ch)
+		}()
+
+		// until tx1 is closed, tx2 cannot acquire the lock
+		select {
+		case <-ch:
+			c.Fatal("cannot read from ch as tx1 is not over")
+		case <-time.After(100 * time.Millisecond):
+			c.Log("lock blocked until tx1 is over")
+		}
+
+		endOfTx1() // lock is released
+
+		select {
+		case _, ok := <-ch:
+			c.Check(ok, qt.IsFalse) // channel is closed
+			c.Log("tx1 is over, next lock can be acquired")
+		case <-time.After(100 * time.Millisecond):
+			c.Fatal("tx2 should be able to acquire the lock")
+		}
+	})
 }
 
 func TestRepository_CreditLedger(t *testing.T) {
