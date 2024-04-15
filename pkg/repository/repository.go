@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"time"
 
 	"github.com/gofrs/uuid"
@@ -62,8 +63,8 @@ type Repository interface {
 	ListAllValidTokens(ctx context.Context) ([]datamodel.Token, error)
 
 	AddCredit(context.Context, datamodel.Credit) error
-	GetRemainingCredit(ctx context.Context, owner string) (float64, error)
-	SubtractCredit(ctx context.Context, owner string, amount float64) error
+	GetRemainingCredit(ctx context.Context, ownerUID uuid.UUID) (float64, error)
+	SubtractCredit(ctx context.Context, ownerUID uuid.UUID, amount float64) error
 }
 
 type repository struct {
@@ -475,17 +476,21 @@ func (r *repository) AddCredit(ctx context.Context, credit datamodel.Credit) err
 
 type remainingCredit struct {
 	Total float64
+
+	// ExpireTime will be used for subtraction, when we group by this column.
+	ExpireTime sql.NullTime
 }
 
-func (r *repository) GetRemainingCredit(ctx context.Context, owner string) (float64, error) {
+// GetRemainingCredit is computed as the sum of entries of a owner that aren't
+// expired.
+func (r *repository) GetRemainingCredit(ctx context.Context, ownerUID uuid.UUID) (float64, error) {
 	db := r.checkPinnedUser(ctx, r.db)
 
 	var result remainingCredit
 	q := db.Model(datamodel.Credit{}).Select("sum(amount) as total").
-		Where("owner = ?", owner).
-		Where("amount > 0").
+		Where("owner_uid = ?", ownerUID).
 		Where("expire_time is null or expire_time > ?", time.Now()).
-		Group("owner")
+		Group("owner_uid")
 
 	if err := q.First(&result).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -501,50 +506,78 @@ func (r *repository) GetRemainingCredit(ctx context.Context, owner string) (floa
 // what's available. The owner's remaining credit will be set to zero.
 var ErrNotEnoughCredit = fmt.Errorf("not enough credit")
 
-func (r *repository) SubtractCredit(ctx context.Context, owner string, amount float64) error {
-	r.pinUser(ctx)
-	db := r.checkPinnedUser(ctx, r.db)
-
-	q := db.Model(datamodel.Credit{}).
-		Where("owner = ?", owner).
-		Where("amount > 0").
-		Where("expire_time is null or expire_time > ?", time.Now()).
-		Order("expire_time asc")
-
-	rows, err := q.Rows()
-	if err != nil {
-		return err
+// Because entries might expire (users get free monthly credit), when
+// subtracting credit we need to:
+// 1. Cancel out credit that has an expiration date. The negative entry will
+// have an expiration date.
+// 2. If there's remaining credit to be subtracted, cancel out non-expiring
+// credit.
+//
+// That way, when computing the remaining credit we'll only take into account
+// credit that doesn't expire or credit within the period.
+// If the number of entries grows too big over time, this won't be as efficient
+// as keeping a separate table with the balance. For now, this is simple than
+// recomputing the balance when an entry expires.
+func (r *repository) SubtractCredit(ctx context.Context, ownerUID uuid.UUID, amount float64) error {
+	if amount <= 0 {
+		return fmt.Errorf("only positive amounts are allowed")
 	}
-	defer rows.Close()
 
-	updatedRows := make([]*datamodel.Credit, 0)
-	for rows.Next() {
-		credit := new(datamodel.Credit)
-		if err := db.ScanRows(rows, credit); err != nil {
+	r.pinUser(ctx)
+	db := r.checkPinnedUser(ctx, r.db).WithContext(ctx)
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		if err := acquireTxLock(ctx, tx, "credit:"+ownerUID.String()); err != nil {
+			return fmt.Errorf("cannot acquire lock: %w", err)
+		}
+
+		q := tx.Model(datamodel.Credit{}).
+			Select("sum(amount) as total", "expire_time").
+			Where("owner_uid = ?", ownerUID).
+			Where("expire_time is null or expire_time > ?", time.Now()).
+			Group("expire_time")
+
+		rows, err := q.Rows()
+		if err != nil {
 			return err
 		}
+		defer rows.Close()
 
-		updatedRows = append(updatedRows, credit)
-		diff := credit.Amount - amount
-		if diff >= 0 { // credit is enough.
-			updatedRows = append(updatedRows, credit)
-			credit.Amount = diff
-			amount = 0
+		// Instead of entering a single negative amount, we cancel first the
+		// credit entries that have an expiration date. The negative entries
+		// will have, in this case, the same expiration date as the positive
+		// one.
+		entriesToCancel := []*datamodel.Credit{}
+		for rows.Next() {
+			remaining := new(remainingCredit)
+			if err := tx.ScanRows(rows, remaining); err != nil {
+				return err
+			}
 
-			rows.Close()
-			break
+			entry := &datamodel.Credit{
+				OwnerUID:   ownerUID,
+				ExpireTime: remaining.ExpireTime,
+			}
+			entriesToCancel = append(entriesToCancel, entry)
+
+			diff := remaining.Total - amount
+			if diff >= 0 { // credit is enough.
+				entry.Amount = -amount
+				amount = 0
+
+				rows.Close()
+				break
+			}
+
+			// set credit to zero and continue subtracting the remaining amount.
+			entry.Amount = -remaining.Total
+			amount = -diff
+
 		}
 
-		// set credit to zero and continue subtracting the remaining amount.
-		credit.Amount = 0
-		amount = -diff
-	}
-
-	err = db.Transaction(func(tx *gorm.DB) error {
-		for _, row := range updatedRows {
-			result := tx.Model(datamodel.Credit{}).Where("uid = ?", row.UID).Update("amount", row.Amount)
-			if result.Error != nil {
-				return result.Error
+		for _, entry := range entriesToCancel {
+			if err := tx.Create(entry).Error; err != nil {
+				return err
 			}
 		}
 
@@ -559,4 +592,18 @@ func (r *repository) SubtractCredit(ctx context.Context, owner string, amount fl
 	}
 
 	return nil
+}
+
+// Acquire an exclusive advisory lock for the provided key. This allows us to
+// lock a resource without having an associated row in the database, e.g.
+// locking the credit ledger of a user (where we fetch the records with a GROUP
+// BY statement, which doesn't allow for locks).
+func acquireTxLock(ctx context.Context, tx *gorm.DB, key string) error {
+	hash := fnv.New64()
+	if _, err := hash.Write([]byte(key)); err != nil {
+		return err
+	}
+	hashedKey := int64(hash.Sum64())
+
+	return tx.WithContext(ctx).Exec("SELECT pg_advisory_xact_lock(?)", hashedKey).Error
 }

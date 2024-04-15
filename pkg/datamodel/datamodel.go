@@ -117,9 +117,11 @@ func (o OnboardingStatus) Value() (driver.Value, error) {
 	return mgmtPB.OnboardingStatus(o).String(), nil
 }
 
-// Credit defines an amount of Instill Credit.
+// Credit defines a positive or negative amount of Instill Credit. The database
+// table adds as a ledger for credit entries. It should only take insertions,
+// no updates.
 type Credit struct {
-	Owner      string
+	OwnerUID   uuid.UUID
 	Amount     float64
 	ExpireTime sql.NullTime
 
