@@ -72,53 +72,6 @@ func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.F
 	return ownerUID, ownerID, ownerType, ownerQueryString, filter, nil
 }
 
-func (s *service) checkConnectorOwnership(ctx context.Context, filter filtering.Filter, owner *mgmtPB.User) (*string, string, string, string, filtering.Filter, error) {
-	ownerID := owner.Id
-	ownerUID := owner.Uid
-	ownerType := "users"
-	ownerQueryString := ""
-
-	if len(filter.CheckedExpr.GetExpr().GetCallExpr().GetArgs()) > 0 {
-
-		ownerName, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, false)
-
-		if ownerName != "" {
-
-			if strings.HasPrefix(ownerName, "users") {
-				if ownerName != fmt.Sprintf("users/%s", owner.Id) {
-					return nil, "", "", "", filter, ErrNoPermission
-				}
-				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.ConnectorOwnerUID, *owner.Uid, false)
-			} else if strings.HasPrefix(ownerName, "organizations") {
-				id, err := resource.GetRscNameID(ownerName)
-				if err != nil {
-					return nil, "", "", "", filter, err
-				}
-				org, err := s.GetOrganizationAdmin(ctx, id)
-				if err != nil {
-					return nil, "", "", "", filter, err
-				}
-				granted, err := s.GetACLClient().CheckPermission(ctx, "organization", uuid.FromStringOrNil(org.Uid), "user", uuid.FromStringOrNil(owner.GetUid()), "", "member")
-				if err != nil {
-					return nil, "", "", "", filter, err
-				}
-				if !granted {
-					return nil, "", "", "", filter, ErrNoPermission
-				}
-				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.ConnectorOwnerUID, org.Uid, false)
-				ownerUID = &org.Uid
-			} else {
-				return nil, "", "", "", filter, fmt.Errorf("owner_name namepsace format error")
-			}
-		} else {
-			ownerQueryString = fmt.Sprintf("r[\"connector_owner_uid\"] == \"%v\")", *owner.Uid)
-		}
-	} else {
-		ownerQueryString = fmt.Sprintf("|> filter(fn: (r) => r[\"owner_uid\"] == \"%v\")", *owner.Uid)
-	}
-	return ownerUID, ownerID, ownerType, ownerQueryString, filter, nil
-}
-
 func (s *service) pipelineUIDLookup(ctx context.Context, ownerID string, ownerType string, filter filtering.Filter, owner *mgmtPB.User) (filtering.Filter, error) {
 
 	ctx = InjectOwnerToContext(ctx, *owner.Uid)
@@ -164,28 +117,6 @@ func (s *service) pipelineUIDLookup(ctx context.Context, ownerID string, ownerTy
 						repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, constant.PipelineUID, respPipelineRelease.Release.Uid, false)
 					}
 				}
-			}
-		}
-	}
-
-	return filter, nil
-}
-
-func (s *service) connectorUIDLookup(ctx context.Context, filter filtering.Filter, owner *mgmtPB.User) (filtering.Filter, error) {
-
-	ctx = InjectOwnerToContext(ctx, *owner.Uid)
-
-	// lookup connector uid
-	if len(filter.CheckedExpr.GetExpr().GetCallExpr().GetArgs()) > 0 {
-		connectorID, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.ConnectorID, false)
-
-		if connectorID != "" {
-			if respConnector, err := s.pipelinePublicServiceClient.GetUserConnector(ctx, &pipelinePB.GetUserConnectorRequest{
-				Name: fmt.Sprintf("%s/connectors/%s", owner.Name, connectorID),
-			}); err != nil {
-				return filter, err
-			} else {
-				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.ConnectorID, constant.ConnectorUID, respConnector.Connector.Uid, false)
 			}
 		}
 	}
@@ -251,74 +182,4 @@ func (s *service) ListPipelineTriggerChartRecords(ctx context.Context, owner *mg
 	}
 
 	return pipelineTriggerChartRecords, nil
-}
-
-func (s *service) ListConnectorExecuteRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteRecord, int64, string, error) {
-
-	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkConnectorOwnership(ctx, filter, owner)
-	if err != nil {
-		return []*mgmtPB.ConnectorExecuteRecord{}, 0, "", err
-	}
-
-	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner)
-	if err != nil {
-		return []*mgmtPB.ConnectorExecuteRecord{}, 0, "", nil
-	}
-
-	filter, err = s.connectorUIDLookup(ctx, filter, owner)
-	if err != nil {
-		return []*mgmtPB.ConnectorExecuteRecord{}, 0, "", nil
-	}
-
-	connectorExecuteRecords, ps, pt, err := s.influxDB.QueryConnectorExecuteRecords(ctx, *ownerUID, ownerQueryString, pageSize, pageToken, filter)
-	if err != nil {
-		return nil, 0, "", err
-	}
-
-	return connectorExecuteRecords, ps, pt, nil
-}
-
-func (s *service) ListConnectorExecuteTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteTableRecord, int64, string, error) {
-
-	ownerUID, _, _, ownerQueryString, filter, err := s.checkConnectorOwnership(ctx, filter, owner)
-	if err != nil {
-		return []*mgmtPB.ConnectorExecuteTableRecord{}, 0, "", err
-	}
-
-	filter, err = s.connectorUIDLookup(ctx, filter, owner)
-	if err != nil {
-		return []*mgmtPB.ConnectorExecuteTableRecord{}, 0, "", nil
-	}
-
-	connectorExecuteTableRecords, ps, pt, err := s.influxDB.QueryConnectorExecuteTableRecords(ctx, *ownerUID, ownerQueryString, pageSize, pageToken, filter)
-	if err != nil {
-		return nil, 0, "", err
-	}
-
-	return connectorExecuteTableRecords, ps, pt, nil
-}
-
-func (s *service) ListConnectorExecuteChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteChartRecord, error) {
-
-	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkConnectorOwnership(ctx, filter, owner)
-	if err != nil {
-		return []*mgmtPB.ConnectorExecuteChartRecord{}, err
-	}
-
-	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner)
-	if err != nil {
-		return []*mgmtPB.ConnectorExecuteChartRecord{}, nil
-	}
-
-	filter, err = s.connectorUIDLookup(ctx, filter, owner)
-	if err != nil {
-		return []*mgmtPB.ConnectorExecuteChartRecord{}, nil
-	}
-
-	connectorExecuteChartRecords, err := s.influxDB.QueryConnectorExecuteChartRecords(ctx, *ownerUID, ownerQueryString, aggregationWindow, filter)
-	if err != nil {
-		return nil, err
-	}
-
-	return connectorExecuteChartRecords, nil
 }

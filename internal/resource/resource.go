@@ -50,12 +50,3 @@ func GetRscPermalinkUID(path string) (uuid.UUID, error) {
 func UserUIDToUserPermalink(userUID uuid.UUID) string {
 	return fmt.Sprintf("users/%s", userUID.String())
 }
-
-func ConvertConnectorToResourceName(connectorName string) string {
-
-	connectorTypeStr := "connectors"
-
-	resourceName := fmt.Sprintf("resources/%s/types/%s", connectorName, connectorTypeStr)
-
-	return resourceName
-}
