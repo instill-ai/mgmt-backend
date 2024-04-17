@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -237,22 +238,6 @@ func main() {
 		handler.NewPublicHandler(service, usg, config.Config.Server.Usage.Enabled),
 	)
 
-	privateServeMux := runtime.NewServeMux(
-		runtime.WithForwardResponseOption(middleware.HTTPResponseModifier),
-		runtime.WithIncomingHeaderMatcher(middleware.CustomMatcher),
-		runtime.WithErrorHandler(middleware.ErrorHandler),
-		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
-			MarshalOptions: protojson.MarshalOptions{
-				UseProtoNames:   true,
-				EmitUnpopulated: true,
-				UseEnumNumbers:  false,
-			},
-			UnmarshalOptions: protojson.UnmarshalOptions{
-				DiscardUnknown: true,
-			},
-		}),
-	)
-
 	publicServeMux := runtime.NewServeMux(
 		runtime.WithIncomingHeaderMatcher(middleware.CustomMatcher),
 		runtime.WithForwardResponseOption(middleware.HTTPResponseModifier),
@@ -283,18 +268,8 @@ func main() {
 		dialOpts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(constant.MaxPayloadSize), grpc.MaxCallSendMsgSize(constant.MaxPayloadSize))}
 	}
 
-	if err := mgmtPB.RegisterMgmtPrivateServiceHandlerFromEndpoint(ctx, privateServeMux, fmt.Sprintf(":%v", config.Config.Server.PrivatePort), dialOpts); err != nil {
-		logger.Fatal(err.Error())
-	}
-
 	if err := mgmtPB.RegisterMgmtPublicServiceHandlerFromEndpoint(ctx, publicServeMux, fmt.Sprintf(":%v", config.Config.Server.PublicPort), dialOpts); err != nil {
 		logger.Fatal(err.Error())
-	}
-
-	privateHTTPServer := &http.Server{
-		Addr:      fmt.Sprintf(":%v", config.Config.Server.PrivatePort),
-		Handler:   grpcHandlerFunc(privateGrpcS, privateServeMux),
-		TLSConfig: tlsConfig,
 	}
 
 	publicHTTPServer := &http.Server{
@@ -306,29 +281,31 @@ func main() {
 	// Wait for interrupt signal to gracefully shutdown the server with a timeout of 5 seconds.
 	quitSig := make(chan os.Signal, 1)
 	errSig := make(chan error)
-	if config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "" {
-		go func() {
-			if err := privateHTTPServer.ListenAndServeTLS(config.Config.Server.HTTPS.Cert, config.Config.Server.HTTPS.Key); err != nil {
-				errSig <- err
-			}
-		}()
-		go func() {
-			if err := publicHTTPServer.ListenAndServeTLS(config.Config.Server.HTTPS.Cert, config.Config.Server.HTTPS.Key); err != nil {
-				errSig <- err
-			}
-		}()
-	} else {
-		go func() {
-			if err := privateHTTPServer.ListenAndServe(); err != nil {
-				errSig <- err
-			}
-		}()
-		go func() {
-			if err := publicHTTPServer.ListenAndServe(); err != nil {
-				errSig <- err
-			}
-		}()
-	}
+
+	go func() {
+		privatePort := fmt.Sprintf(":%d", config.Config.Server.PrivatePort)
+		privateListener, err := net.Listen("tcp", privatePort)
+		if err != nil {
+			errSig <- fmt.Errorf("failed to listen: %w", err)
+		}
+		if err := privateGrpcS.Serve(privateListener); err != nil {
+			errSig <- fmt.Errorf("failed to serve: %w", err)
+		}
+	}()
+
+	go func() {
+		var err error
+		switch {
+		case config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "":
+			err = publicHTTPServer.ListenAndServeTLS(config.Config.Server.HTTPS.Cert, config.Config.Server.HTTPS.Key)
+		default:
+			err = publicHTTPServer.ListenAndServe()
+		}
+		if err != nil {
+			errSig <- err
+		}
+	}()
+
 	span.End()
 	logger.Info("gRPC servers are running.")
 
