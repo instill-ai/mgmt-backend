@@ -223,7 +223,6 @@ export function CheckPublicDeleteToken(header) {
 export function CheckPublicMetrics(header) {
 
   let pipeline_id = randomString(10)
-  let connector_id = randomString(10)
 
   client.connect(constant.mgmtPublicGRPCHost, {
     plaintext: true
@@ -290,71 +289,6 @@ export function CheckPublicMetrics(header) {
     }, header), {
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecords with filter status': (r) => r && r.status == grpc.StatusOK,
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecords with filter response pipelineTriggerChartRecords lenght is 0': (r) => r && r.message.pipelineTriggerChartRecords.length === 0,
-    });
-
-  });
-
-  group(`Management Public API: List Connector Execute Records`, () => {
-
-    let emptyConnectorExecuteRecordResponse = {
-      "connectorExecuteRecords": [],
-      "nextPageToken": "",
-      "totalSize": 0
-    }
-
-    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteRecords', {}, header), {
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteRecords status': (r) => r && r.status == grpc.StatusOK,
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteRecords response has connectorExecuteRecords': (r) => r && r.message.connectorExecuteRecords !== undefined,
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteRecords response has total_size': (r) => r && r.message.totalSize !== undefined,
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteRecords response has next_page_token': (r) => r && r.message.nextPageToken !== undefined,
-    });
-    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteRecords', {
-      filter: `connector_id="${connector_id}" AND status=STATUS_COMPLETED`,
-    }, header), {
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteRecords with filter status': (r) => r && r.status == grpc.StatusOK,
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteRecords with filter response connectorExecuteRecords length is 0': (r) => r && r.message.connectorExecuteRecords.length === 0,
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteRecords with filter response total_size is 0': (r) => r && r.message.totalSize === emptyConnectorExecuteRecordResponse.totalSize,
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteRecords with filter response next_page_token is empty': (r) => r && r.message.nextPageToken === emptyConnectorExecuteRecordResponse.nextPageToken,
-    });
-
-  });
-
-  group(`Management Public API: List Connector Execute Table Records`, () => {
-
-    let emptyConnectorExecuteTableRecordResponse = {
-      "connectorExecuteTableRecords": [],
-      "nextPageToken": "",
-      "totalSize": 0
-    }
-
-    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteTableRecords', {}, header), {
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteTableRecords status': (r) => r && r.status == grpc.StatusOK,
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteTableRecords response has connectorExecuteTableRecords': (r) => r && r.message.connectorExecuteTableRecords !== undefined,
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteTableRecords response has total_size': (r) => r && r.message.totalSize !== undefined,
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteTableRecords response has next_page_token': (r) => r && r.message.nextPageToken !== undefined,
-    });
-    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteTableRecords', {
-      filter: `connector_id="${connector_id}"`,
-    }, header), {
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteTableRecords with filter status': (r) => r && r.status == grpc.StatusOK,
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteTableRecords with filter response connectorExecuteTableRecords length is 0': (r) => r && r.message.connectorExecuteTableRecords.length === 0,
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteTableRecords with filter response total_size is 0': (r) => r && r.message.totalSize === emptyConnectorExecuteTableRecordResponse.totalSize,
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteTableRecords with filter response next_page_token is empty': (r) => r && r.message.nextPageToken === emptyConnectorExecuteTableRecordResponse.nextPageToken,
-    });
-
-  });
-
-  group(`Management Public API: List Connector Execute Chart Records`, () => {
-
-    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteChartRecords', {}, header), {
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteChartRecords status': (r) => r && r.status == grpc.StatusOK,
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteChartRecords response has connectorExecuteChartRecords': (r) => r && r.message.connectorExecuteChartRecords !== undefined,
-    });
-    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteChartRecords', {
-      filter: `connector_id="${connector_id}" AND status=STATUS_COMPLETED`,
-    }, header), {
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteChartRecords with filter status': (r) => r && r.status == grpc.StatusOK,
-      'core.mgmt.v1beta.MgmtPublicService/ListConnectorExecuteChartRecords with filter response connectorExecuteChartRecords lenght is 0': (r) => r && r.message.connectorExecuteChartRecords.length === 0,
     });
 
   });

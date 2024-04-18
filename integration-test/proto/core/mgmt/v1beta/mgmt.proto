@@ -161,6 +161,17 @@ message AuthenticatedUser {
   UserProfile profile = 18;
 }
 
+// Owner is a wrapper for User and Organization, used to embed owner information in other resources.
+message Owner {
+  // The owner, which can be either a User or an Organization.
+  oneof owner {
+    // User.
+    core.mgmt.v1beta.User user = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+    // Organization.
+    core.mgmt.v1beta.Organization organization = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+}
+
 // User describes an individual that interacts with Instill AI. It doesn't
 // contain any private information about the user.
 message User {
@@ -552,6 +563,43 @@ message ValidateTokenRequest {}
 message ValidateTokenResponse {
   // If token is valid, UUID of the user that owns it.
   string user_uid = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// GetRemainingCreditRequest represents a request to get the remaining credit
+// of a user or organization.
+message GetRemainingCreditRequest {
+  // The user or organization to which the credit belongs.
+  // Format: `{[users|organizations]}/{id}`.
+  string owner = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+      field_configuration: {path_param_name: "owner_name"}
+    }
+  ];
+}
+
+// GetRemainingCreditResponse contains the remaining credit of a user or
+// organization.
+message GetRemainingCreditResponse {
+  // The requested credit.
+  float amount = 1;
+}
+
+// SubtractCreditRequest represents a request to subtract Instill Credit from
+// an account.
+message SubtractCreditRequest {
+  // The user or organization to which the credit belongs.
+  // Format: `{[users|organizations]}/{id}`.
+  string owner = 1 [(google.api.field_behavior) = REQUIRED];
+  // The credit amount to subtract.
+  float amount = 2;
+}
+
+// SubtractCreditResponse contains the remaining credit of an account after the
+// subtraction.
+message SubtractCreditResponse {
+  // The remaining credit.
+  float amount = 1;
 }
 
 // AuthTokenIssuerRequest represents a request to fetch the issuer details of a
@@ -956,18 +1004,44 @@ message DeleteOrganizationMembershipResponse {}
 
 // StripeSubscriptionDetail describes the details of a subscription in Stripe.
 message StripeSubscriptionDetail {
-  // Customer ID associated with the subscription.
-  string customer_id = 1;
+  // Enumerates the status types for the user's subscription.
+  enum Status {
+    // Unspecified status.
+    STATUS_UNSPECIFIED = 0;
+    // Incomplete.
+    STATUS_INCOMPLETE = 1;
+    // Incomplete Expired.
+    STATUS_INCOMPLETE_EXPIRED = 2;
+    // Trialing.
+    STATUS_TRIALING = 3;
+    // Active.
+    STATUS_ACTIVE = 4;
+    // Past due.
+    STATUS_PAST_DUE = 5;
+    // Canceled.
+    STATUS_CANCELED = 6;
+    // Unpaid.
+    STATUS_UNPAID = 7;
+    // Paused.
+    STATUS_PAUSED = 8;
+  }
+
   // Product name associated with the subscription in Stripe.
-  string product_name = 2;
+  string product_name = 1;
   // Unique identifier for the subscription.
-  string id = 3;
+  string id = 2;
   // Identifier for the specific item within the subscription.
-  string item_id = 4;
+  string item_id = 3;
   // Price of the subscription.
-  float price = 5;
+  float price = 4;
   // Optional timestamp indicating when the subscription was canceled, if applicable.
-  optional int32 canceled_at = 6;
+  optional int32 canceled_at = 5;
+  // Optional timestamp indicating when the trial ended, if applicable.
+  optional int32 trial_end = 6;
+  // Status of the subscription.
+  Status status = 7;
+  // Description of the subscription.
+  string description = 8;
 }
 
 // UserSubscription details describe the plan (i.e., features) a user has access to.

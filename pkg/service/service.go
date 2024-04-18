@@ -70,9 +70,6 @@ type Service interface {
 	ListPipelineTriggerRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerRecord, int64, string, error)
 	ListPipelineTriggerTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerTableRecord, int64, string, error)
 	ListPipelineTriggerChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerChartRecord, error)
-	ListConnectorExecuteRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteRecord, int64, string, error)
-	ListConnectorExecuteTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteTableRecord, int64, string, error)
-	ListConnectorExecuteChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.ConnectorExecuteChartRecord, error)
 
 	DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*mgmtPB.User, error)
 	DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtPB.User, error)
@@ -459,32 +456,6 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 		}
 	}
 
-	pageToken = ""
-	connectorIDList := []string{}
-	for {
-		// TODO: optimize this cascade delete
-		resp, err := s.pipelinePublicServiceClient.ListOrganizationConnectors(InjectOwnerToContext(ctx, ctxUserUID.String()),
-			&pipelinePB.ListOrganizationConnectorsRequest{
-				Parent:    fmt.Sprintf("organizations/%s", id),
-				PageToken: &pageToken})
-		if err != nil {
-			break
-		}
-		for _, connector := range resp.Connectors {
-			connectorIDList = append(connectorIDList, connector.Id)
-		}
-		pageToken = resp.NextPageToken
-		if pageToken == "" {
-			break
-		}
-	}
-
-	for _, connectorID := range connectorIDList {
-		_, _ = s.pipelinePublicServiceClient.DeleteOrganizationConnector(InjectOwnerToContext(ctx, ctxUserUID.String()),
-			&pipelinePB.DeleteOrganizationConnectorRequest{
-				Name: fmt.Sprintf("organizations/%s/connectors/%s", id, connectorID),
-			})
-	}
 	for _, pipelineID := range pipelineIDList {
 		_, _ = s.pipelinePublicServiceClient.DeleteOrganizationPipeline(InjectOwnerToContext(ctx, ctxUserUID.String()),
 			&pipelinePB.DeleteOrganizationPipelineRequest{
