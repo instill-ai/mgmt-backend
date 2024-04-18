@@ -38,12 +38,11 @@ export default function (header) {
    */
 
   if (!constant.apiGatewayMode) {
-
     // ======== Private API
     mgmtPrivate.CheckPrivateListUsersAdmin();
     mgmtPrivate.CheckPrivateGetUserAdmin();
     mgmtPrivate.CheckPrivateLookUpUserAdmin();
-
+    mgmtPrivate.CheckPrivateSubtractCredit();
   } else {
     // ======== Public API with instill-user-uid
     mgmtPublicWithJwt.CheckPublicGetUser();
@@ -56,6 +55,7 @@ export default function (header) {
     mgmtPublic.CheckPublicListTokens(header);
     mgmtPublic.CheckPublicGetToken(header);
     mgmtPublic.CheckPublicDeleteToken(header);
+    mgmtPublic.CheckPublicGetRemainingCredit(header);
     mgmtPublic.CheckPublicMetrics(header);
   }
 

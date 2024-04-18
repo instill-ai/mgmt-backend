@@ -140,3 +140,33 @@ export function CheckPrivateLookUpUserAdmin() {
 
   client.close()
 }
+
+export function CheckPrivateSubtractCredit() {
+  client.connect(constant.mgmtPrivateGRPCHost, {
+    plaintext: true
+  });
+
+  group(`Management Private API: Subtract credit`, () => {
+
+    check(client.invoke('core.mgmt.v1beta.MgmtPrivateService/SubtractCredit', {
+      owner: `users/${constant.defaultUser.id}`,
+      amount: 0.000145,
+    }), {
+      'core.mgmt.v1beta.MgmtPrivateService/SubtractCredit status Unimplemented': (r) => r && r.status == grpc.StatusUnimplemented,
+    });
+
+  });
+
+  var nonExistID = "non-exist";
+  group(`Management Private API: Get non-exist user`, () => {
+
+    check(client.invoke('core.mgmt.v1beta.MgmtPrivateService/GetUserAdmin', {
+      name: "users/" + nonExistID
+    }), {
+      'core.mgmt.v1beta.MgmtPrivateService/GetUserAdmin status StatusNotFound': (r) => r && r.status == grpc.StatusNotFound,
+    });
+
+  });
+
+  client.close();
+}

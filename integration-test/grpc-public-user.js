@@ -220,6 +220,24 @@ export function CheckPublicDeleteToken(header) {
   client.close();
 }
 
+export function CheckPublicGetRemainingCredit(header) {
+  client.connect(constant.mgmtPublicGRPCHost, {
+    plaintext: true
+  });
+
+  group(`Management Public API: Get remaining credit`, () => {
+
+    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/GetRemainingCredit', {
+      owner: `users/${constant.defaultUser.id}`,
+    }, header), {
+      'core.mgmt.v1beta.MgmtPublicService/GetRemainingCredit status Unimplemented': (r) => r && r.status == grpc.StatusUnimplemented,
+    });
+
+  });
+
+  client.close();
+}
+
 export function CheckPublicMetrics(header) {
 
   let pipeline_id = randomString(10)

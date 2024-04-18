@@ -49,9 +49,9 @@ export default function (header) {
     mgmtPublic.CheckPublicListTokens(header);
     mgmtPublic.CheckPublicGetToken(header);
     mgmtPublic.CheckPublicDeleteToken(header);
+    mgmtPublic.CheckPublicGetRemainingCredit(header);
     mgmtPublic.CheckPublicMetrics(header);
   }
-
 }
 
 export function teardown(data) {
