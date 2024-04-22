@@ -246,6 +246,25 @@ export function CheckPublicDeleteToken(header) {
   });
 }
 
+export function CheckPublicGetRemainingCredit(header) {
+  group(`Management Public API: Get remaining credit`, () => {
+    check(
+      http.request(
+        "GET",
+        `${constant.mgmtPublicHost}/users/${constant.defaultUser.id}/credit`,
+        JSON.stringify({}),
+        header
+      ),
+      {
+        // Although grpc-gateway returns 501 unimplemented, in the public
+        // gateway the endpoint shouldn't be defined, yielding a 404.
+        [`GET /${constant.mgmtVersion}/users/${constant.defaultUser.id}/credit response status 404`]:
+          (r) => r.status === 404,
+      }
+    );
+  });
+}
+
 export function CheckPublicMetrics(header) {
   group(`Management Public API: List Pipeline Trigger Records`, () => {
 

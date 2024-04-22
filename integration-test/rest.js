@@ -1,7 +1,6 @@
 import http from "k6/http";
 import { check } from "k6";
 import * as constant from "./const.js"
-import * as mgmtPrivate from "./rest-private-user.js";
 import * as mgmtPublic from "./rest-public-user.js"
 import * as mgmtPublicWithJwt from "./rest-public-user-with-jwt.js"
 
@@ -38,14 +37,7 @@ export default function (header) {
    * Management API - API CALLS
    */
 
-  if (!constant.apiGatewayMode) {
-
-    // ======== Private API
-    mgmtPrivate.CheckPrivateListUsersAdmin();
-    mgmtPrivate.CheckPrivateGetUserAdmin();
-    mgmtPrivate.CheckPrivateLookUpUserAdmin();
-
-  } else {
+  if (constant.apiGatewayMode) {
     // ======== Public API with instill-user-uid
     mgmtPublicWithJwt.CheckPublicGetUser();
     mgmtPublicWithJwt.CheckPublicPatchAuthenticatedUser();
@@ -57,9 +49,9 @@ export default function (header) {
     mgmtPublic.CheckPublicListTokens(header);
     mgmtPublic.CheckPublicGetToken(header);
     mgmtPublic.CheckPublicDeleteToken(header);
+    mgmtPublic.CheckPublicGetRemainingCredit(header);
     mgmtPublic.CheckPublicMetrics(header);
   }
-
 }
 
 export function teardown(data) {
