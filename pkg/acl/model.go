@@ -12,15 +12,17 @@ package acl
 // type organization
 //   relations
 //     define owner: [user]
-//     define member: [user] or owner
+//     define admin: [user] or owner
+//     define member: [user] or admin or owner
 //     define pending_owner: [user]
+//     define pending_admin: [user]
 //     define pending_member: [user]
 //     define can_create_organization: owner
 //     define can_delete_organization: owner
-//     define can_get_membership: owner or member
-//     define can_remove_membership: owner
-//     define can_set_membership: owner
-//     define can_update_organization: owner
+//     define can_get_membership: owner or admin or member
+//     define can_remove_membership: owner or admin
+//     define can_set_membership: owner or admin
+//     define can_update_organization: owner or admin
 
 // type pipeline
 //   relations
@@ -68,8 +70,110 @@ const ACLModel = `
 	  {
 		"type": "organization",
 		"relations": {
-		  "owner": {
-			"this": {}
+		  "admin": {
+			"union": {
+			  "child": [
+				{
+				  "this": {}
+				},
+				{
+				  "computedUserset": {
+					"object": "",
+					"relation": "owner"
+				  }
+				}
+			  ]
+			}
+		  },
+		  "can_create_organization": {
+			"computedUserset": {
+			  "object": "",
+			  "relation": "owner"
+			}
+		  },
+		  "can_delete_organization": {
+			"computedUserset": {
+			  "object": "",
+			  "relation": "owner"
+			}
+		  },
+		  "can_get_membership": {
+			"union": {
+			  "child": [
+				{
+				  "computedUserset": {
+					"object": "",
+					"relation": "owner"
+				  }
+				},
+				{
+				  "computedUserset": {
+					"object": "",
+					"relation": "admin"
+				  }
+				},
+				{
+				  "computedUserset": {
+					"object": "",
+					"relation": "member"
+				  }
+				}
+			  ]
+			}
+		  },
+		  "can_remove_membership": {
+			"union": {
+			  "child": [
+				{
+				  "computedUserset": {
+					"object": "",
+					"relation": "owner"
+				  }
+				},
+				{
+				  "computedUserset": {
+					"object": "",
+					"relation": "admin"
+				  }
+				}
+			  ]
+			}
+		  },
+		  "can_set_membership": {
+			"union": {
+			  "child": [
+				{
+				  "computedUserset": {
+					"object": "",
+					"relation": "owner"
+				  }
+				},
+				{
+				  "computedUserset": {
+					"object": "",
+					"relation": "admin"
+				  }
+				}
+			  ]
+			}
+		  },
+		  "can_update_organization": {
+			"union": {
+			  "child": [
+				{
+				  "computedUserset": {
+					"object": "",
+					"relation": "owner"
+				  }
+				},
+				{
+				  "computedUserset": {
+					"object": "",
+					"relation": "admin"
+				  }
+				}
+			  ]
+			}
 		  },
 		  "member": {
 			"union": {
@@ -79,117 +183,132 @@ const ACLModel = `
 				},
 				{
 				  "computedUserset": {
+					"object": "",
+					"relation": "admin"
+				  }
+				},
+				{
+				  "computedUserset": {
+					"object": "",
 					"relation": "owner"
 				  }
 				}
 			  ]
 			}
 		  },
-		  "pending_owner": {
+		  "owner": {
+			"this": {}
+		  },
+		  "pending_admin": {
 			"this": {}
 		  },
 		  "pending_member": {
 			"this": {}
 		  },
-		  "can_create_organization": {
-			"computedUserset": {
-			  "relation": "owner"
-			}
-		  },
-		  "can_delete_organization": {
-			"computedUserset": {
-			  "relation": "owner"
-			}
-		  },
-		  "can_get_membership": {
-			"union": {
-			  "child": [
-				{
-				  "computedUserset": {
-					"relation": "owner"
-				  }
-				},
-				{
-				  "computedUserset": {
-					"relation": "member"
-				  }
-				}
-			  ]
-			}
-		  },
-		  "can_remove_membership": {
-			"computedUserset": {
-			  "relation": "owner"
-			}
-		  },
-		  "can_set_membership": {
-			"computedUserset": {
-			  "relation": "owner"
-			}
-		  },
-		  "can_update_organization": {
-			"computedUserset": {
-			  "relation": "owner"
-			}
+		  "pending_owner": {
+			"this": {}
 		  }
 		},
 		"metadata": {
 		  "relations": {
-			"owner": {
+			"admin": {
 			  "directly_related_user_types": [
 				{
-				  "type": "user"
+				  "type": "user",
+				  "condition": ""
 				}
-			  ]
+			  ],
+			  "module": "",
+			  "source_info": null
+			},
+			"can_create_organization": {
+			  "directly_related_user_types": [],
+			  "module": "",
+			  "source_info": null
+			},
+			"can_delete_organization": {
+			  "directly_related_user_types": [],
+			  "module": "",
+			  "source_info": null
+			},
+			"can_get_membership": {
+			  "directly_related_user_types": [],
+			  "module": "",
+			  "source_info": null
+			},
+			"can_remove_membership": {
+			  "directly_related_user_types": [],
+			  "module": "",
+			  "source_info": null
+			},
+			"can_set_membership": {
+			  "directly_related_user_types": [],
+			  "module": "",
+			  "source_info": null
+			},
+			"can_update_organization": {
+			  "directly_related_user_types": [],
+			  "module": "",
+			  "source_info": null
 			},
 			"member": {
 			  "directly_related_user_types": [
 				{
-				  "type": "user"
+				  "type": "user",
+				  "condition": ""
 				}
-			  ]
+			  ],
+			  "module": "",
+			  "source_info": null
 			},
-			"pending_owner": {
+			"owner": {
 			  "directly_related_user_types": [
 				{
-				  "type": "user"
+				  "type": "user",
+				  "condition": ""
 				}
-			  ]
+			  ],
+			  "module": "",
+			  "source_info": null
+			},
+			"pending_admin": {
+			  "directly_related_user_types": [
+				{
+				  "type": "user",
+				  "condition": ""
+				}
+			  ],
+			  "module": "",
+			  "source_info": null
 			},
 			"pending_member": {
 			  "directly_related_user_types": [
 				{
-				  "type": "user"
+				  "type": "user",
+				  "condition": ""
 				}
-			  ]
+			  ],
+			  "module": "",
+			  "source_info": null
 			},
-			"can_create_organization": {
-			  "directly_related_user_types": []
-			},
-			"can_delete_organization": {
-			  "directly_related_user_types": []
-			},
-			"can_get_membership": {
-			  "directly_related_user_types": []
-			},
-			"can_remove_membership": {
-			  "directly_related_user_types": []
-			},
-			"can_set_membership": {
-			  "directly_related_user_types": []
-			},
-			"can_update_organization": {
-			  "directly_related_user_types": []
+			"pending_owner": {
+			  "directly_related_user_types": [
+				{
+				  "type": "user",
+				  "condition": ""
+				}
+			  ],
+			  "module": "",
+			  "source_info": null
 			}
-		  }
+		  },
+		  "module": "",
+		  "source_info": null
 		}
 	  },
 	  {
 		"type": "pipeline",
 		"relations": {
-		  "owner": {
-			"this": {}
-		  },
 		  "admin": {
 			"union": {
 			  "child": [
@@ -198,40 +317,19 @@ const ACLModel = `
 				},
 				{
 				  "computedUserset": {
+					"object": "",
 					"relation": "owner"
 				  }
 				},
 				{
 				  "tupleToUserset": {
-					"computedUserset": {
-					  "relation": "member"
-					},
 					"tupleset": {
+					  "object": "",
 					  "relation": "owner"
-					}
-				  }
-				}
-			  ]
-			}
-		  },
-		  "writer": {
-			"union": {
-			  "child": [
-				{
-				  "this": {}
-				},
-				{
-				  "computedUserset": {
-					"relation": "admin"
-				  }
-				},
-				{
-				  "tupleToUserset": {
-					"computedUserset": {
-					  "relation": "member"
 					},
-					"tupleset": {
-					  "relation": "owner"
+					"computedUserset": {
+					  "object": "",
+					  "relation": "member"
 					}
 				  }
 				}
@@ -246,21 +344,27 @@ const ACLModel = `
 				},
 				{
 				  "computedUserset": {
+					"object": "",
 					"relation": "writer"
 				  }
 				},
 				{
 				  "tupleToUserset": {
-					"computedUserset": {
-					  "relation": "member"
-					},
 					"tupleset": {
+					  "object": "",
 					  "relation": "owner"
+					},
+					"computedUserset": {
+					  "object": "",
+					  "relation": "member"
 					}
 				  }
 				}
 			  ]
 			}
+		  },
+		  "owner": {
+			"this": {}
 		  },
 		  "reader": {
 			"union": {
@@ -270,16 +374,46 @@ const ACLModel = `
 				},
 				{
 				  "computedUserset": {
+					"object": "",
 					"relation": "executor"
 				  }
 				},
 				{
 				  "tupleToUserset": {
-					"computedUserset": {
-					  "relation": "member"
-					},
 					"tupleset": {
+					  "object": "",
 					  "relation": "owner"
+					},
+					"computedUserset": {
+					  "object": "",
+					  "relation": "member"
+					}
+				  }
+				}
+			  ]
+			}
+		  },
+		  "writer": {
+			"union": {
+			  "child": [
+				{
+				  "this": {}
+				},
+				{
+				  "computedUserset": {
+					"object": "",
+					"relation": "admin"
+				  }
+				},
+				{
+				  "tupleToUserset": {
+					"tupleset": {
+					  "object": "",
+					  "relation": "owner"
+					},
+					"computedUserset": {
+					  "object": "",
+					  "relation": "member"
 					}
 				  }
 				}
@@ -289,71 +423,91 @@ const ACLModel = `
 		},
 		"metadata": {
 		  "relations": {
-			"owner": {
-			  "directly_related_user_types": [
-				{
-				  "type": "organization"
-				},
-				{
-				  "type": "user"
-				}
-			  ]
-			},
 			"admin": {
 			  "directly_related_user_types": [
 				{
-				  "type": "user"
+				  "type": "user",
+				  "condition": ""
 				}
-			  ]
-			},
-			"writer": {
-			  "directly_related_user_types": [
-				{
-				  "type": "user"
-				}
-			  ]
+			  ],
+			  "module": "",
+			  "source_info": null
 			},
 			"executor": {
 			  "directly_related_user_types": [
 				{
-				  "type": "user"
+				  "type": "user",
+				  "condition": ""
 				},
 				{
 				  "type": "user",
-				  "wildcard": {}
+				  "wildcard": {},
+				  "condition": ""
 				},
 				{
-				  "type": "code"
+				  "type": "code",
+				  "condition": ""
 				}
-			  ]
+			  ],
+			  "module": "",
+			  "source_info": null
+			},
+			"owner": {
+			  "directly_related_user_types": [
+				{
+				  "type": "organization",
+				  "condition": ""
+				},
+				{
+				  "type": "user",
+				  "condition": ""
+				}
+			  ],
+			  "module": "",
+			  "source_info": null
 			},
 			"reader": {
 			  "directly_related_user_types": [
 				{
-				  "type": "user"
+				  "type": "user",
+				  "condition": ""
 				},
 				{
 				  "type": "user",
-				  "wildcard": {}
+				  "wildcard": {},
+				  "condition": ""
 				},
 				{
-				  "type": "code"
+				  "type": "code",
+				  "condition": ""
 				},
 				{
 				  "type": "visitor",
-				  "wildcard": {}
+				  "wildcard": {},
+				  "condition": ""
 				}
-			  ]
+			  ],
+			  "module": "",
+			  "source_info": null
+			},
+			"writer": {
+			  "directly_related_user_types": [
+				{
+				  "type": "user",
+				  "condition": ""
+				}
+			  ],
+			  "module": "",
+			  "source_info": null
 			}
-		  }
+		  },
+		  "module": "",
+		  "source_info": null
 		}
 	  },
 	  {
 		"type": "connector",
 		"relations": {
-		  "owner": {
-			"this": {}
-		  },
 		  "admin": {
 			"union": {
 			  "child": [
@@ -362,40 +516,19 @@ const ACLModel = `
 				},
 				{
 				  "computedUserset": {
+					"object": "",
 					"relation": "owner"
 				  }
 				},
 				{
 				  "tupleToUserset": {
-					"computedUserset": {
-					  "relation": "member"
-					},
 					"tupleset": {
+					  "object": "",
 					  "relation": "owner"
-					}
-				  }
-				}
-			  ]
-			}
-		  },
-		  "writer": {
-			"union": {
-			  "child": [
-				{
-				  "this": {}
-				},
-				{
-				  "computedUserset": {
-					"relation": "admin"
-				  }
-				},
-				{
-				  "tupleToUserset": {
-					"computedUserset": {
-					  "relation": "member"
 					},
-					"tupleset": {
-					  "relation": "owner"
+					"computedUserset": {
+					  "object": "",
+					  "relation": "member"
 					}
 				  }
 				}
@@ -410,21 +543,27 @@ const ACLModel = `
 				},
 				{
 				  "computedUserset": {
+					"object": "",
 					"relation": "writer"
 				  }
 				},
 				{
 				  "tupleToUserset": {
-					"computedUserset": {
-					  "relation": "member"
-					},
 					"tupleset": {
+					  "object": "",
 					  "relation": "owner"
+					},
+					"computedUserset": {
+					  "object": "",
+					  "relation": "member"
 					}
 				  }
 				}
 			  ]
 			}
+		  },
+		  "owner": {
+			"this": {}
 		  },
 		  "reader": {
 			"union": {
@@ -434,16 +573,46 @@ const ACLModel = `
 				},
 				{
 				  "computedUserset": {
+					"object": "",
 					"relation": "executor"
 				  }
 				},
 				{
 				  "tupleToUserset": {
-					"computedUserset": {
-					  "relation": "member"
-					},
 					"tupleset": {
+					  "object": "",
 					  "relation": "owner"
+					},
+					"computedUserset": {
+					  "object": "",
+					  "relation": "member"
+					}
+				  }
+				}
+			  ]
+			}
+		  },
+		  "writer": {
+			"union": {
+			  "child": [
+				{
+				  "this": {}
+				},
+				{
+				  "computedUserset": {
+					"object": "",
+					"relation": "admin"
+				  }
+				},
+				{
+				  "tupleToUserset": {
+					"tupleset": {
+					  "object": "",
+					  "relation": "owner"
+					},
+					"computedUserset": {
+					  "object": "",
+					  "relation": "member"
 					}
 				  }
 				}
@@ -453,61 +622,78 @@ const ACLModel = `
 		},
 		"metadata": {
 		  "relations": {
-			"owner": {
-			  "directly_related_user_types": [
-				{
-				  "type": "organization"
-				},
-				{
-				  "type": "user"
-				}
-			  ]
-			},
 			"admin": {
 			  "directly_related_user_types": [
 				{
-				  "type": "user"
+				  "type": "user",
+				  "condition": ""
 				}
-			  ]
-			},
-			"writer": {
-			  "directly_related_user_types": [
-				{
-				  "type": "user"
-				}
-			  ]
+			  ],
+			  "module": "",
+			  "source_info": null
 			},
 			"executor": {
 			  "directly_related_user_types": [
 				{
-				  "type": "user"
+				  "type": "user",
+				  "condition": ""
 				},
 				{
 				  "type": "user",
-				  "wildcard": {}
+				  "wildcard": {},
+				  "condition": ""
 				}
-			  ]
+			  ],
+			  "module": "",
+			  "source_info": null
+			},
+			"owner": {
+			  "directly_related_user_types": [
+				{
+				  "type": "organization",
+				  "condition": ""
+				},
+				{
+				  "type": "user",
+				  "condition": ""
+				}
+			  ],
+			  "module": "",
+			  "source_info": null
 			},
 			"reader": {
 			  "directly_related_user_types": [
 				{
-				  "type": "user"
+				  "type": "user",
+				  "condition": ""
 				},
 				{
 				  "type": "user",
-				  "wildcard": {}
+				  "wildcard": {},
+				  "condition": ""
 				}
-			  ]
+			  ],
+			  "module": "",
+			  "source_info": null
+			},
+			"writer": {
+			  "directly_related_user_types": [
+				{
+				  "type": "user",
+				  "condition": ""
+				}
+			  ],
+			  "module": "",
+			  "source_info": null
 			}
-		  }
+		  },
+		  "module": "",
+		  "source_info": null
 		}
 	  },
 	  {
 		"type": "model_",
 		"relations": {
-		  "owner": {
-			"this": {}
-		  },
 		  "admin": {
 			"union": {
 			  "child": [
@@ -516,40 +702,19 @@ const ACLModel = `
 				},
 				{
 				  "computedUserset": {
+					"object": "",
 					"relation": "owner"
 				  }
 				},
 				{
 				  "tupleToUserset": {
-					"computedUserset": {
-					  "relation": "member"
-					},
 					"tupleset": {
+					  "object": "",
 					  "relation": "owner"
-					}
-				  }
-				}
-			  ]
-			}
-		  },
-		  "writer": {
-			"union": {
-			  "child": [
-				{
-				  "this": {}
-				},
-				{
-				  "computedUserset": {
-					"relation": "admin"
-				  }
-				},
-				{
-				  "tupleToUserset": {
-					"computedUserset": {
-					  "relation": "member"
 					},
-					"tupleset": {
-					  "relation": "owner"
+					"computedUserset": {
+					  "object": "",
+					  "relation": "member"
 					}
 				  }
 				}
@@ -564,21 +729,27 @@ const ACLModel = `
 				},
 				{
 				  "computedUserset": {
+					"object": "",
 					"relation": "writer"
 				  }
 				},
 				{
 				  "tupleToUserset": {
-					"computedUserset": {
-					  "relation": "member"
-					},
 					"tupleset": {
+					  "object": "",
 					  "relation": "owner"
+					},
+					"computedUserset": {
+					  "object": "",
+					  "relation": "member"
 					}
 				  }
 				}
 			  ]
 			}
+		  },
+		  "owner": {
+			"this": {}
 		  },
 		  "reader": {
 			"union": {
@@ -588,16 +759,46 @@ const ACLModel = `
 				},
 				{
 				  "computedUserset": {
+					"object": "",
 					"relation": "executor"
 				  }
 				},
 				{
 				  "tupleToUserset": {
-					"computedUserset": {
-					  "relation": "member"
-					},
 					"tupleset": {
+					  "object": "",
 					  "relation": "owner"
+					},
+					"computedUserset": {
+					  "object": "",
+					  "relation": "member"
+					}
+				  }
+				}
+			  ]
+			}
+		  },
+		  "writer": {
+			"union": {
+			  "child": [
+				{
+				  "this": {}
+				},
+				{
+				  "computedUserset": {
+					"object": "",
+					"relation": "admin"
+				  }
+				},
+				{
+				  "tupleToUserset": {
+					"tupleset": {
+					  "object": "",
+					  "relation": "owner"
+					},
+					"computedUserset": {
+					  "object": "",
+					  "relation": "member"
 					}
 				  }
 				}
@@ -607,65 +808,89 @@ const ACLModel = `
 		},
 		"metadata": {
 		  "relations": {
-			"owner": {
-			  "directly_related_user_types": [
-				{
-				  "type": "organization"
-				},
-				{
-				  "type": "user"
-				}
-			  ]
-			},
 			"admin": {
 			  "directly_related_user_types": [
 				{
-				  "type": "user"
+				  "type": "user",
+				  "condition": ""
 				}
-			  ]
-			},
-			"writer": {
-			  "directly_related_user_types": [
-				{
-				  "type": "user"
-				}
-			  ]
+			  ],
+			  "module": "",
+			  "source_info": null
 			},
 			"executor": {
 			  "directly_related_user_types": [
 				{
-				  "type": "user"
+				  "type": "user",
+				  "condition": ""
 				},
 				{
 				  "type": "user",
-				  "wildcard": {}
+				  "wildcard": {},
+				  "condition": ""
 				},
 				{
-				  "type": "code"
+				  "type": "code",
+				  "condition": ""
 				}
-			  ]
+			  ],
+			  "module": "",
+			  "source_info": null
+			},
+			"owner": {
+			  "directly_related_user_types": [
+				{
+				  "type": "organization",
+				  "condition": ""
+				},
+				{
+				  "type": "user",
+				  "condition": ""
+				}
+			  ],
+			  "module": "",
+			  "source_info": null
 			},
 			"reader": {
 			  "directly_related_user_types": [
 				{
-				  "type": "user"
+				  "type": "user",
+				  "condition": ""
 				},
 				{
 				  "type": "user",
-				  "wildcard": {}
+				  "wildcard": {},
+				  "condition": ""
 				},
 				{
-				  "type": "code"
+				  "type": "code",
+				  "condition": ""
 				},
 				{
 				  "type": "visitor",
-				  "wildcard": {}
+				  "wildcard": {},
+				  "condition": ""
 				}
-			  ]
+			  ],
+			  "module": "",
+			  "source_info": null
+			},
+			"writer": {
+			  "directly_related_user_types": [
+				{
+				  "type": "user",
+				  "condition": ""
+				}
+			  ],
+			  "module": "",
+			  "source_info": null
 			}
-		  }
+		  },
+		  "module": "",
+		  "source_info": null
 		}
 	  }
-	]
+	],
+	"conditions": {}
   }
 `
