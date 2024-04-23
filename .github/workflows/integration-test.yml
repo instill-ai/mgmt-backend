@@ -95,11 +95,17 @@ jobs:
         with:
           repository: instill-ai/instill-core
 
+      - name: Load .env file (instill-core)
+        uses: cardinalby/export-env-action@v2
+        with:
+          envFile: .env
+
       - name: Launch Instill Core
         run: |
           COMPOSE_PROFILES=all \
           EDITION=local-ce:test \
           RAY_LATEST_TAG=latest \
+          RAY_RELEASE_TAG=${RAY_SERVER_VERSION} \
           docker compose -f docker-compose.yml -f docker-compose-latest.yml up -d --quiet-pull
           COMPOSE_PROFILES=all \
           EDITION=local-ce:test \

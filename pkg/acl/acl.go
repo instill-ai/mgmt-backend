@@ -100,7 +100,7 @@ func (c *ACLClient) DeleteOrganizationUserMembership(ctx context.Context, orgUID
 		AuthorizationModelId: c.authorizationModelID,
 	}
 
-	for _, role := range []string{"owner", "member", "pending_owner", "pending_member"} {
+	for _, role := range []string{"owner", "admin", "member", "pending_owner", "pending_admin", "pending_member"} {
 		body := openfgaClient.ClientWriteRequest{
 			Deletes: &[]openfgaClient.ClientTupleKey{
 				{

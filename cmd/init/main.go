@@ -173,6 +173,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	// TODO: we should implement a better flow to upgrade the OpenFGA model
 	if len(*models.AuthorizationModels) == 0 {
 		var body openfga.ClientWriteAuthorizationModelRequest
 		if err := json.Unmarshal([]byte(acl.ACLModel), &body); err != nil {
