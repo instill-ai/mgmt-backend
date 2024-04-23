@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.15.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.14.0-beta...v0.15.0-beta) (2024-04-23)
+
+
+### Features
+
+* add `admin` role for organization ([#203](https://github.com/instill-ai/mgmt-backend/issues/203)) ([ad161d8](https://github.com/instill-ai/mgmt-backend/commit/ad161d8660de6de037ac13a8f5765c770b585be4))
+* update credit datamodel ([#198](https://github.com/instill-ai/mgmt-backend/issues/198)) ([fe3524f](https://github.com/instill-ai/mgmt-backend/commit/fe3524f5b71566185894fe57a73bac7d265a73a2))
+
 ## [0.14.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.13.0-beta...v0.14.0-beta) (2024-04-11)
 
 
