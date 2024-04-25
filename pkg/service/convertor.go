@@ -304,14 +304,13 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 	}
 
 	avatar := fmt.Sprintf("%s/core/v1beta/organizations/%s/avatar", s.instillCoreHost, dbOrg.ID)
+	canUpdateOrganization := false
 	ctxUserUID, err := s.ExtractCtxUser(ctx, true)
-	if err != nil {
-		return nil, err
-	}
-
-	canUpdateOrganization, err := s.aclClient.CheckOrganizationUserMembership(ctx, uuid.FromStringOrNil(uid), ctxUserUID, "can_update_organization")
-	if err != nil {
-		return nil, err
+	if err == nil {
+		canUpdateOrganization, err = s.aclClient.CheckOrganizationUserMembership(ctx, uuid.FromStringOrNil(uid), ctxUserUID, "can_update_organization")
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &mgmtPB.Organization{
