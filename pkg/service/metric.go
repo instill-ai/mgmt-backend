@@ -61,7 +61,7 @@ func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.F
 				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.PipelineOwnerUID, org.Uid, false)
 				ownerUID = &org.Uid
 			} else {
-				return nil, "", "", "", filter, fmt.Errorf("owner_name namepsace format error")
+				return nil, "", "", "", filter, ErrInvalidOwnerNamespace
 			}
 		} else {
 			ownerQueryString = fmt.Sprintf("|> filter(fn: (r) => r[\"owner_uid\"] == \"%v\")", *owner.Uid)
