@@ -6,9 +6,7 @@ import (
 	"strings"
 
 	"go.einride.tech/aip/filtering"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 
 	"github.com/gofrs/uuid"
 	"github.com/instill-ai/mgmt-backend/internal/resource"
@@ -63,7 +61,7 @@ func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.F
 				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.PipelineOwnerUID, org.Uid, false)
 				ownerUID = &org.Uid
 			} else {
-				return nil, "", "", "", filter, status.Errorf(codes.InvalidArgument, "owner_name namepsace format error")
+				return nil, "", "", "", filter, ErrInvalidOwnerNamespace
 			}
 		} else {
 			ownerQueryString = fmt.Sprintf("|> filter(fn: (r) => r[\"owner_uid\"] == \"%v\")", *owner.Uid)

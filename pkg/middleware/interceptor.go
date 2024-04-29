@@ -84,7 +84,8 @@ func InjectErrCode(err error) error {
 		errors.Is(err, service.ErrInvalidRole),
 		errors.Is(err, service.ErrInvalidTokenTTL),
 		errors.Is(err, service.ErrStateCanOnlyBeActive),
-		errors.Is(err, service.ErrPasswordNotMatch):
+		errors.Is(err, service.ErrPasswordNotMatch),
+		errors.Is(err, service.ErrInvalidOwnerNamespace):
 		return status.Error(codes.InvalidArgument, err.Error())
 
 	case
