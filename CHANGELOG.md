@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.1-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.15.0-beta...v0.15.1-beta) (2024-05-07)
+
+
+### Bug Fixes
+
+* fix organization converter bug ([15ed2a2](https://github.com/instill-ai/mgmt-backend/commit/15ed2a20e09cc95dd043532868f09e168f081651))
+
 ## [0.15.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.14.0-beta...v0.15.0-beta) (2024-04-23)
 
 
