@@ -60,6 +60,11 @@ func (s *service) compressAvatar(profileAvatar string) (string, error) {
 			return "", nil
 		}
 	}
+	// Due to the local env, we don't set the `InstillCoreHost` config, the avatar path is not working.
+	// As a workaround, if the profileAvatar is not a base64 string, we ignore the avatar.
+	if !strings.HasPrefix(profileAvatar, "data:") {
+		return "", nil
+	}
 
 	profileAvatarStrs := strings.Split(profileAvatar, ",")
 	b, err := base64.StdEncoding.DecodeString(profileAvatarStrs[len(profileAvatarStrs)-1])
