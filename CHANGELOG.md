@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.2-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.15.1-beta...v0.15.2-beta) (2024-05-16)
+
+
+### Miscellaneous Chores
+
+* release v0.15.2-beta ([bf945cc](https://github.com/instill-ai/mgmt-backend/commit/bf945ccd69af29fed23bbeeafd76e6ae332d0ab7))
+
 ## [0.15.1-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.15.0-beta...v0.15.1-beta) (2024-05-07)
 
 
