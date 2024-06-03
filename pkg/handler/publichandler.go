@@ -864,6 +864,13 @@ func (h *PublicHandler) ValidateToken(ctx context.Context, req *mgmtPB.ValidateT
 		return nil, err
 	}
 
+	err = h.Service.UpdateTokenLastUseTime(ctx, apiToken)
+
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
 	return &mgmtPB.ValidateTokenResponse{UserUid: userUID}, nil
 }
 
