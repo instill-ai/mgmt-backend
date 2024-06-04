@@ -63,6 +63,7 @@ type Service interface {
 	GetToken(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.ApiToken, error)
 	DeleteToken(ctx context.Context, ctxUserUID uuid.UUID, id string) error
 	ValidateToken(ctx context.Context, accessToken string) (string, error)
+	UpdateTokenLastUseTime(ctx context.Context, accessToken string) error
 
 	CheckUserPassword(ctx context.Context, uid uuid.UUID, password string) error
 	UpdateUserPassword(ctx context.Context, uid uuid.UUID, newPassword string) error
@@ -648,6 +649,11 @@ func (s *service) DeleteToken(ctx context.Context, ctxUserUID uuid.UUID, id stri
 	}
 	return nil
 }
+
+func (s *service) UpdateTokenLastUseTime(ctx context.Context, accessToken string) error {
+	return s.repository.UpdateTokenLastUseTime(ctx, accessToken)
+}
+
 func (s *service) ValidateToken(ctx context.Context, accessToken string) (string, error) {
 	uid := s.getAPITokenFromCache(ctx, accessToken)
 	if uid == uuid.Nil {

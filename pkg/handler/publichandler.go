@@ -722,7 +722,7 @@ func (h *PublicHandler) CreateToken(ctx context.Context, req *mgmtPB.CreateToken
 	return resp, nil
 }
 
-// ListTokens lists all the API tokens of the authenticated user. This endpoint is not supported yet.
+// ListTokens lists all the API tokens of the authenticated user.
 func (h *PublicHandler) ListTokens(ctx context.Context, req *mgmtPB.ListTokensRequest) (*mgmtPB.ListTokensResponse, error) {
 
 	eventName := "ListTokens"
@@ -858,6 +858,13 @@ func (h *PublicHandler) ValidateToken(ctx context.Context, req *mgmtPB.ValidateT
 	apiToken := strings.Replace(authorization, "Bearer ", "", 1)
 
 	userUID, err := h.Service.ValidateToken(ctx, apiToken)
+
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	err = h.Service.UpdateTokenLastUseTime(ctx, apiToken)
 
 	if err != nil {
 		span.SetStatus(1, err.Error())

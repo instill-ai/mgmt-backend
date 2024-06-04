@@ -66,6 +66,7 @@ type Repository interface {
 	GetToken(ctx context.Context, owner string, id string) (*datamodel.Token, error)
 	DeleteToken(ctx context.Context, owner string, id string) error
 	LookupToken(ctx context.Context, token string) (*datamodel.Token, error)
+	UpdateTokenLastUseTime(ctx context.Context, accessToken string) error
 
 	ListAllValidTokens(ctx context.Context) ([]datamodel.Token, error)
 }
@@ -467,6 +468,25 @@ func (r *repository) DeleteToken(ctx context.Context, owner string, id string) e
 
 	if result.RowsAffected == 0 {
 		return ErrNoDataDeleted
+	}
+
+	return nil
+}
+
+func (r *repository) UpdateTokenLastUseTime(ctx context.Context, accessToken string) error {
+	r.PinUser(ctx)
+	db := r.CheckPinnedUser(ctx, r.db)
+
+	result := db.Model(&datamodel.Token{}).
+		Where("access_token = ?", accessToken).
+		Update("last_use_time", time.Now())
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return ErrNoDataUpdated
 	}
 
 	return nil
