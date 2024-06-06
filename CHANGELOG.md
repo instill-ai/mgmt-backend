@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.15.2-beta...v0.16.0-beta) (2024-06-06)
+
+
+### Features
+
+* update last use time when api token is used ([#210](https://github.com/instill-ai/mgmt-backend/issues/210)) ([10fa9e2](https://github.com/instill-ai/mgmt-backend/commit/10fa9e238a2faab183d3f77157cde32b6f362689))
+
 ## [0.15.2-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.15.1-beta...v0.15.2-beta) (2024-05-16)
 
 
