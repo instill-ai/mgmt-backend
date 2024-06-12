@@ -42,20 +42,20 @@ export function CheckPublicGetUser(header) {
           (r) => r.json().user.id === constant.defaultUser.id,
         [`GET /${constant.mgmtVersion}/user response email`]:
           (r) => r.json().user.email !== undefined,
-        [`GET /${constant.mgmtVersion}/user response customer_id`]:
-          (r) => r.json().user.customer_id !== undefined,
-        [`GET /${constant.mgmtVersion}/user response display_name`]:
-          (r) => r.json().user.profile.display_name !== undefined,
-        [`GET /${constant.mgmtVersion}/user response company_name`]:
-          (r) => r.json().user.profile.company_name !== undefined,
+        [`GET /${constant.mgmtVersion}/user response customerId`]:
+          (r) => r.json().user.customerId !== undefined,
+        [`GET /${constant.mgmtVersion}/user response displayName`]:
+          (r) => r.json().user.profile.displayName !== undefined,
+        [`GET /${constant.mgmtVersion}/user response companyName`]:
+          (r) => r.json().user.profile.companyName !== undefined,
         [`GET /${constant.mgmtVersion}/user response role`]:
           (r) => r.json().user.role !== undefined,
-        [`GET /${constant.mgmtVersion}/user response newsletter_subscription`]:
-          (r) => r.json().user.newsletter_subscription !== undefined,
-        [`GET /${constant.mgmtVersion}/user response create_time`]:
-          (r) => r.json().user.create_time !== undefined,
-        [`GET /${constant.mgmtVersion}/user response update_time`]:
-          (r) => r.json().user.update_time !== undefined,
+        [`GET /${constant.mgmtVersion}/user response newsletterSubscription`]:
+          (r) => r.json().user.newsletterSubscription !== undefined,
+        [`GET /${constant.mgmtVersion}/user response createTime`]:
+          (r) => r.json().user.createTime !== undefined,
+        [`GET /${constant.mgmtVersion}/user response updateTime`]:
+          (r) => r.json().user.updateTime !== undefined,
       }
     )
   })
@@ -65,15 +65,15 @@ export function CheckPublicPatchAuthenticatedUser(header) {
   group(`Management Public API: Update authenticated user`, () => {
     var userUpdate = {
       email: "test@foo.bar",
-      customer_id: "new_customer_id",
+      customerId: "new_customer_id",
       profile: {
-        display_name: "test",
-        company_name: "company",
+        displayName: "test",
+        companyName: "company",
       },
       role: "ai-engineer",
-      newsletter_subscription: true,
-      create_time: "2000-01-01T00:00:00.000000Z",
-      update_time: "2000-01-01T00:00:00.000000Z",
+      newsletterSubscription: true,
+      createTime: "2000-01-01T00:00:00.000000Z",
+      updateTime: "2000-01-01T00:00:00.000000Z",
     };
 
     var res = http.request(
@@ -99,22 +99,22 @@ export function CheckPublicPatchAuthenticatedUser(header) {
           (r) => r.json().user.id === res.json().user.id,
         [`PATCH /${constant.mgmtVersion}/user response email updated`]:
           (r) => r.json().user.email === userUpdate.email,
-        [`PATCH /${constant.mgmtVersion}/user response customer_id unchanged`]:
-          (r) => r.json().user.customer_id === res.json().user.customer_id,
-        [`PATCH /${constant.mgmtVersion}/user response display_name updated`]:
-          (r) => r.json().user.profile.display_name === userUpdate.profile.display_name,
-        [`PATCH /${constant.mgmtVersion}/user response company_name updated`]:
-          (r) => r.json().user.profile.company_name === userUpdate.profile.company_name,
+        [`PATCH /${constant.mgmtVersion}/user response customerId unchanged`]:
+          (r) => r.json().user.customerId === res.json().user.customerId,
+        [`PATCH /${constant.mgmtVersion}/user response displayName updated`]:
+          (r) => r.json().user.profile.displayName === userUpdate.profile.displayName,
+        [`PATCH /${constant.mgmtVersion}/user response companyName updated`]:
+          (r) => r.json().user.profile.companyName === userUpdate.profile.companyName,
         [`PATCH /${constant.mgmtVersion}/user response role updated`]:
           (r) => r.json().user.role === userUpdate.role,
-        [`PATCH /${constant.mgmtVersion}/user response newsletter_subscription updated`]:
-          (r) => r.json().user.newsletter_subscription === userUpdate.newsletter_subscription,
-        [`PATCH /${constant.mgmtVersion}/user response create_time unchanged`]:
-          (r) => r.json().user.create_time === res.json().user.create_time,
-        [`PATCH /${constant.mgmtVersion}/user response update_time updated`]:
-          (r) => r.json().user.update_time !== res.json().user.update_time,
-        [`PATCH /${constant.mgmtVersion}/user response update_time not updated with request value`]:
-          (r) => r.json().user.update_time !== userUpdate.update_time,
+        [`PATCH /${constant.mgmtVersion}/user response newsletterSubscription updated`]:
+          (r) => r.json().user.newsletterSubscription === userUpdate.newsletterSubscription,
+        [`PATCH /${constant.mgmtVersion}/user response createTime unchanged`]:
+          (r) => r.json().user.createTime === res.json().user.createTime,
+        [`PATCH /${constant.mgmtVersion}/user response updateTime updated`]:
+          (r) => r.json().user.updateTime !== res.json().user.updateTime,
+        [`PATCH /${constant.mgmtVersion}/user response updateTime not updated with request value`]:
+          (r) => r.json().user.updateTime !== userUpdate.updateTime,
       }
     );
 
@@ -287,11 +287,11 @@ export function CheckPublicMetrics(header) {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response status is 200`]:
           (r) => r.status === 200,
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response has pipelineTriggerRecords`]:
-          (r) => r.json().pipeline_trigger_records !== undefined,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response has next_page_token`]:
-          (r) => r.json().total_size !== undefined,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response has total_size`]:
-          (r) => r.json().next_page_token !== undefined,
+          (r) => r.json().pipelineTriggerRecords !== undefined,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response has nextPageToken`]:
+          (r) => r.json().totalSize !== undefined,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response has totalSize`]:
+          (r) => r.json().nextPageToken !== undefined,
       }
     )
     check(
@@ -305,11 +305,11 @@ export function CheckPublicMetrics(header) {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers with filter response status is 200`]:
           (r) => r.status === 200,
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers with filter response pipelineTriggerRecords length is 0`]:
-          (r) => r.json().pipeline_trigger_records.length === 0,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers with filter response next_page_token is empty`]:
-          (r) => r.json().next_page_token === emptyPipelineTriggerRecordResponse.nextPageToken,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers with filter response total_size is 0`]:
-          (r) => r.json().total_size === emptyPipelineTriggerRecordResponse.totalSize,
+          (r) => r.json().pipelineTriggerRecords.length === 0,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers with filter response nextPageToken is empty`]:
+          (r) => r.json().nextPageToken === emptyPipelineTriggerRecordResponse.nextPageToken,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers with filter response totalSize is 0`]:
+          (r) => r.json().totalSize === emptyPipelineTriggerRecordResponse.totalSize,
       }
     )
   })
@@ -334,11 +334,11 @@ export function CheckPublicMetrics(header) {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables response status is 200`]:
           (r) => r.status === 200,
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables response has pipelineTriggerTableRecords`]:
-          (r) => r.json().pipeline_trigger_table_records !== undefined,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables response has next_page_token`]:
-          (r) => r.json().total_size !== undefined,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables response has total_size`]:
-          (r) => r.json().next_page_token !== undefined,
+          (r) => r.json().pipelineTriggerTableRecords !== undefined,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables response has nextPageToken`]:
+          (r) => r.json().totalSize !== undefined,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables response has totalSize`]:
+          (r) => r.json().nextPageToken !== undefined,
       }
     )
     check(
@@ -352,11 +352,11 @@ export function CheckPublicMetrics(header) {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables with filter response status is 200`]:
           (r) => r.status === 200,
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables with filter response pipelineTriggerTableRecords length is 0`]:
-          (r) => r.json().pipeline_trigger_table_records.length === 0,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables with filter response next_page_token is empty`]:
-          (r) => r.json().next_page_token === emptyPipelineTriggerTableRecordResponse.nextPageToken,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables with filter response total_size is 0`]:
-          (r) => r.json().total_size === emptyPipelineTriggerTableRecordResponse.totalSize,
+          (r) => r.json().pipelineTriggerTableRecords.length === 0,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables with filter response nextPageToken is empty`]:
+          (r) => r.json().nextPageToken === emptyPipelineTriggerTableRecordResponse.nextPageToken,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables with filter response totalSize is 0`]:
+          (r) => r.json().totalSize === emptyPipelineTriggerTableRecordResponse.totalSize,
       }
     )
   })
@@ -375,7 +375,7 @@ export function CheckPublicMetrics(header) {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/charts response status is 200`]:
           (r) => r.status === 200,
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/charts response has pipelineTriggerRecords`]:
-          (r) => r.json().pipeline_trigger_chart_records !== undefined,
+          (r) => r.json().pipelineTriggerChartRecords !== undefined,
       }
     )
     check(
@@ -389,7 +389,7 @@ export function CheckPublicMetrics(header) {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/charts with filter response status is 200`]:
           (r) => r.status === 200,
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/charts with filter response pipelineTriggerRecords length is 0`]:
-          (r) => r.json().pipeline_trigger_chart_records.length === 0,
+          (r) => r.json().pipelineTriggerChartRecords.length === 0,
       }
     )
   })

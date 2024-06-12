@@ -33,7 +33,7 @@ export function CheckPrivateListUsersAdmin() {
     }), {
       'core.mgmt.v1beta.MgmtPrivateService/ListUsersAdmin page_size=0 status': (r) => r && r.status == grpc.StatusOK,
       'core.mgmt.v1beta.MgmtPrivateService/ListUsersAdmin page_size=0 response all records': (r) => r && r.message.users.length === res.message.users.length,
-      'core.mgmt.v1beta.MgmtPrivateService/ListUsersAdmin page_size=0 response total_size 1': (r) => r && r.message.totalSize === res.message.totalSize,
+      'core.mgmt.v1beta.MgmtPrivateService/ListUsersAdmin page_size=0 response totalSize 1': (r) => r && r.message.totalSize === res.message.totalSize,
     });
 
     check(client.invoke('core.mgmt.v1beta.MgmtPrivateService/ListUsersAdmin', {

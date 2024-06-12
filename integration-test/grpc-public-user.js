@@ -71,13 +71,13 @@ export function CheckPublicPatchAuthenticatedUser(header) {
     var userUpdate = {
       name: `users/${constant.defaultUser.id}`,
       email: "test@foo.bar",
-      customer_id: "new_customer_id",
+      customerId: "new_customer_id",
       profile: {
-        display_name: "test",
-        company_name: "company",
+        displayName: "test",
+        companyName: "company",
       },
       role: "ai-engineer",
-      newsletter_subscription: true,
+      newsletterSubscription: true,
     };
 
     var res = client.invoke('core.mgmt.v1beta.MgmtPublicService/GetAuthenticatedUser', {}, header)
@@ -91,10 +91,10 @@ export function CheckPublicPatchAuthenticatedUser(header) {
       'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response uid unchanged': (r) => r && r.message.user.uid === res.message.user.uid,
       'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response id unchanged': (r) => r && r.message.user.id === res.message.user.id,
       'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response email updated': (r) => r && r.message.user.email === userUpdate.email,
-      'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response displayName updated': (r) => r && r.message.user.profile.displayName === userUpdate.profile.display_name,
-      'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response companyName updated': (r) => r && r.message.user.profile.companyName === userUpdate.profile.company_name,
+      'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response displayName updated': (r) => r && r.message.user.profile.displayName === userUpdate.profile.displayName,
+      'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response companyName updated': (r) => r && r.message.user.profile.companyName === userUpdate.profile.companyName,
       'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response role updated': (r) => r && r.message.user.role === userUpdate.role,
-      'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response newsletterSubscription updated': (r) => r && r.message.user.newsletterSubscription === userUpdate.newsletter_subscription,
+      'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response newsletterSubscription updated': (r) => r && r.message.user.newsletterSubscription === userUpdate.newsletterSubscription,
       'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response createTime unchanged': (r) => r && r.message.user.createTime === res.message.user.createTime,
       'core.mgmt.v1beta.MgmtPublicService/PatchAuthenticatedUser response updateTime updated': (r) => r && r.message.user.updateTime !== res.message.user.updateTime,
     });
@@ -257,16 +257,16 @@ export function CheckPublicMetrics(header) {
     check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords', {}, header), {
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords status': (r) => r && r.status == grpc.StatusOK,
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords response has pipelineTriggerRecords': (r) => r && r.message.pipelineTriggerRecords !== undefined,
-      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords response has total_size': (r) => r && r.message.totalSize !== undefined,
-      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords response has next_page_token': (r) => r && r.message.nextPageToken !== undefined,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords response has totalSize': (r) => r && r.message.totalSize !== undefined,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords response has nextPageToken': (r) => r && r.message.nextPageToken !== undefined,
     });
     check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords', {
       filter: `pipeline_id="${pipeline_id}" AND trigger_mode=MODE_SYNC`,
     }, header), {
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords with filter status': (r) => r && r.status == grpc.StatusOK,
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords with filter response pipelineTriggerRecords length is 0': (r) => r && r.message.pipelineTriggerRecords.length === 0,
-      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords with filter response total_size is 0': (r) => r && r.message.totalSize === emptyPipelineTriggerRecordResponse.totalSize,
-      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords with filter response next_page_token is empty': (r) => r && r.message.nextPageToken === emptyPipelineTriggerRecordResponse.nextPageToken,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords with filter response totalSize is 0': (r) => r && r.message.totalSize === emptyPipelineTriggerRecordResponse.totalSize,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords with filter response nextPageToken is empty': (r) => r && r.message.nextPageToken === emptyPipelineTriggerRecordResponse.nextPageToken,
     });
 
   });
@@ -282,16 +282,16 @@ export function CheckPublicMetrics(header) {
     check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords', {}, header), {
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords status': (r) => r && r.status == grpc.StatusOK,
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords response has pipelineTriggerTableRecords': (r) => r && r.message.pipelineTriggerTableRecords !== undefined,
-      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords response has total_size': (r) => r && r.message.totalSize !== undefined,
-      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords response has next_page_token': (r) => r && r.message.nextPageToken !== undefined,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords response has totalSize': (r) => r && r.message.totalSize !== undefined,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords response has nextPageToken': (r) => r && r.message.nextPageToken !== undefined,
     });
     check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords', {
       filter: `pipeline_id="${pipeline_id}"`,
     }, header), {
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords with filter status': (r) => r && r.status == grpc.StatusOK,
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords with filter response pipelineTriggerTableRecords length is 0': (r) => r && r.message.pipelineTriggerTableRecords.length === 0,
-      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords with filter response total_size is 0': (r) => r && r.message.totalSize === emptyPipelineTriggerTableRecordResponse.totalSize,
-      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords with filter response next_page_token is empty': (r) => r && r.message.nextPageToken === emptyPipelineTriggerTableRecordResponse.nextPageToken,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords with filter response totalSize is 0': (r) => r && r.message.totalSize === emptyPipelineTriggerTableRecordResponse.totalSize,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords with filter response nextPageToken is empty': (r) => r && r.message.nextPageToken === emptyPipelineTriggerTableRecordResponse.nextPageToken,
     });
 
   });
