@@ -4,16 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"time"
 
-	"github.com/influxdata/influxdb-client-go/v2/api"
-	"github.com/influxdata/influxdb-client-go/v2/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
-
-	influxdb3 "github.com/InfluxCommunity/influxdb3-go/influx"
-	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
@@ -66,59 +60,4 @@ func InitUsageServiceClient(ctx context.Context, serverConfig *config.ServerConf
 	}
 
 	return usagePB.NewUsageServiceClient(clientConn), clientConn
-}
-
-// InitInfluxDBServiceClientV2 initialises a InfluxDBServiceClientV2 instance
-func InitInfluxDBServiceClientV2(ctx context.Context, appConfig *config.AppConfig) (influxdb2.Client, api.QueryAPI) {
-
-	logger, _ := logger.GetZapLogger(ctx)
-
-	var creds credentials.TransportCredentials
-	var err error
-
-	influxOptions := influxdb2.DefaultOptions()
-	if appConfig.Server.Debug {
-		influxOptions = influxOptions.SetLogLevel(log.DebugLevel)
-	}
-	influxOptions = influxOptions.SetFlushInterval(uint(time.Duration(appConfig.InfluxDB.FlushInterval * int(time.Second)).Milliseconds()))
-
-	if appConfig.InfluxDB.HTTPS.Cert != "" && appConfig.InfluxDB.HTTPS.Key != "" {
-		// TODO: support TLS
-		creds, err = credentials.NewServerTLSFromFile(appConfig.InfluxDB.HTTPS.Cert, appConfig.InfluxDB.HTTPS.Key)
-		if err != nil {
-			logger.Fatal(err.Error())
-		}
-		logger.Info(creds.Info().ServerName)
-	}
-
-	client := influxdb2.NewClientWithOptions(
-		appConfig.InfluxDB.URL,
-		appConfig.InfluxDB.Token,
-		influxOptions,
-	)
-
-	if _, err := client.Ping(ctx); err != nil {
-		logger.Warn(err.Error())
-	}
-
-	queryAPI := client.QueryAPI(appConfig.InfluxDB.Org)
-
-	return client, queryAPI
-}
-
-// InitInfluxDBServiceClientV3 initialises a InfluxDBServiceClientV3 instance
-func InitInfluxDBServiceClientV3(ctx context.Context, appConfig *config.AppConfig) *influxdb3.Client {
-
-	logger, _ := logger.GetZapLogger(ctx)
-
-	client, err := influxdb3.New(influxdb3.Configs{
-		HostURL:   appConfig.InfluxDB.URL,
-		AuthToken: appConfig.InfluxDB.Token,
-	})
-
-	if err != nil {
-		logger.Error(err.Error())
-	}
-
-	return client
 }
