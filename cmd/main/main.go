@@ -194,7 +194,7 @@ func main() {
 		defer pipelinePublicServiceClientConn.Close()
 	}
 
-	influxDB := repository.MustNewInfluxDB(ctx)
+	influxDB := repository.MustNewInfluxDB(ctx, config.Config)
 	defer influxDB.Close()
 
 	repository := repository.NewRepository(db, redisClient)

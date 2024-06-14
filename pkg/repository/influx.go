@@ -52,23 +52,23 @@ type influxDB struct {
 }
 
 // MustNewInfluxDB returns an initialized InfluxDB repository.
-func MustNewInfluxDB(ctx context.Context) InfluxDB {
+func MustNewInfluxDB(ctx context.Context, cfg config.AppConfig) InfluxDB {
 	logger, _ := logger.GetZapLogger(ctx)
 
 	opts := client.DefaultOptions()
-	if config.Config.Server.Debug {
+	if cfg.Server.Debug {
 		opts = opts.SetLogLevel(log.DebugLevel)
 	}
 
-	flush := uint(config.Config.InfluxDB.FlushInterval.Milliseconds())
+	flush := uint(cfg.InfluxDB.FlushInterval.Milliseconds())
 	opts = opts.SetFlushInterval(flush)
 
 	var creds credentials.TransportCredentials
 	var err error
 
-	if config.Config.InfluxDB.HTTPS.Cert != "" && config.Config.InfluxDB.HTTPS.Key != "" {
+	if cfg.InfluxDB.HTTPS.Cert != "" && cfg.InfluxDB.HTTPS.Key != "" {
 		// TODO support TLS
-		creds, err = credentials.NewServerTLSFromFile(config.Config.InfluxDB.HTTPS.Cert, config.Config.InfluxDB.HTTPS.Key)
+		creds, err = credentials.NewServerTLSFromFile(cfg.InfluxDB.HTTPS.Cert, cfg.InfluxDB.HTTPS.Key)
 		if err != nil {
 			logger.With(zap.Error(err)).Fatal("Couldn't initialize InfluxDB client")
 		}
@@ -78,13 +78,13 @@ func MustNewInfluxDB(ctx context.Context) InfluxDB {
 
 	i := new(influxDB)
 	i.client = client.NewClientWithOptions(
-		config.Config.InfluxDB.URL,
-		config.Config.InfluxDB.Token,
+		cfg.InfluxDB.URL,
+		cfg.InfluxDB.Token,
 		opts,
 	)
-	i.bucket = config.Config.InfluxDB.Bucket
+	i.bucket = cfg.InfluxDB.Bucket
 
-	org := config.Config.InfluxDB.Org
+	org := cfg.InfluxDB.Org
 	i.api = i.client.QueryAPI(org)
 	logger = logger.With(zap.String("bucket", i.bucket)).
 		With(zap.String("org", org))
