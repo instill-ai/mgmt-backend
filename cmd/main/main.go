@@ -194,10 +194,9 @@ func main() {
 		defer pipelinePublicServiceClientConn.Close()
 	}
 
-	influxDBClient, influxDBQueryAPI := external.InitInfluxDBServiceClientV2(ctx, &config.Config)
-	defer influxDBClient.Close()
+	influxDB := repository.MustNewInfluxDB(ctx)
+	defer influxDB.Close()
 
-	influxDB := repository.NewInfluxDB(influxDBQueryAPI, config.Config.InfluxDB.Bucket)
 	repository := repository.NewRepository(db, redisClient)
 	service := service.NewService(repository, redisClient, influxDB, pipelinePublicServiceClient, &aclClient, config.Config.Server.InstillCoreHost)
 

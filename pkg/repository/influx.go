@@ -4,21 +4,25 @@ import (
 	"context"
 	"fmt"
 	"strings"
-
-	// "strconv"
 	"time"
 
 	"github.com/influxdata/influxdb-client-go/v2/api"
+	"github.com/influxdata/influxdb-client-go/v2/log"
 	"go.einride.tech/aip/filtering"
+	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	client "github.com/influxdata/influxdb-client-go/v2"
+
+	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/x/paginate"
 
-	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 )
 
 // DefaultPageSize is the default pagination page size when page size is not assigned
@@ -32,22 +36,82 @@ var defaultAggregationWindow = time.Hour.Nanoseconds()
 
 // InfluxDB interface
 type InfluxDB interface {
-	QueryPipelineTriggerRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (pipelines []*mgmtPB.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error)
-	QueryPipelineTriggerTableRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerTableRecord, totalSize int64, nextPageToken string, err error)
-	QueryPipelineTriggerChartRecords(ctx context.Context, owner string, ownerQueryString string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerChartRecord, err error)
+	QueryPipelineTriggerRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (pipelines []*mgmtpb.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error)
+	QueryPipelineTriggerTableRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerTableRecord, totalSize int64, nextPageToken string, err error)
+	QueryPipelineTriggerChartRecords(ctx context.Context, owner string, ownerQueryString string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerChartRecord, err error)
+
+	Bucket() string
+	QueryAPI() api.QueryAPI
+	Close()
 }
 
 type influxDB struct {
-	queryAPI api.QueryAPI
-	bucket   string
+	client client.Client
+	api    api.QueryAPI
+	bucket string
 }
 
-// NewInfluxDB initiates a repository instance
-func NewInfluxDB(queryAPI api.QueryAPI, bucket string) InfluxDB {
-	return &influxDB{
-		queryAPI: queryAPI,
-		bucket:   bucket,
+// MustNewInfluxDB returns an initialized InfluxDB repository.
+func MustNewInfluxDB(ctx context.Context) InfluxDB {
+	logger, _ := logger.GetZapLogger(ctx)
+
+	opts := client.DefaultOptions()
+	if config.Config.Server.Debug {
+		opts = opts.SetLogLevel(log.DebugLevel)
 	}
+
+	flush := uint(config.Config.InfluxDB.FlushInterval.Milliseconds())
+	opts = opts.SetFlushInterval(flush)
+
+	var creds credentials.TransportCredentials
+	var err error
+
+	if config.Config.InfluxDB.HTTPS.Cert != "" && config.Config.InfluxDB.HTTPS.Key != "" {
+		// TODO support TLS
+		creds, err = credentials.NewServerTLSFromFile(config.Config.InfluxDB.HTTPS.Cert, config.Config.InfluxDB.HTTPS.Key)
+		if err != nil {
+			logger.With(zap.Error(err)).Fatal("Couldn't initialize InfluxDB client")
+		}
+
+		logger = logger.With(zap.String("influxServer", creds.Info().ServerName))
+	}
+
+	i := new(influxDB)
+	i.client = client.NewClientWithOptions(
+		config.Config.InfluxDB.URL,
+		config.Config.InfluxDB.Token,
+		opts,
+	)
+	i.bucket = config.Config.InfluxDB.Bucket
+
+	org := config.Config.InfluxDB.Org
+	i.api = i.client.QueryAPI(org)
+	logger = logger.With(zap.String("bucket", i.bucket)).
+		With(zap.String("org", org))
+
+	logger.Info("InfluxDB client initialized")
+	if _, err := i.client.Ping(ctx); err != nil {
+		logger.With(zap.Error(err)).Warn("Failed to ping InfluxDB")
+	}
+
+	return i
+}
+
+// Close  cleans up the InfluxDB connections.
+func (i *influxDB) Close() {
+	i.client.Close()
+}
+
+// QueryAPI return the InfluxDB client's Query API.
+// TODO this is a shortcut to avoid refactoring client packages (e.g. worker)
+// but we should use a TimeSeriesRepository interface in them.
+func (i *influxDB) QueryAPI() api.QueryAPI {
+	return i.api
+}
+
+// Bucket returns the InfluxDB bucket the repository reads from.
+func (i *influxDB) Bucket() string {
+	return i.bucket
 }
 
 func (i *influxDB) constructRecordQuery(
@@ -131,7 +195,7 @@ func (i *influxDB) constructRecordQuery(
 		sortKey,
 	)
 
-	totalQueryResult, err := i.queryAPI.Query(ctx, totalQuery)
+	totalQueryResult, err := i.api.Query(ctx, totalQuery)
 
 	if err != nil {
 		return "", 0, status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
@@ -144,7 +208,7 @@ func (i *influxDB) constructRecordQuery(
 	return query, total, nil
 }
 
-func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error) {
+func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error) {
 
 	logger, _ := logger.GetZapLogger(ctx)
 
@@ -153,7 +217,7 @@ func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string
 		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
 	}
 
-	result, err := i.queryAPI.Query(ctx, query)
+	result, err := i.api.Query(ctx, query)
 	var lastTimestamp time.Time
 	if err != nil {
 		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
@@ -165,7 +229,7 @@ func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string
 				logger.Debug(fmt.Sprintf("table: %s\n", result.TableMetadata().String()))
 			}
 
-			record := &mgmtPB.PipelineTriggerRecord{}
+			record := &mgmtpb.PipelineTriggerRecord{}
 
 			if v, match := result.Record().ValueByKey(constant.TriggerTime).(string); match {
 				triggerTime, err := time.Parse(time.RFC3339Nano, v)
@@ -190,7 +254,7 @@ func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string
 				record.PipelineReleaseUid = v
 			}
 			if v, match := result.Record().ValueByKey(constant.TriggerMode).(string); match {
-				record.TriggerMode = mgmtPB.Mode(mgmtPB.Mode_value[v])
+				record.TriggerMode = mgmtpb.Mode(mgmtpb.Mode_value[v])
 			}
 			if v, match := result.Record().ValueByKey(constant.ComputeTimeDuration).(float64); match {
 				record.ComputeTimeDuration = float32(v)
@@ -198,15 +262,15 @@ func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string
 			// TODO: temporary solution for legacy data format, currently there is no way to update the tags in influxdb
 			if v, match := result.Record().ValueByKey(constant.Status).(string); match {
 				if v == constant.Completed {
-					record.Status = mgmtPB.Status_STATUS_COMPLETED
+					record.Status = mgmtpb.Status_STATUS_COMPLETED
 				} else if v == constant.Errored {
-					record.Status = mgmtPB.Status_STATUS_ERRORED
+					record.Status = mgmtpb.Status_STATUS_ERRORED
 				} else {
-					record.Status = mgmtPB.Status(mgmtPB.Status_value[v])
+					record.Status = mgmtpb.Status(mgmtpb.Status_value[v])
 				}
 			}
 			if v, match := result.Record().ValueByKey(constant.PipelineMode).(string); match {
-				record.TriggerMode = mgmtPB.Mode(mgmtPB.Mode_value[v])
+				record.TriggerMode = mgmtpb.Mode(mgmtpb.Mode_value[v])
 			}
 
 			records = append(records, record)
@@ -231,7 +295,7 @@ func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string
 	return records, int64(len(records)), pageToken, nil
 }
 
-func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerTableRecord, totalSize int64, nextPageToken string, err error) {
+func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerTableRecord, totalSize int64, nextPageToken string, err error) {
 
 	logger, _ := logger.GetZapLogger(ctx)
 
@@ -353,7 +417,7 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 
 	var lastTimestamp time.Time
 
-	result, err := i.queryAPI.Query(ctx, query)
+	result, err := i.api.Query(ctx, query)
 	if err != nil {
 		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
 	} else {
@@ -364,7 +428,7 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 				logger.Debug(fmt.Sprintf("table: %s\n", result.TableMetadata().String()))
 			}
 
-			tableRecord := &mgmtPB.PipelineTriggerTableRecord{}
+			tableRecord := &mgmtpb.PipelineTriggerTableRecord{}
 
 			if v, match := result.Record().ValueByKey(constant.PipelineID).(string); match {
 				tableRecord.PipelineId = v
@@ -378,10 +442,10 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 			if v, match := result.Record().ValueByKey(constant.PipelineReleaseUID).(string); match {
 				tableRecord.PipelineReleaseUid = v
 			}
-			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_COMPLETED.String()).(int64); match {
+			if v, match := result.Record().ValueByKey(mgmtpb.Status_STATUS_COMPLETED.String()).(int64); match {
 				tableRecord.TriggerCountCompleted = int32(v)
 			}
-			if v, match := result.Record().ValueByKey(mgmtPB.Status_STATUS_ERRORED.String()).(int64); match {
+			if v, match := result.Record().ValueByKey(mgmtpb.Status_STATUS_ERRORED.String()).(int64); match {
 				tableRecord.TriggerCountErrored = int32(v)
 			}
 
@@ -402,7 +466,7 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 	}
 
 	var total int64
-	totalQueryResult, err := i.queryAPI.Query(ctx, totalQuery)
+	totalQueryResult, err := i.api.Query(ctx, totalQuery)
 	if err != nil {
 		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid total query: %s", err.Error())
 	} else {
@@ -420,7 +484,7 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 	return records, int64(len(records)), pageToken, nil
 }
 
-func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner string, ownerQueryString string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtPB.PipelineTriggerChartRecord, err error) {
+func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner string, ownerQueryString string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerChartRecord, err error) {
 
 	logger, _ := logger.GetZapLogger(ctx)
 
@@ -501,61 +565,59 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 		aggregationWindow,
 	)
 
-	result, err := i.queryAPI.Query(ctx, query)
+	result, err := i.api.Query(ctx, query)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
-	} else {
+	}
 
-		var currentTablePosition = -1
-		var chartRecord *mgmtPB.PipelineTriggerChartRecord
+	var currentTablePosition = -1
+	var chartRecord *mgmtpb.PipelineTriggerChartRecord
 
-		// Iterate over query response
-		for result.Next() {
-			// Notice when group key has changed
-			if result.TableChanged() {
-				logger.Debug(fmt.Sprintf("table: %s\n", result.TableMetadata().String()))
-			}
-
-			if result.Record().Table() != currentTablePosition {
-
-				chartRecord = &mgmtPB.PipelineTriggerChartRecord{}
-
-				if v, match := result.Record().ValueByKey(constant.PipelineID).(string); match {
-					chartRecord.PipelineId = v
-				}
-				if v, match := result.Record().ValueByKey(constant.PipelineUID).(string); match {
-					chartRecord.PipelineUid = v
-				}
-				if v, match := result.Record().ValueByKey(constant.PipelineReleaseID).(string); match {
-					chartRecord.PipelineReleaseId = v
-				}
-				if v, match := result.Record().ValueByKey(constant.PipelineReleaseUID).(string); match {
-					chartRecord.PipelineReleaseUid = v
-				}
-				chartRecord.TimeBuckets = []*timestamppb.Timestamp{}
-				chartRecord.TriggerCounts = []int32{}
-				chartRecord.ComputeTimeDuration = []float32{}
-				records = append(records, chartRecord)
-				currentTablePosition = result.Record().Table()
-			}
-
-			if v, match := result.Record().ValueByKey("_time").(time.Time); match {
-				chartRecord.TimeBuckets = append(chartRecord.TimeBuckets, timestamppb.New(v))
-			}
-			if v, match := result.Record().ValueByKey(constant.TriggerTime).(int64); match {
-				chartRecord.TriggerCounts = append(chartRecord.TriggerCounts, int32(v))
-			}
-			if v, match := result.Record().ValueByKey(constant.ComputeTimeDuration).(float64); match {
-				chartRecord.ComputeTimeDuration = append(chartRecord.ComputeTimeDuration, float32(v))
-			}
+	// Iterate over query response
+	for result.Next() {
+		// Notice when group key has changed
+		if result.TableChanged() {
+			logger.Debug(fmt.Sprintf("table: %s\n", result.TableMetadata().String()))
 		}
-		// Check for an error
-		if result.Err() != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
+
+		if result.Record().Table() != currentTablePosition {
+			chartRecord = &mgmtpb.PipelineTriggerChartRecord{}
+
+			if v, match := result.Record().ValueByKey(constant.PipelineID).(string); match {
+				chartRecord.PipelineId = v
+			}
+			if v, match := result.Record().ValueByKey(constant.PipelineUID).(string); match {
+				chartRecord.PipelineUid = v
+			}
+			if v, match := result.Record().ValueByKey(constant.PipelineReleaseID).(string); match {
+				chartRecord.PipelineReleaseId = v
+			}
+			if v, match := result.Record().ValueByKey(constant.PipelineReleaseUID).(string); match {
+				chartRecord.PipelineReleaseUid = v
+			}
+			chartRecord.TimeBuckets = []*timestamppb.Timestamp{}
+			chartRecord.TriggerCounts = []int32{}
+			chartRecord.ComputeTimeDuration = []float32{}
+			records = append(records, chartRecord)
+			currentTablePosition = result.Record().Table()
 		}
-		if result.Record() == nil {
-			return nil, nil
+
+		if v, match := result.Record().ValueByKey("_time").(time.Time); match {
+			chartRecord.TimeBuckets = append(chartRecord.TimeBuckets, timestamppb.New(v))
 		}
+		if v, match := result.Record().ValueByKey(constant.TriggerTime).(int64); match {
+			chartRecord.TriggerCounts = append(chartRecord.TriggerCounts, int32(v))
+		}
+		if v, match := result.Record().ValueByKey(constant.ComputeTimeDuration).(float64); match {
+			chartRecord.ComputeTimeDuration = append(chartRecord.ComputeTimeDuration, float32(v))
+		}
+	}
+	// Check for an error
+	if result.Err() != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
+	}
+	if result.Record() == nil {
+		return nil, nil
 	}
 
 	return records, nil
