@@ -27,7 +27,7 @@ export function setup() {
 
   return {
     "headers": {
-      "Authorization": `Bearer ${loginResp.json().access_token}`
+      "Authorization": `Bearer ${loginResp.json().accessToken}`
     }
   }
 }

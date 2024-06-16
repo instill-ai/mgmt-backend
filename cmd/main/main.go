@@ -243,7 +243,6 @@ func main() {
 		runtime.WithErrorHandler(middleware.ErrorHandler),
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
 			MarshalOptions: protojson.MarshalOptions{
-				UseProtoNames:   true,
 				EmitUnpopulated: true,
 				UseEnumNumbers:  false,
 			},

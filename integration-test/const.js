@@ -46,10 +46,10 @@ export const defaultUser = {
   name: "users/admin",
   id: "admin",
   email: "hello@instill.tech",
-  customer_id: "",
+  customerId: "",
   profile: {
-    display_name: "Instill AI",
-    company_name: "Instill AI",
+    displayName: "Instill AI",
+    companyName: "Instill AI",
   },
   role: "hobbyist",
   newsletter_subscription: true,
