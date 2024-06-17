@@ -297,7 +297,7 @@ export function CheckPublicMetrics(header) {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/triggers?filter=trigger_mode=MODE_SYNC%20AND%20pipeline_id=%22${pipeline_id}%22`,
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/triggers?filter=triggerMode=MODE_SYNC%20AND%20pipelineId=%22${pipeline_id}%22`,
         null,
         header,
       ),
@@ -344,7 +344,7 @@ export function CheckPublicMetrics(header) {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/tables?filter=pipeline_id=%22${pipeline_id}%22`,
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/tables?filter=pipelineId=%22${pipeline_id}%22`,
         null,
         header,
       ),
@@ -381,7 +381,7 @@ export function CheckPublicMetrics(header) {
     check(
       http.request(
         "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/charts?filter=trigger_mode=MODE_SYNC%20AND%20pipeline_id=%22${pipeline_id}%22`,
+        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/charts?filter=triggerMode=MODE_SYNC%20AND%20pipelineId=%22${pipeline_id}%22`,
         null,
         header,
       ),

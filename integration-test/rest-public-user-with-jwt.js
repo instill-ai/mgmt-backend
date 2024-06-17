@@ -28,8 +28,8 @@ export function CheckPublicPatchAuthenticatedUser() {
       },
       role: "ai-engineer",
       newsletter_subscription: true,
-      create_time: "2000-01-01T00:00:00.000000Z",
-      update_time: "2000-01-01T00:00:00.000000Z",
+      createTime: "2000-01-01T00:00:00.000000Z",
+      updateTime: "2000-01-01T00:00:00.000000Z",
     };
 
     check(http.request("PATCH", `${constant.mgmtPublicHost}/user`, JSON.stringify(userUpdate), constant.restParamsWithInstillUserUid),

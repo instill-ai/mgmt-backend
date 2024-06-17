@@ -32,12 +32,12 @@ const MaxPayloadSize = 1024 * 1024 * 32
 const (
 	Start              string = "start"
 	Stop               string = "stop"
-	OwnerName          string = "owner_name"
-	PipelineID         string = "pipeline_id"
-	PipelineUID        string = "pipeline_uid"
-	PipelineReleaseID  string = "pipeline_release_id"
-	PipelineReleaseUID string = "pipeline_release_uid"
-	TriggerMode        string = "trigger_mode"
+	OwnerName          string = "ownerName"
+	PipelineID         string = "pipelineId"
+	PipelineUID        string = "pipelineUid"
+	PipelineReleaseID  string = "pipelineReleaseId"
+	PipelineReleaseUID string = "pipelineReleaseUid"
+	TriggerMode        string = "triggerMode"
 	Status             string = "status"
 )
 

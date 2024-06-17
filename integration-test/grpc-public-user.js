@@ -261,9 +261,9 @@ export function CheckPublicMetrics(header) {
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords response has nextPageToken': (r) => r && r.message.nextPageToken !== undefined,
     });
     check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords', {
-      filter: `pipeline_id="${pipeline_id}" AND trigger_mode=MODE_SYNC`,
+      filter: `pipelineId="${pipeline_id}" AND triggerMode=MODE_SYNC`,
     }, header), {
-      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords with filter status': (r) => r && r.status == grpc.StatusOK,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords with filter status': (r) => {console.log(r); return r && r.status == grpc.StatusOK},
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords with filter response pipelineTriggerRecords length is 0': (r) => r && r.message.pipelineTriggerRecords.length === 0,
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords with filter response totalSize is 0': (r) => r && r.message.totalSize === emptyPipelineTriggerRecordResponse.totalSize,
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords with filter response nextPageToken is empty': (r) => r && r.message.nextPageToken === emptyPipelineTriggerRecordResponse.nextPageToken,
@@ -286,7 +286,7 @@ export function CheckPublicMetrics(header) {
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords response has nextPageToken': (r) => r && r.message.nextPageToken !== undefined,
     });
     check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords', {
-      filter: `pipeline_id="${pipeline_id}"`,
+      filter: `pipelineId="${pipeline_id}"`,
     }, header), {
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords with filter status': (r) => r && r.status == grpc.StatusOK,
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords with filter response pipelineTriggerTableRecords length is 0': (r) => r && r.message.pipelineTriggerTableRecords.length === 0,
@@ -303,7 +303,7 @@ export function CheckPublicMetrics(header) {
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecords response has pipelineTriggerChartRecords': (r) => r && r.message.pipelineTriggerChartRecords !== undefined,
     });
     check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecords', {
-      filter: `pipeline_id="${pipeline_id}" AND trigger_mode=MODE_SYNC`,
+      filter: `pipelineId="${pipeline_id}" AND triggerMode=MODE_SYNC`,
     }, header), {
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecords with filter status': (r) => r && r.status == grpc.StatusOK,
       'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecords with filter response pipelineTriggerChartRecords lenght is 0': (r) => r && r.message.pipelineTriggerChartRecords.length === 0,
