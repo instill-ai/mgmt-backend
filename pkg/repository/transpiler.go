@@ -4,6 +4,7 @@ import (
 	"fmt"
 	// "time"
 
+	"github.com/iancoleman/strcase"
 	"go.einride.tech/aip/filtering"
 	"gorm.io/gorm/clause"
 
@@ -98,13 +99,14 @@ func (t *Transpiler) transpileCallExpr(e *expr.Expr) (string, error) {
 func (t *Transpiler) transpileIdentExpr(e *expr.Expr) (string, string, error) {
 
 	identExpr := e.GetIdentExpr()
+	identExprName := strcase.ToSnake(identExpr.Name)
 	identType, ok := t.filter.CheckedExpr.TypeMap[e.Id]
 	if !ok {
 		return "", "", fmt.Errorf("unknown type of ident expr %d", e.Id)
 	}
 	if messageType := identType.GetMessageType(); messageType != "" {
 		if enumType, err := protoregistry.GlobalTypes.FindEnumByName(protoreflect.FullName(messageType)); err == nil {
-			if enumValue := enumType.Descriptor().Values().ByName(protoreflect.Name(identExpr.Name)); enumValue != nil {
+			if enumValue := enumType.Descriptor().Values().ByName(protoreflect.Name(identExprName)); enumValue != nil {
 				// TODO: Configurable support for string literals.
 				return string(enumValue.Name()), messageType, nil
 			}
@@ -278,7 +280,8 @@ func (t *Transpiler) transpileTimestampCallExpr(e *expr.Expr) (string, error) {
 
 // TODO: temporary solution to recusrively find target filter expr name to replace
 func ExtractConstExpr(e *expr.Expr, targetName string, found bool) (string, bool) {
-	if len(e.GetCallExpr().GetArgs()) == 0 && e.GetIdentExpr().GetName() == targetName {
+	identExprName := strcase.ToSnake(e.GetIdentExpr().GetName())
+	if len(e.GetCallExpr().GetArgs()) == 0 && identExprName == targetName {
 		return "", true
 	}
 	if found {
@@ -298,7 +301,8 @@ func ExtractConstExpr(e *expr.Expr, targetName string, found bool) (string, bool
 
 // TODO: temporary solution to hijack and replace the `pipeline_id` filter on the fly to swap to `pipeline_uid` for query
 func HijackConstExpr(e *expr.Expr, beforeExprName string, replaceExprName string, replaceExprValue string, found bool) (string, bool) {
-	if len(e.GetCallExpr().GetArgs()) == 0 && e.GetIdentExpr().GetName() == beforeExprName {
+	identExprName := strcase.ToSnake(e.GetIdentExpr().GetName())
+	if len(e.GetCallExpr().GetArgs()) == 0 && identExprName == beforeExprName {
 		e.GetIdentExpr().Name = replaceExprName
 		return "", true
 	}
