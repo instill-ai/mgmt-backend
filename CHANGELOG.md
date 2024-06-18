@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.17.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.16.0-beta...v0.17.0-beta) (2024-06-18)
+
+
+### Features
+
+* **endpoints:** use camelCase for `filter` and `orderBy` query strings ([#217](https://github.com/instill-ai/mgmt-backend/issues/217)) ([12242f8](https://github.com/instill-ai/mgmt-backend/commit/12242f8b2d8ccf06a4ba6fed8a0d38d35a4a805b))
+* use camelCase for HTTP body ([#213](https://github.com/instill-ai/mgmt-backend/issues/213)) ([81c518e](https://github.com/instill-ai/mgmt-backend/commit/81c518eb5f32413bad4d81b49adfebdd62dda4dc))
+
+
+### Bug Fixes
+
+* receive config in InfluxDB constructor ([#215](https://github.com/instill-ai/mgmt-backend/issues/215)) ([2fc8f3e](https://github.com/instill-ai/mgmt-backend/commit/2fc8f3e5fdf9d73f748a694b046f4f0fef6f82fe))
+
 ## [0.16.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.15.2-beta...v0.16.0-beta) (2024-06-06)
 
 
