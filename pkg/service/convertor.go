@@ -428,7 +428,12 @@ func (s *service) DBToken2PBToken(ctx context.Context, dbToken *datamodel.Token)
 		Expiration:  &mgmtPB.ApiToken_ExpireTime{ExpireTime: timestamppb.New(dbToken.ExpireTime)},
 		CreateTime:  timestamppb.New(dbToken.Base.CreateTime),
 		UpdateTime:  timestamppb.New(dbToken.Base.UpdateTime),
-		LastUseTime: timestamppb.New(dbToken.LastUseTime),
+		LastUseTime: func() *timestamppb.Timestamp {
+			if dbToken.LastUseTime.IsZero() {
+				return nil
+			}
+			return timestamppb.New(dbToken.LastUseTime)
+		}(),
 	}, nil
 }
 
