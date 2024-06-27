@@ -13,6 +13,7 @@ import (
 	"github.com/instill-ai/x/sterr"
 
 	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	checkfield "github.com/instill-ai/x/checkfield"
 )
 
 const defaultPageSize = int32(10)
@@ -160,4 +161,31 @@ func (h *PrivateHandler) LookUpOrganizationAdmin(ctx context.Context, req *mgmtP
 		Organization: pbOrganization,
 	}
 	return &resp, nil
+}
+
+func (h *PrivateHandler) CheckNamespaceAdmin(ctx context.Context, req *mgmtPB.CheckNamespaceAdminRequest) (*mgmtPB.CheckNamespaceAdminResponse, error) {
+
+	err := checkfield.CheckResourceID(req.GetId())
+	if err != nil {
+		return nil, ErrResourceID
+	}
+
+	user, err := h.Service.GetUserAdmin(ctx, req.GetId())
+	if err == nil {
+		return &mgmtPB.CheckNamespaceAdminResponse{
+			Type: mgmtPB.CheckNamespaceAdminResponse_NAMESPACE_USER,
+			Uid:  *user.Uid,
+		}, nil
+	}
+	org, err := h.Service.GetOrganizationAdmin(ctx, req.GetId())
+	if err == nil {
+		return &mgmtPB.CheckNamespaceAdminResponse{
+			Type: mgmtPB.CheckNamespaceAdminResponse_NAMESPACE_ORGANIZATION,
+			Uid:  org.Uid,
+		}, nil
+	}
+
+	return &mgmtPB.CheckNamespaceAdminResponse{
+		Type: mgmtPB.CheckNamespaceAdminResponse_NAMESPACE_AVAILABLE,
+	}, nil
 }

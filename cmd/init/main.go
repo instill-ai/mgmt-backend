@@ -35,7 +35,7 @@ import (
 // CreateDefaultUser creates a default user in the database
 // Return error types
 //   - codes.Internal
-func createDefaultUser(ctx context.Context, db *gorm.DB) error {
+func createDefaultUser(ctx context.Context, r repository.Repository) error {
 
 	// Generate a random uid to the user
 	var defaultUserUID uuid.UUID
@@ -48,10 +48,6 @@ func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 	if err != nil {
 		return status.Errorf(codes.Internal, "uuid generation error %v", err)
 	}
-
-	redisClient := redis.NewClient(&config.Config.Cache.Redis.RedisOptions)
-	defer redisClient.Close()
-	r := repository.NewRepository(db, redisClient)
 
 	passwordBytes, err := bcrypt.GenerateFromPassword([]byte(constant.DefaultUserPassword), 10)
 	if err != nil {
@@ -105,6 +101,34 @@ func createDefaultUser(ctx context.Context, db *gorm.DB) error {
 	return nil
 }
 
+func createPresetOrg(ctx context.Context, r repository.Repository) error {
+
+	// In Instill Core, we provide a "preset" namespace for storing preset
+	// resources, such as preset pipelines.
+	presetOrg := &datamodel.Owner{
+		Base:        datamodel.Base{UID: uuid.FromStringOrNil(constant.PresetOrgUID)},
+		ID:          constant.PresetOrgID,
+		OwnerType:   sql.NullString{String: service.PBUserType2DBUserType[mgmtPB.OwnerType_OWNER_TYPE_ORGANIZATION], Valid: true},
+		DisplayName: sql.NullString{String: constant.PresetOrgDisplayName, Valid: true},
+	}
+
+	_, err := r.GetOrganization(context.Background(), constant.PresetOrgID, false)
+	if err == nil {
+		return nil
+	}
+
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return status.Errorf(codes.Internal, "error %v", err)
+	}
+
+	// Create the default preset organization
+	err = r.CreateOrganization(ctx, presetOrg)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func main() {
 	if err := config.Init(config.ParseConfigFlag()); err != nil {
 		log.Fatal(err.Error())
@@ -137,8 +161,17 @@ func main() {
 	db := database.GetConnection(&config.Config.Database)
 	defer database.Close(db)
 
+	redisClient := redis.NewClient(&config.Config.Cache.Redis.RedisOptions)
+	defer redisClient.Close()
+	r := repository.NewRepository(db, redisClient)
+
 	// Create a default user
-	if err := createDefaultUser(ctx, db); err != nil {
+	if err := createDefaultUser(ctx, r); err != nil {
+		logger.Fatal(err.Error())
+	}
+
+	// Create template organization
+	if err := createPresetOrg(ctx, r); err != nil {
 		logger.Fatal(err.Error())
 	}
 
