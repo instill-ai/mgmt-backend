@@ -150,6 +150,7 @@ func (t *Transpiler) transpileComparisonCallExpr(e *expr.Expr, op interface{}) (
 	if err != nil {
 		return "", err
 	}
+	ident = strcase.ToSnake(ident)
 
 	con, _, err := t.transpileExpr(callExpr.Args[1])
 	if err != nil {
