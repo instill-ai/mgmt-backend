@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.18.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.17.0-beta...v0.18.0-beta) (2024-06-29)
+
+
+### Features
+
+* add script to create `preset` namespace ([#219](https://github.com/instill-ai/mgmt-backend/issues/219)) ([a578ed9](https://github.com/instill-ai/mgmt-backend/commit/a578ed900aedb73c75b1d57dd3df3bbe0ca8085e))
+
+
+### Bug Fixes
+
+* fix metric endpoints bug ([#221](https://github.com/instill-ai/mgmt-backend/issues/221)) ([b24db57](https://github.com/instill-ai/mgmt-backend/commit/b24db572545fbf68a892241718a2a9e4ac461846))
+
 ## [0.17.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.16.0-beta...v0.17.0-beta) (2024-06-18)
 
 
