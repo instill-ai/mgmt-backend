@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.1-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.18.0-beta...v0.18.1-beta) (2024-07-16)
+
+
+### Miscellaneous Chores
+
+* release v0.18.1-beta ([c858468](https://github.com/instill-ai/mgmt-backend/commit/c8584686650121107735ed5ea3cb34f85ea8dba8))
+
 ## [0.18.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.17.0-beta...v0.18.0-beta) (2024-06-29)
 
 
