@@ -21,6 +21,16 @@ import (
 	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 )
 
+const (
+	// DefaultPageSize is the default pagination page size when page size is
+	// not assigned
+	DefaultPageSize = 100
+
+	// MaxPageSize is the maximum pagination page size if the assigned value is
+	// over this number
+	MaxPageSize = 1000
+)
+
 type CtxKey string
 
 // UserUIDCtxKey must be present in the context in order to pin a user to the
