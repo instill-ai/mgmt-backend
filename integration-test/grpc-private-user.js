@@ -68,7 +68,7 @@ export function CheckPrivateGetUserAdmin() {
   group(`Management Private API: Get default user`, () => {
 
     check(client.invoke('core.mgmt.v1beta.MgmtPrivateService/GetUserAdmin', {
-      name: `users/${constant.defaultUser.id}`
+      userId: constant.defaultUser.id
     }), {
       'core.mgmt.v1beta.MgmtPrivateService/GetUserAdmin status': (r) => r && r.status == grpc.StatusOK,
       'core.mgmt.v1beta.MgmtPrivateService/GetUserAdmin status': (r) => r && r.status == grpc.StatusOK,
@@ -87,7 +87,7 @@ export function CheckPrivateGetUserAdmin() {
   group(`Management Private API: Get non-exist user`, () => {
 
     check(client.invoke('core.mgmt.v1beta.MgmtPrivateService/GetUserAdmin', {
-      name: "users/" + nonExistID
+      userId: nonExistID
     }), {
       'core.mgmt.v1beta.MgmtPrivateService/GetUserAdmin status StatusNotFound': (r) => r && r.status == grpc.StatusNotFound,
     });
@@ -105,7 +105,7 @@ export function CheckPrivateLookUpUserAdmin() {
 
   // Get the uid of the default user
   var res = client.invoke('core.mgmt.v1beta.MgmtPrivateService/GetUserAdmin', {
-    name: `users/${constant.defaultUser.id}`
+    userId: constant.defaultUser.id
   })
   var defaultUid = res.message.user.uid;
 
@@ -161,7 +161,7 @@ export function CheckPrivateSubtractCredit() {
   group(`Management Private API: Get non-exist user`, () => {
 
     check(client.invoke('core.mgmt.v1beta.MgmtPrivateService/GetUserAdmin', {
-      name: "users/" + nonExistID
+      userId: nonExistID
     }), {
       'core.mgmt.v1beta.MgmtPrivateService/GetUserAdmin status StatusNotFound': (r) => r && r.status == grpc.StatusNotFound,
     });

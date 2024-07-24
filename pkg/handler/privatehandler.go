@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"strings"
 
 	"github.com/gofrs/uuid"
 	"go.einride.tech/aip/filtering"
@@ -57,9 +56,7 @@ func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUse
 // GetUserAdmin gets a user
 func (h *PrivateHandler) GetUserAdmin(ctx context.Context, req *mgmtPB.GetUserAdminRequest) (*mgmtPB.GetUserAdminResponse, error) {
 
-	id := strings.TrimPrefix(req.GetName(), "users/")
-
-	pbUser, err := h.Service.GetUserAdmin(ctx, id)
+	pbUser, err := h.Service.GetUserAdmin(ctx, req.UserId)
 	if err != nil {
 		return nil, err
 	}
@@ -74,9 +71,8 @@ func (h *PrivateHandler) GetUserAdmin(ctx context.Context, req *mgmtPB.GetUserAd
 func (h *PrivateHandler) LookUpUserAdmin(ctx context.Context, req *mgmtPB.LookUpUserAdminRequest) (*mgmtPB.LookUpUserAdminResponse, error) {
 	logger, _ := logger.GetZapLogger(ctx)
 
-	uidStr := strings.TrimPrefix(req.GetPermalink(), "users/")
 	// Validation: `uid` in request is valid
-	uid, err := uuid.FromString(uidStr)
+	uid, err := uuid.FromString(req.UserUid)
 	if err != nil {
 		st, e := sterr.CreateErrorBadRequest(
 			"look up user invalid uuid error", []*errdetails.BadRequest_FieldViolation{
@@ -129,9 +125,7 @@ func (h *PrivateHandler) ListOrganizationsAdmin(ctx context.Context, req *mgmtPB
 // GetOrganizationAdmin gets a organization
 func (h *PrivateHandler) GetOrganizationAdmin(ctx context.Context, req *mgmtPB.GetOrganizationAdminRequest) (*mgmtPB.GetOrganizationAdminResponse, error) {
 
-	id := strings.TrimPrefix(req.GetName(), "organizations/")
-
-	pbOrganization, err := h.Service.GetOrganizationAdmin(ctx, id)
+	pbOrganization, err := h.Service.GetOrganizationAdmin(ctx, req.OrganizationId)
 	if err != nil {
 		return nil, err
 	}
@@ -145,9 +139,8 @@ func (h *PrivateHandler) GetOrganizationAdmin(ctx context.Context, req *mgmtPB.G
 // LookUpOrganizationAdmin gets a organization by permalink
 func (h *PrivateHandler) LookUpOrganizationAdmin(ctx context.Context, req *mgmtPB.LookUpOrganizationAdminRequest) (*mgmtPB.LookUpOrganizationAdminResponse, error) {
 
-	uidStr := strings.TrimPrefix(req.GetPermalink(), "organizations/")
 	// Validation: `uid` in request is valid
-	uid, err := uuid.FromString(uidStr)
+	uid, err := uuid.FromString(req.OrganizationUid)
 	if err != nil {
 		return nil, err
 	}

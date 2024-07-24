@@ -68,10 +68,6 @@ type Service interface {
 	CheckUserPassword(ctx context.Context, uid uuid.UUID, password string) error
 	UpdateUserPassword(ctx context.Context, uid uuid.UUID, newPassword string) error
 
-	ListPipelineTriggerRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerRecord, int64, string, error)
-	ListPipelineTriggerTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerTableRecord, int64, string, error)
-	ListPipelineTriggerChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerChartRecord, error)
-
 	DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*mgmtPB.User, error)
 	DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtPB.User, error)
 	PBAuthenticatedUser2DBUser(ctx context.Context, pbUser *mgmtPB.AuthenticatedUser) (*datamodel.Owner, error)
@@ -441,6 +437,7 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 	pipelineIDList := []string{}
 	for {
 		// TODO: optimize this cascade delete
+		//nolint:staticcheck
 		resp, err := s.pipelinePublicServiceClient.ListOrganizationPipelines(InjectOwnerToContext(ctx, ctxUserUID.String()),
 			&pipelinePB.ListOrganizationPipelinesRequest{
 				Parent:    fmt.Sprintf("organizations/%s", id),
@@ -458,6 +455,7 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 	}
 
 	for _, pipelineID := range pipelineIDList {
+		//nolint:staticcheck
 		_, _ = s.pipelinePublicServiceClient.DeleteOrganizationPipeline(InjectOwnerToContext(ctx, ctxUserUID.String()),
 			&pipelinePB.DeleteOrganizationPipelineRequest{
 				Name: fmt.Sprintf("organizations/%s/pipelines/%s", id, pipelineID),

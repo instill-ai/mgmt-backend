@@ -1,8 +1,6 @@
 module github.com/instill-ai/mgmt-backend
 
-go 1.21.3
-
-toolchain go1.21.5
+go 1.22.5
 
 retract v0.3.2 // Published accidentally.
 
@@ -17,7 +15,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1
 	github.com/iancoleman/strcase v0.2.0
 	github.com/influxdata/influxdb-client-go/v2 v2.12.3
-	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20240626092719-eaf7fa6dbcce
+	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20240724130416-27b3d8e33885
 	github.com/instill-ai/usage-client v0.2.4-alpha.0.20240123081026-6c78d9a5197a
 	github.com/instill-ai/x v0.4.0-alpha
 	github.com/knadh/koanf v1.5.0
@@ -37,12 +35,12 @@ require (
 	go.temporal.io/api v1.16.0
 	go.temporal.io/sdk v1.21.0
 	go.uber.org/zap v1.26.0
-	golang.org/x/crypto v0.23.0
+	golang.org/x/crypto v0.24.0
 	golang.org/x/image v0.18.0
-	golang.org/x/net v0.25.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20240125205218-1f4bbc51befe
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240125205218-1f4bbc51befe
-	google.golang.org/grpc v1.61.1
+	golang.org/x/net v0.26.0
+	google.golang.org/genproto/googleapis/api v0.0.0-20240318140521-94a12d6c2237
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240318140521-94a12d6c2237
+	google.golang.org/grpc v1.64.1
 	google.golang.org/protobuf v1.33.0
 	gorm.io/datatypes v1.2.0
 	gorm.io/driver/postgres v1.5.0
@@ -72,9 +70,9 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/gogo/status v1.1.1 // indirect
 	github.com/golang/mock v1.6.0 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/google/uuid v1.4.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/influxdata/line-protocol v0.0.0-20200327222509-2487e7298839 // indirect
@@ -105,7 +103,7 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/sys v0.21.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/genproto v0.0.0-20240116215550-a9fa1716bcac // indirect
