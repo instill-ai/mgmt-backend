@@ -87,7 +87,6 @@ jobs:
           load: true
           build-args: |
             SERVICE_NAME=mgmt-backend
-            GOLANG_VERSION=${{ env.GOLANG_VERSION }}
           tags: instill/mgmt-backend:latest
 
       - name: Checkout (instill-core)

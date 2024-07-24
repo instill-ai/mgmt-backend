@@ -205,9 +205,8 @@ func (h *PublicHandler) GetUser(ctx context.Context, req *mgmtPB.GetUserRequest)
 		span.SetStatus(1, err.Error())
 		return nil, err
 	}
-	userID := strings.Split(req.Name, "/")[1]
 
-	pbUser, err := h.Service.GetUser(ctx, ctxUserUID, userID)
+	pbUser, err := h.Service.GetUser(ctx, ctxUserUID, req.UserId)
 
 	if err != nil {
 		logger.Error(err.Error())
@@ -496,12 +495,7 @@ func (h *PublicHandler) GetOrganization(ctx context.Context, req *mgmtPB.GetOrga
 		return nil, err
 	}
 
-	id, err := resource.GetRscNameID(req.GetName())
-	if err != nil {
-		return nil, ErrResourceID
-	}
-
-	pbOrg, err := h.Service.GetOrganization(ctx, ctxUserUID, id)
+	pbOrg, err := h.Service.GetOrganization(ctx, ctxUserUID, req.OrganizationId)
 	if err != nil {
 		return nil, err
 	}
@@ -551,7 +545,7 @@ func (h *PublicHandler) UpdateOrganization(ctx context.Context, req *mgmtPB.Upda
 		return nil, ErrUpdateMask
 	}
 
-	getResp, err := h.GetOrganization(ctx, &mgmtPB.GetOrganizationRequest{Name: pbOrgReq.GetName()})
+	getResp, err := h.GetOrganization(ctx, &mgmtPB.GetOrganizationRequest{OrganizationId: pbOrgReq.Id})
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -616,23 +610,18 @@ func (h *PublicHandler) DeleteOrganization(ctx context.Context, req *mgmtPB.Dele
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	id, err := resource.GetRscNameID(req.Name)
-	if err != nil {
-		span.SetStatus(1, err.Error())
-		return nil, ErrResourceID
-	}
 	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
 	}
-	existOrg, err := h.GetOrganization(ctx, &mgmtPB.GetOrganizationRequest{Name: req.GetName()})
+	existOrg, err := h.GetOrganization(ctx, &mgmtPB.GetOrganizationRequest{OrganizationId: req.OrganizationId})
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
 	}
 
-	if err := h.Service.DeleteOrganization(ctx, ctxUserUID, id); err != nil {
+	if err := h.Service.DeleteOrganization(ctx, ctxUserUID, req.OrganizationId); err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
 	}
@@ -778,12 +767,7 @@ func (h *PublicHandler) GetToken(ctx context.Context, req *mgmtPB.GetTokenReques
 		return nil, err
 	}
 
-	id, err := resource.GetRscNameID(req.GetName())
-	if err != nil {
-		return nil, ErrResourceID
-	}
-
-	pbToken, err := h.Service.GetToken(ctx, ctxUserUID, id)
+	pbToken, err := h.Service.GetToken(ctx, ctxUserUID, req.TokenId)
 	if err != nil {
 		return nil, err
 	}
@@ -821,7 +805,7 @@ func (h *PublicHandler) DeleteToken(ctx context.Context, req *mgmtPB.DeleteToken
 		return nil, err
 	}
 
-	existToken, err := h.GetToken(ctx, &mgmtPB.GetTokenRequest{Name: req.GetName()})
+	existToken, err := h.GetToken(ctx, &mgmtPB.GetTokenRequest{TokenId: req.TokenId})
 	if err != nil {
 		return nil, err
 	}
@@ -874,211 +858,6 @@ func (h *PublicHandler) ValidateToken(ctx context.Context, req *mgmtPB.ValidateT
 	return &mgmtPB.ValidateTokenResponse{UserUid: userUID}, nil
 }
 
-func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgmtPB.ListPipelineTriggerRecordsRequest) (*mgmtPB.ListPipelineTriggerRecordsResponse, error) {
-
-	eventName := "ListPipelineTriggerRecords"
-	ctx, span := tracer.Start(ctx, eventName,
-		trace.WithSpanKind(trace.SpanKindServer))
-	defer span.End()
-
-	logUUID, _ := uuid.NewV4()
-
-	logger, _ := logger.GetZapLogger(ctx)
-
-	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
-	if err != nil {
-		span.SetStatus(1, err.Error())
-		return nil, err
-	}
-	pbUser, err := h.Service.GetUserByUIDAdmin(ctx, ctxUserUID)
-	if err != nil {
-		span.SetStatus(1, err.Error())
-		return nil, err
-	}
-
-	var mode mgmtPB.Mode
-	var status mgmtPB.Status
-
-	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
-		filtering.DeclareStandardFunctions(),
-		filtering.DeclareIdent(constant.Start, filtering.TypeTimestamp),
-		filtering.DeclareIdent(constant.Stop, filtering.TypeTimestamp),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.OwnerName), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineID), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineUID), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineReleaseID), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineReleaseUID), filtering.TypeString),
-		filtering.DeclareEnumIdent(strcase.ToLowerCamel(constant.TriggerMode), mode.Type()),
-		filtering.DeclareEnumIdent(constant.Status, status.Type()),
-	}...)
-	if err != nil {
-		span.SetStatus(1, err.Error())
-		return nil, err
-	}
-
-	filter, err := filtering.ParseFilter(req, declarations)
-	if err != nil {
-		span.SetStatus(1, err.Error())
-		return nil, err
-	}
-
-	pipelineTriggerRecords, totalSize, nextPageToken, err := h.Service.ListPipelineTriggerRecords(ctx, pbUser, int64(req.GetPageSize()), req.GetPageToken(), filter)
-	if err != nil {
-		span.SetStatus(1, err.Error())
-		return nil, err
-	}
-
-	resp := mgmtPB.ListPipelineTriggerRecordsResponse{
-		PipelineTriggerRecords: pipelineTriggerRecords,
-		NextPageToken:          nextPageToken,
-		TotalSize:              int32(totalSize),
-	}
-
-	logger.Info(string(custom_otel.NewLogMessage(
-		span,
-		logUUID.String(),
-		uuid.FromStringOrNil(*pbUser.Uid),
-		eventName,
-		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v", totalSize)),
-	)))
-
-	return &resp, nil
-}
-
-func (h *PublicHandler) ListPipelineTriggerTableRecords(ctx context.Context, req *mgmtPB.ListPipelineTriggerTableRecordsRequest) (*mgmtPB.ListPipelineTriggerTableRecordsResponse, error) {
-
-	eventName := "ListPipelineTriggerTableRecords"
-	ctx, span := tracer.Start(ctx, eventName,
-		trace.WithSpanKind(trace.SpanKindServer))
-	defer span.End()
-
-	logUUID, _ := uuid.NewV4()
-
-	logger, _ := logger.GetZapLogger(ctx)
-
-	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
-	if err != nil {
-		span.SetStatus(1, err.Error())
-		return nil, err
-	}
-	pbUser, err := h.Service.GetUserByUIDAdmin(ctx, ctxUserUID)
-	if err != nil {
-		span.SetStatus(1, err.Error())
-		return nil, err
-	}
-
-	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
-		filtering.DeclareStandardFunctions(),
-		filtering.DeclareIdent(constant.Start, filtering.TypeTimestamp),
-		filtering.DeclareIdent(constant.Stop, filtering.TypeTimestamp),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.OwnerName), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineID), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineUID), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineReleaseID), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineReleaseUID), filtering.TypeString),
-	}...)
-	if err != nil {
-		span.SetStatus(1, err.Error())
-		return nil, err
-	}
-
-	filter, err := filtering.ParseFilter(req, declarations)
-	if err != nil {
-		span.SetStatus(1, err.Error())
-		return nil, err
-	}
-
-	pipelineTriggerTableRecords, totalSize, nextPageToken, err := h.Service.ListPipelineTriggerTableRecords(ctx, pbUser, int64(req.GetPageSize()), req.GetPageToken(), filter)
-	if err != nil {
-		span.SetStatus(1, err.Error())
-		return nil, err
-	}
-
-	resp := mgmtPB.ListPipelineTriggerTableRecordsResponse{
-		PipelineTriggerTableRecords: pipelineTriggerTableRecords,
-		NextPageToken:               nextPageToken,
-		TotalSize:                   int32(totalSize),
-	}
-
-	logger.Info(string(custom_otel.NewLogMessage(
-		span,
-		logUUID.String(),
-		uuid.FromStringOrNil(*pbUser.Uid),
-		eventName,
-		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v", totalSize)),
-	)))
-
-	return &resp, nil
-}
-
-func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req *mgmtPB.ListPipelineTriggerChartRecordsRequest) (*mgmtPB.ListPipelineTriggerChartRecordsResponse, error) {
-
-	eventName := "ListPipelineTriggerChartRecords"
-	ctx, span := tracer.Start(ctx, eventName,
-		trace.WithSpanKind(trace.SpanKindServer))
-	defer span.End()
-
-	logUUID, _ := uuid.NewV4()
-
-	logger, _ := logger.GetZapLogger(ctx)
-
-	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
-	if err != nil {
-		span.SetStatus(1, err.Error())
-		return nil, err
-	}
-	pbUser, err := h.Service.GetUserByUIDAdmin(ctx, ctxUserUID)
-	if err != nil {
-		span.SetStatus(1, err.Error())
-		return nil, err
-	}
-
-	var mode mgmtPB.Mode
-	var status mgmtPB.Status
-
-	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
-		filtering.DeclareStandardFunctions(),
-		filtering.DeclareIdent(constant.Start, filtering.TypeTimestamp),
-		filtering.DeclareIdent(constant.Stop, filtering.TypeTimestamp),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.OwnerName), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineID), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineUID), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineReleaseID), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineReleaseUID), filtering.TypeString),
-		filtering.DeclareEnumIdent(strcase.ToLowerCamel(constant.TriggerMode), mode.Type()),
-		filtering.DeclareEnumIdent(constant.Status, status.Type()),
-	}...)
-	if err != nil {
-		span.SetStatus(1, err.Error())
-		return nil, err
-	}
-
-	filter, err := filtering.ParseFilter(req, declarations)
-	if err != nil {
-		span.SetStatus(1, err.Error())
-		return nil, err
-	}
-
-	pipelineTriggerChartRecords, err := h.Service.ListPipelineTriggerChartRecords(ctx, pbUser, int64(req.GetAggregationWindow()), filter)
-	if err != nil {
-		span.SetStatus(1, err.Error())
-		return nil, err
-	}
-
-	resp := mgmtPB.ListPipelineTriggerChartRecordsResponse{
-		PipelineTriggerChartRecords: pipelineTriggerChartRecords,
-	}
-
-	logger.Info(string(custom_otel.NewLogMessage(
-		span,
-		logUUID.String(),
-		uuid.FromStringOrNil(*pbUser.Uid),
-		eventName,
-	)))
-
-	return &resp, nil
-}
-
 func (h *PublicHandler) ListUserMemberships(ctx context.Context, req *mgmtPB.ListUserMembershipsRequest) (*mgmtPB.ListUserMembershipsResponse, error) {
 
 	eventName := "ListUserMemberships"
@@ -1096,9 +875,8 @@ func (h *PublicHandler) ListUserMemberships(ctx context.Context, req *mgmtPB.Lis
 		span.SetStatus(1, err.Error())
 		return nil, err
 	}
-	userID := strings.Split(req.Parent, "/")[1]
 
-	pbMemberships, err := h.Service.ListUserMemberships(ctx, ctxUserUID, userID)
+	pbMemberships, err := h.Service.ListUserMemberships(ctx, ctxUserUID, req.UserId)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -1130,15 +908,13 @@ func (h *PublicHandler) GetUserMembership(ctx context.Context, req *mgmtPB.GetUs
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	userID := strings.Split(req.Name, "/")[1]
-	orgID := strings.Split(req.Name, "/")[3]
 	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
 	}
 
-	pbMembership, err := h.Service.GetUserMembership(ctx, ctxUserUID, userID, orgID)
+	pbMembership, err := h.Service.GetUserMembership(ctx, ctxUserUID, req.UserId, req.OrganizationId)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -1218,15 +994,13 @@ func (h *PublicHandler) DeleteUserMembership(ctx context.Context, req *mgmtPB.De
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	userID := strings.Split(req.Name, "/")[1]
-	orgID := strings.Split(req.Name, "/")[3]
 	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
 	}
 
-	err = h.Service.DeleteUserMembership(ctx, ctxUserUID, userID, orgID)
+	err = h.Service.DeleteUserMembership(ctx, ctxUserUID, req.UserId, req.OrganizationId)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -1262,7 +1036,7 @@ func (h *PublicHandler) ListOrganizationMemberships(ctx context.Context, req *mg
 		return nil, err
 	}
 
-	pbMemberships, err := h.Service.ListOrganizationMemberships(ctx, ctxUserUID, strings.Split(req.Parent, "/")[1])
+	pbMemberships, err := h.Service.ListOrganizationMemberships(ctx, ctxUserUID, req.OrganizationId)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -1300,10 +1074,7 @@ func (h *PublicHandler) GetOrganizationMembership(ctx context.Context, req *mgmt
 		return nil, err
 	}
 
-	orgID := strings.Split(req.Name, "/")[1]
-	userID := strings.Split(req.Name, "/")[3]
-
-	pbMembership, err := h.Service.GetOrganizationMembership(ctx, ctxUserUID, orgID, userID)
+	pbMembership, err := h.Service.GetOrganizationMembership(ctx, ctxUserUID, req.OrganizationId, req.UserId)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -1390,10 +1161,7 @@ func (h *PublicHandler) DeleteOrganizationMembership(ctx context.Context, req *m
 		return nil, err
 	}
 
-	orgID := strings.Split(req.Name, "/")[1]
-	userID := strings.Split(req.Name, "/")[3]
-
-	err = h.Service.DeleteOrganizationMembership(ctx, ctxUserUID, orgID, userID)
+	err = h.Service.DeleteOrganizationMembership(ctx, ctxUserUID, req.OrganizationId, req.UserId)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err

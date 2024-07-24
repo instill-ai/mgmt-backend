@@ -32,7 +32,7 @@ func InitPipelinePublicServiceClient(ctx context.Context, appConfig *config.AppC
 		clientDialOpts = grpc.WithTransportCredentials(insecure.NewCredentials())
 	}
 
-	clientConn, err := grpc.Dial(fmt.Sprintf("%v:%v", appConfig.PipelineBackend.Host, appConfig.PipelineBackend.PublicPort), clientDialOpts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(constant.MaxPayloadSize), grpc.MaxCallSendMsgSize(constant.MaxPayloadSize)))
+	clientConn, err := grpc.NewClient(fmt.Sprintf("%v:%v", appConfig.PipelineBackend.Host, appConfig.PipelineBackend.PublicPort), clientDialOpts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(constant.MaxPayloadSize), grpc.MaxCallSendMsgSize(constant.MaxPayloadSize)))
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, nil
@@ -53,7 +53,7 @@ func InitUsageServiceClient(ctx context.Context, serverConfig *config.ServerConf
 		clientDialOpts = grpc.WithTransportCredentials(insecure.NewCredentials())
 	}
 
-	clientConn, err := grpc.Dial(fmt.Sprintf("%v:%v", serverConfig.Usage.Host, serverConfig.Usage.Port), clientDialOpts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(constant.MaxPayloadSize), grpc.MaxCallSendMsgSize(constant.MaxPayloadSize)))
+	clientConn, err := grpc.NewClient(fmt.Sprintf("%v:%v", serverConfig.Usage.Host, serverConfig.Usage.Port), clientDialOpts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(constant.MaxPayloadSize), grpc.MaxCallSendMsgSize(constant.MaxPayloadSize)))
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, nil
