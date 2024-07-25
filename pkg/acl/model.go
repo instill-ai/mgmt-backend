@@ -48,6 +48,14 @@ package acl
 //     define executor: [user, user:*, code] or writer or member from owner
 //     define reader: [user, user:*, code, visitor:*] or executor or member from owner
 
+// type knowledgebase
+//   relations
+// 	define owner: [organization, user]
+// 	define admin: [user] or owner or member from owner
+// 	define writer: [user] or admin or member from owner
+// 	define executor: [user, user:*, code] or writer or member from owner
+// 	define reader: [user, user:*, code, visitor:*] or executor or member from owner
+
 const ACLModel = `
   {
 	"schema_version": "1.1",
@@ -888,6 +896,170 @@ const ACLModel = `
 		  },
 		  "module": "",
 		  "source_info": null
+		}
+	  },
+	  {
+		"type": "knowledgebase",
+		"relations": {
+		  "owner": {
+			"this": {}
+		  },
+		  "admin": {
+			"union": {
+			  "child": [
+				{
+				  "this": {}
+				},
+				{
+				  "computedUserset": {
+					"relation": "owner"
+				  }
+				},
+				{
+				  "tupleToUserset": {
+					"computedUserset": {
+					  "relation": "member"
+					},
+					"tupleset": {
+					  "relation": "owner"
+					}
+				  }
+				}
+			  ]
+			}
+		  },
+		  "writer": {
+			"union": {
+			  "child": [
+				{
+				  "this": {}
+				},
+				{
+				  "computedUserset": {
+					"relation": "admin"
+				  }
+				},
+				{
+				  "tupleToUserset": {
+					"computedUserset": {
+					  "relation": "member"
+					},
+					"tupleset": {
+					  "relation": "owner"
+					}
+				  }
+				}
+			  ]
+			}
+		  },
+		  "executor": {
+			"union": {
+			  "child": [
+				{
+				  "this": {}
+				},
+				{
+				  "computedUserset": {
+					"relation": "writer"
+				  }
+				},
+				{
+				  "tupleToUserset": {
+					"computedUserset": {
+					  "relation": "member"
+					},
+					"tupleset": {
+					  "relation": "owner"
+					}
+				  }
+				}
+			  ]
+			}
+		  },
+		  "reader": {
+			"union": {
+			  "child": [
+				{
+				  "this": {}
+				},
+				{
+				  "computedUserset": {
+					"relation": "executor"
+				  }
+				},
+				{
+				  "tupleToUserset": {
+					"computedUserset": {
+					  "relation": "member"
+					},
+					"tupleset": {
+					  "relation": "owner"
+					}
+				  }
+				}
+			  ]
+			}
+		  }
+		},
+		"metadata": {
+		  "relations": {
+			"owner": {
+			  "directly_related_user_types": [
+				{
+				  "type": "organization"
+				},
+				{
+				  "type": "user"
+				}
+			  ]
+			},
+			"admin": {
+			  "directly_related_user_types": [
+				{
+				  "type": "user"
+				}
+			  ]
+			},
+			"writer": {
+			  "directly_related_user_types": [
+				{
+				  "type": "user"
+				}
+			  ]
+			},
+			"executor": {
+			  "directly_related_user_types": [
+				{
+				  "type": "user"
+				},
+				{
+				  "type": "user",
+				  "wildcard": {}
+				},
+				{
+				  "type": "code"
+				}
+			  ]
+			},
+			"reader": {
+			  "directly_related_user_types": [
+				{
+				  "type": "user"
+				},
+				{
+				  "type": "user",
+				  "wildcard": {}
+				},
+				{
+				  "type": "code"
+				},
+				{
+				  "type": "visitor",
+				  "wildcard": {}
+				}
+			  ]
+			}
+		  }
 		}
 	  }
 	],

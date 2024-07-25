@@ -108,3 +108,6 @@ protogen-go
 .air.toml
 tmp
 bin
+
+# local
+.DS_Store
