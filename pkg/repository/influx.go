@@ -24,6 +24,7 @@ import (
 // InfluxDB interface
 type InfluxDB interface {
 	ListPipelineTriggerChartRecords(ctx context.Context, p ListPipelineTriggerChartRecordsParams) (*mgmtpb.ListPipelineTriggerChartRecordsResponse, error)
+	GetPipelineTriggerCount(ctx context.Context, p GetPipelineTriggerCountParams) (*mgmtpb.GetPipelineTriggerCountResponse, error)
 
 	Bucket() string
 	QueryAPI() api.QueryAPI
@@ -177,6 +178,82 @@ func (i *influxDB) ListPipelineTriggerChartRecords(
 
 	return &mgmtpb.ListPipelineTriggerChartRecordsResponse{
 		PipelineTriggerChartRecords: records,
+	}, nil
+}
+
+const qPipelineTriggerCount = `
+from(bucket: "%s")
+	|> range(start: %s, stop: %s)
+	|> filter(fn: (r) => r._measurement == "pipeline.trigger" and r.requester_uid == "%s")
+	|> filter(fn: (r) => r._field == "trigger_time")
+	|> group(columns: ["requester_uid", "status"])
+	|> count(column: "_value")
+`
+
+// GetPipelineTriggerCountParams contains the required information to
+// query the pipeline trigger count of a namespace.
+// TODO jvallesm: this should be defined in the service package for better
+// decoupling. At the moment this implies breaking an import cycle with many
+// dependencies.
+type GetPipelineTriggerCountParams struct {
+	NamespaceUID uuid.UUID
+	Start        time.Time
+	Stop         time.Time
+}
+
+func (i *influxDB) GetPipelineTriggerCount(
+	ctx context.Context,
+	p GetPipelineTriggerCountParams,
+) (*mgmtpb.GetPipelineTriggerCountResponse, error) {
+	l, _ := logger.GetZapLogger(ctx)
+	l = l.With(zap.Reflect("triggerCountParams", p))
+
+	query := fmt.Sprintf(
+		qPipelineTriggerCount,
+		i.Bucket(),
+		p.Start.Format(time.RFC3339Nano),
+		p.Stop.Format(time.RFC3339Nano),
+		p.NamespaceUID.String(),
+	)
+	result, err := i.QueryAPI().Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("%w: querying data from InfluxDB: %w", errdomain.ErrInvalidArgument, err)
+	}
+
+	defer result.Close()
+
+	// We'll have one record per status.
+	countRecords := make([]*mgmtpb.PipelineTriggerCount, 0, 2)
+	for result.Next() {
+		l := l.With(zap.Time("_time", result.Record().Time()))
+
+		statusStr := result.Record().ValueByKey("status").(string)
+		status := mgmtpb.Status(mgmtpb.Status_value[statusStr])
+		if status == mgmtpb.Status_STATUS_UNSPECIFIED {
+			l.Error("Missing status on trigger count record.")
+		}
+
+		count, match := result.Record().Value().(int64)
+		if !match {
+			l.Error("Missing count on pipeline trigger count record.")
+		}
+
+		countRecords = append(countRecords, &mgmtpb.PipelineTriggerCount{
+			TriggerCount: int32(count),
+			Status:       &status,
+		})
+	}
+
+	if result.Err() != nil {
+		return nil, fmt.Errorf("collecting information from pipeline trigger count records: %w", err)
+	}
+
+	if result.Record() == nil {
+		return nil, nil
+	}
+
+	return &mgmtpb.GetPipelineTriggerCountResponse{
+		PipelineTriggerCounts: countRecords,
 	}, nil
 }
 

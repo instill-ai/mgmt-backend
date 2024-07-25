@@ -17,6 +17,36 @@ import (
 	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 )
 
+func (s *service) GetPipelineTriggerCount(
+	ctx context.Context,
+	req *mgmtpb.GetPipelineTriggerCountRequest,
+	ctxUserUID uuid.UUID,
+) (*mgmtpb.GetPipelineTriggerCountResponse, error) {
+	nsUID, err := s.GrantedNamespaceUID(ctx, req.GetNamespaceId(), ctxUserUID)
+	if err != nil {
+		return nil, fmt.Errorf("checking user permissions: %w", err)
+	}
+
+	now := time.Now().UTC()
+	p := repository.GetPipelineTriggerCountParams{
+		NamespaceUID: nsUID,
+
+		// Default values
+		Start: time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()),
+		Stop:  now,
+	}
+
+	if req.GetStart() != nil {
+		p.Start = req.GetStart().AsTime()
+	}
+
+	if req.GetStop() != nil {
+		p.Stop = req.GetStop().AsTime()
+	}
+
+	return s.influxDB.GetPipelineTriggerCount(ctx, p)
+}
+
 func (s *service) ListPipelineTriggerChartRecords(
 	ctx context.Context,
 	req *mgmtpb.ListPipelineTriggerChartRecordsRequest,
