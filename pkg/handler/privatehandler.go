@@ -168,6 +168,9 @@ func (h *PrivateHandler) CheckNamespaceAdmin(ctx context.Context, req *mgmtPB.Ch
 		return &mgmtPB.CheckNamespaceAdminResponse{
 			Type: mgmtPB.CheckNamespaceAdminResponse_NAMESPACE_USER,
 			Uid:  *user.Uid,
+			Owner: &mgmtPB.CheckNamespaceAdminResponse_User{
+				User: user,
+			},
 		}, nil
 	}
 	org, err := h.Service.GetOrganizationAdmin(ctx, req.GetId())
@@ -175,10 +178,41 @@ func (h *PrivateHandler) CheckNamespaceAdmin(ctx context.Context, req *mgmtPB.Ch
 		return &mgmtPB.CheckNamespaceAdminResponse{
 			Type: mgmtPB.CheckNamespaceAdminResponse_NAMESPACE_ORGANIZATION,
 			Uid:  org.Uid,
+			Owner: &mgmtPB.CheckNamespaceAdminResponse_Organization{
+				Organization: org,
+			},
 		}, nil
 	}
 
 	return &mgmtPB.CheckNamespaceAdminResponse{
 		Type: mgmtPB.CheckNamespaceAdminResponse_NAMESPACE_AVAILABLE,
+	}, nil
+}
+
+func (h *PrivateHandler) CheckNamespaceByUIDAdmin(ctx context.Context, req *mgmtPB.CheckNamespaceByUIDAdminRequest) (*mgmtPB.CheckNamespaceByUIDAdminResponse, error) {
+
+	user, err := h.Service.GetUserAdmin(ctx, req.GetUid())
+	if err == nil {
+		return &mgmtPB.CheckNamespaceByUIDAdminResponse{
+			Type: mgmtPB.CheckNamespaceByUIDAdminResponse_NAMESPACE_USER,
+			Id:   user.Id,
+			Owner: &mgmtPB.CheckNamespaceByUIDAdminResponse_User{
+				User: user,
+			},
+		}, nil
+	}
+	org, err := h.Service.GetOrganizationAdmin(ctx, req.GetUid())
+	if err == nil {
+		return &mgmtPB.CheckNamespaceByUIDAdminResponse{
+			Type: mgmtPB.CheckNamespaceByUIDAdminResponse_NAMESPACE_ORGANIZATION,
+			Id:   org.Id,
+			Owner: &mgmtPB.CheckNamespaceByUIDAdminResponse_Organization{
+				Organization: org,
+			},
+		}, nil
+	}
+
+	return &mgmtPB.CheckNamespaceByUIDAdminResponse{
+		Type: mgmtPB.CheckNamespaceByUIDAdminResponse_NAMESPACE_AVAILABLE,
 	}, nil
 }
