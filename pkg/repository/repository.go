@@ -61,10 +61,11 @@ type Repository interface {
 	UpdateOrganization(ctx context.Context, id string, user *datamodel.Owner) error
 	DeleteOrganization(ctx context.Context, id string) error
 
+	GetOwner(ctx context.Context, id string, includeAvatar bool) (*datamodel.Owner, error)
+	GetOwnerByUID(ctx context.Context, uid uuid.UUID) (*datamodel.Owner, error)
+
 	listOwners(ctx context.Context, ownerType string, pageSize int, pageToken string, filter filtering.Filter) ([]*datamodel.Owner, int64, string, error)
 	createOwner(ctx context.Context, ownerType string, user *datamodel.Owner) error
-	getOwner(ctx context.Context, ownerType string, id string, includeAvatar bool) (*datamodel.Owner, error)
-	getOwnerByUID(ctx context.Context, ownerType string, uid uuid.UUID) (*datamodel.Owner, error)
 	updateOwner(ctx context.Context, ownerType string, id string, user *datamodel.Owner) error
 	deleteOwner(ctx context.Context, ownerType string, id string) error
 
@@ -119,11 +120,32 @@ func (r *repository) ListUsers(ctx context.Context, pageSize int, pageToken stri
 func (r *repository) CreateUser(ctx context.Context, user *datamodel.Owner) error {
 	return r.createOwner(ctx, "user", user)
 }
-func (r *repository) GetUser(ctx context.Context, id string, includeAvatar bool) (*datamodel.Owner, error) {
-	return r.getOwner(ctx, "user", id, includeAvatar)
+
+// ownerWithType is used to wrap an owner fetch with a tyupe check.
+func ownerWithType(o *datamodel.Owner, ownerType string) (*datamodel.Owner, error) {
+	if !o.OwnerType.Valid || o.OwnerType.String != ownerType {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	return o, nil
 }
+
+func (r *repository) GetUser(ctx context.Context, id string, includeAvatar bool) (*datamodel.Owner, error) {
+	owner, err := r.GetOwner(ctx, id, includeAvatar)
+	if err != nil {
+		return nil, err
+	}
+
+	return ownerWithType(owner, "user")
+}
+
 func (r *repository) GetUserByUID(ctx context.Context, uid uuid.UUID) (*datamodel.Owner, error) {
-	return r.getOwnerByUID(ctx, "user", uid)
+	owner, err := r.GetOwnerByUID(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+
+	return ownerWithType(owner, "user")
 }
 func (r *repository) UpdateUser(ctx context.Context, id string, user *datamodel.Owner) error {
 	return r.updateOwner(ctx, "user", id, user)
@@ -138,12 +160,25 @@ func (r *repository) ListOrganizations(ctx context.Context, pageSize int, pageTo
 func (r *repository) CreateOrganization(ctx context.Context, org *datamodel.Owner) error {
 	return r.createOwner(ctx, "organization", org)
 }
+
 func (r *repository) GetOrganization(ctx context.Context, id string, includeAvatar bool) (*datamodel.Owner, error) {
-	return r.getOwner(ctx, "organization", id, includeAvatar)
+	owner, err := r.GetOwner(ctx, id, includeAvatar)
+	if err != nil {
+		return nil, err
+	}
+
+	return ownerWithType(owner, "organization")
 }
+
 func (r *repository) GetOrganizationByUID(ctx context.Context, uid uuid.UUID) (*datamodel.Owner, error) {
-	return r.getOwnerByUID(ctx, "organization", uid)
+	owner, err := r.GetOwnerByUID(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+
+	return ownerWithType(owner, "organization")
 }
+
 func (r *repository) UpdateOrganization(ctx context.Context, id string, org *datamodel.Owner) error {
 	return r.updateOwner(ctx, "organization", id, org)
 }
@@ -250,12 +285,11 @@ func (r *repository) createOwner(ctx context.Context, ownerType string, owner *d
 	return nil
 }
 
-func (r *repository) getOwner(ctx context.Context, ownerType string, id string, includeAvatar bool) (*datamodel.Owner, error) {
-
+func (r *repository) GetOwner(ctx context.Context, id string, includeAvatar bool) (*datamodel.Owner, error) {
 	db := r.CheckPinnedUser(ctx, r.db)
 
 	var owner datamodel.Owner
-	queryBuilder := db.Model(&datamodel.Owner{}).Where("owner_type = ?", ownerType).Where("id = ?", id)
+	queryBuilder := db.Model(&datamodel.Owner{}).Where("id = ?", id)
 	if !includeAvatar {
 		queryBuilder = queryBuilder.Omit("profile_avatar")
 	}
@@ -265,12 +299,12 @@ func (r *repository) getOwner(ctx context.Context, ownerType string, id string, 
 	return &owner, nil
 }
 
-func (r *repository) getOwnerByUID(ctx context.Context, ownerType string, uid uuid.UUID) (*datamodel.Owner, error) {
-
+func (r *repository) GetOwnerByUID(ctx context.Context, uid uuid.UUID) (*datamodel.Owner, error) {
 	db := r.CheckPinnedUser(ctx, r.db)
 
 	var owner datamodel.Owner
-	if result := db.Model(&datamodel.Owner{}).Omit("profile_avatar").Where("owner_type = ?", ownerType).Where("uid = ?", uid.String()).First(&owner); result.Error != nil {
+	result := db.Model(&datamodel.Owner{}).Omit("profile_avatar").Where("uid = ?", uid.String()).First(&owner)
+	if result.Error != nil {
 		return nil, result.Error
 	}
 	return &owner, nil

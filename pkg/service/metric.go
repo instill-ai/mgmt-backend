@@ -91,15 +91,7 @@ func (s *service) ListPipelineTriggerChartRecords(
 // GrantedNamespaceUID returns the UID of a namespace, provided the
 // authenticated user has access to it.
 func (s *service) GrantedNamespaceUID(ctx context.Context, namespaceID string, authenticatedUserUID uuid.UUID) (uuid.UUID, error) {
-	owner, err := s.repository.GetUser(ctx, namespaceID, false)
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		// TODO jvallesm: with the namespace refactor we should have a
-		// GetNamespace method that will allow us to fetch the owner UID
-		// without knowing the owner type. For convenience, we try user first
-		// and fall back to organization.
-		owner, err = s.repository.GetOrganization(ctx, namespaceID, false)
-	}
-
+	owner, err := s.repository.GetOwner(ctx, namespaceID, false)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			err = errdomain.ErrUnauthorized
