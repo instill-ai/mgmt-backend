@@ -191,7 +191,7 @@ func (h *PrivateHandler) CheckNamespaceAdmin(ctx context.Context, req *mgmtPB.Ch
 
 func (h *PrivateHandler) CheckNamespaceByUIDAdmin(ctx context.Context, req *mgmtPB.CheckNamespaceByUIDAdminRequest) (*mgmtPB.CheckNamespaceByUIDAdminResponse, error) {
 
-	user, err := h.Service.GetUserAdmin(ctx, req.GetUid())
+	user, err := h.Service.GetUserByUIDAdmin(ctx, uuid.FromStringOrNil(req.GetUid()))
 	if err == nil {
 		return &mgmtPB.CheckNamespaceByUIDAdminResponse{
 			Type: mgmtPB.CheckNamespaceByUIDAdminResponse_NAMESPACE_USER,
@@ -201,7 +201,7 @@ func (h *PrivateHandler) CheckNamespaceByUIDAdmin(ctx context.Context, req *mgmt
 			},
 		}, nil
 	}
-	org, err := h.Service.GetOrganizationAdmin(ctx, req.GetUid())
+	org, err := h.Service.GetOrganizationByUIDAdmin(ctx, uuid.FromStringOrNil(req.GetUid()))
 	if err == nil {
 		return &mgmtPB.CheckNamespaceByUIDAdminResponse{
 			Type: mgmtPB.CheckNamespaceByUIDAdminResponse_NAMESPACE_ORGANIZATION,
