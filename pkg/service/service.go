@@ -10,6 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.einride.tech/aip/filtering"
 	"golang.org/x/crypto/bcrypt"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/instill-ai/mgmt-backend/internal/resource"
 	"github.com/instill-ai/mgmt-backend/pkg/acl"
@@ -17,6 +18,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 
+	errdomain "github.com/instill-ai/mgmt-backend/pkg/errors"
 	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 	pipelinePB "github.com/instill-ai/protogen-go/vdp/pipeline/v1beta"
 )
@@ -68,6 +70,9 @@ type Service interface {
 	CheckUserPassword(ctx context.Context, uid uuid.UUID, password string) error
 	UpdateUserPassword(ctx context.Context, uid uuid.UUID, newPassword string) error
 
+	GetPipelineTriggerCount(_ context.Context, _ *mgmtPB.GetPipelineTriggerCountRequest, ctxUserUID uuid.UUID) (*mgmtPB.GetPipelineTriggerCountResponse, error)
+	ListPipelineTriggerChartRecords(_ context.Context, _ *mgmtPB.ListPipelineTriggerChartRecordsRequest, ctxUserUID uuid.UUID) (*mgmtPB.ListPipelineTriggerChartRecordsResponse, error)
+
 	DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*mgmtPB.User, error)
 	DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtPB.User, error)
 	PBAuthenticatedUser2DBUser(ctx context.Context, pbUser *mgmtPB.AuthenticatedUser) (*datamodel.Owner, error)
@@ -80,6 +85,8 @@ type Service interface {
 	GetRedisClient() *redis.Client
 	GetInfluxClient() repository.InfluxDB
 	GetACLClient() *acl.ACLClient
+
+	GrantedNamespaceUID(_ context.Context, namespaceID string, authenticatedUserUID uuid.UUID) (uuid.UUID, error)
 }
 
 type service struct {
@@ -389,7 +396,7 @@ func (s *service) UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 		return nil, err
 	}
 	if !canUpdateOrganization {
-		return nil, ErrNoPermission
+		return nil, errdomain.ErrUnauthorized
 	}
 
 	// Update the user
@@ -424,7 +431,7 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 		return err
 	}
 	if !canDeleteOrganization {
-		return ErrNoPermission
+		return errdomain.ErrUnauthorized
 	}
 
 	err = s.deleteOrganizationFromCacheByID(ctx, id)
@@ -683,7 +690,7 @@ func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID,
 		return nil, fmt.Errorf("users/%s: %w", userID, err)
 	}
 	if ctxUserUID != user.UID {
-		return nil, ErrNoPermission
+		return nil, errdomain.ErrUnauthorized
 	}
 
 	orgRelations, err := s.aclClient.GetUserOrganizations(ctx, user.UID)
@@ -737,7 +744,7 @@ func (s *service) GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, u
 		return nil, fmt.Errorf("users/%s: %w", userID, err)
 	}
 	if ctxUserUID != user.UID {
-		return nil, ErrNoPermission
+		return nil, errdomain.ErrUnauthorized
 	}
 	org, err := s.repository.GetOrganization(ctx, orgID, false)
 	if err != nil {
@@ -786,7 +793,7 @@ func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 		return nil, fmt.Errorf("users/%s: %w", userID, err)
 	}
 	if ctxUserUID != user.UID {
-		return nil, ErrNoPermission
+		return nil, errdomain.ErrUnauthorized
 	}
 	org, err := s.repository.GetOrganization(ctx, orgID, false)
 	if err != nil {
@@ -844,7 +851,7 @@ func (s *service) DeleteUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 		return fmt.Errorf("users/%s: %w", userID, err)
 	}
 	if ctxUserUID != user.UID {
-		return ErrNoPermission
+		return errdomain.ErrUnauthorized
 	}
 	org, err := s.repository.GetOrganization(ctx, orgID, false)
 	if err != nil {
@@ -871,7 +878,7 @@ func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uu
 		return nil, err
 	}
 	if !canGetMembership {
-		return nil, ErrNoPermission
+		return nil, errdomain.ErrUnauthorized
 	}
 
 	canSetMembership, err := s.aclClient.CheckOrganizationUserMembership(ctx, org.UID, ctxUserUID, "can_set_membership")
@@ -941,7 +948,7 @@ func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid
 		return nil, err
 	}
 	if !canGetMembership {
-		return nil, ErrNoPermission
+		return nil, errdomain.ErrUnauthorized
 	}
 	canSetMembership, err := s.aclClient.CheckOrganizationUserMembership(ctx, org.UID, ctxUserUID, "can_set_membership")
 	if err != nil {
@@ -970,7 +977,7 @@ func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid
 
 	if state == mgmtPB.MembershipState_MEMBERSHIP_STATE_PENDING && ctxUserUID != uuid.FromStringOrNil(*pbUser.Uid) {
 		if !canSetMembership {
-			return nil, ErrNoPermission
+			return nil, errdomain.ErrUnauthorized
 		}
 	}
 	membership := &mgmtPB.OrganizationMembership{
@@ -1006,7 +1013,7 @@ func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID u
 		return nil, err
 	}
 	if !canSetMembership {
-		return nil, ErrNoPermission
+		return nil, errdomain.ErrUnauthorized
 	}
 
 	if membership.Role == "owner" {
@@ -1079,7 +1086,7 @@ func (s *service) DeleteOrganizationMembership(ctx context.Context, ctxUserUID u
 		return err
 	}
 	if !canRemoveMembership {
-		return ErrNoPermission
+		return errdomain.ErrUnauthorized
 	}
 	if canRemoveMembership && ctxUserUID == user.UID {
 		return ErrCanNotRemoveOwnerFromOrganization
@@ -1089,4 +1096,10 @@ func (s *service) DeleteOrganizationMembership(ctx context.Context, ctxUserUID u
 		return err
 	}
 	return nil
+}
+
+func InjectOwnerToContext(ctx context.Context, uid string) context.Context {
+	ctx = metadata.AppendToOutgoingContext(ctx, "instill-auth-type", "user")
+	ctx = metadata.AppendToOutgoingContext(ctx, "instill-user-uid", uid)
+	return ctx
 }

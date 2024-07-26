@@ -858,6 +858,72 @@ func (h *PublicHandler) ValidateToken(ctx context.Context, req *mgmtPB.ValidateT
 	return &mgmtPB.ValidateTokenResponse{UserUid: userUID}, nil
 }
 
+// GetPipelineTriggerCount returns the pipeline trigger count of a given
+// requester within a timespan.  Results are grouped by trigger status.
+func (h *PublicHandler) GetPipelineTriggerCount(ctx context.Context, req *mgmtPB.GetPipelineTriggerCountRequest) (*mgmtPB.GetPipelineTriggerCountResponse, error) {
+	eventName := "GetPipelineTriggerCount"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+	logger, _ := logger.GetZapLogger(ctx)
+
+	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	resp, err := h.Service.GetPipelineTriggerCount(ctx, req, ctxUserUID)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, fmt.Errorf("fetching credit chart records: %w", err)
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		ctxUserUID,
+		eventName,
+	)))
+
+	return resp, nil
+}
+
+// ListPipelineTriggerChartRecords returns a timeline of a requester's pipeline
+// trigger count.
+func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req *mgmtPB.ListPipelineTriggerChartRecordsRequest) (*mgmtPB.ListPipelineTriggerChartRecordsResponse, error) {
+	eventName := "ListPipelineTriggerChartRecords"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+	logger, _ := logger.GetZapLogger(ctx)
+
+	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	resp, err := h.Service.ListPipelineTriggerChartRecords(ctx, req, ctxUserUID)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, fmt.Errorf("fetching credit chart records: %w", err)
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		ctxUserUID,
+		eventName,
+	)))
+
+	return resp, nil
+}
+
 func (h *PublicHandler) ListUserMemberships(ctx context.Context, req *mgmtPB.ListUserMembershipsRequest) (*mgmtPB.ListUserMembershipsResponse, error) {
 
 	eventName := "ListUserMemberships"

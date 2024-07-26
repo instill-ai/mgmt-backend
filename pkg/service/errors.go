@@ -2,7 +2,6 @@ package service
 
 import "errors"
 
-var ErrNoPermission = errors.New("no permission")
 var ErrUnauthenticated = errors.New("unauthenticated")
 var ErrInvalidTokenTTL = errors.New("invalid token ttl")
 var ErrInvalidRole = errors.New("invalid role")
