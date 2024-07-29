@@ -70,8 +70,8 @@ type Service interface {
 	CheckUserPassword(ctx context.Context, uid uuid.UUID, password string) error
 	UpdateUserPassword(ctx context.Context, uid uuid.UUID, newPassword string) error
 
-	GetPipelineTriggerCount(_ context.Context, _ *mgmtPB.GetPipelineTriggerCountRequest, ctxUserUID uuid.UUID) (*mgmtPB.GetPipelineTriggerCountResponse, error)
-	ListPipelineTriggerChartRecords(_ context.Context, _ *mgmtPB.ListPipelineTriggerChartRecordsRequest, ctxUserUID uuid.UUID) (*mgmtPB.ListPipelineTriggerChartRecordsResponse, error)
+	ListPipelineTriggerTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerTableRecord, int64, string, error)
+	ListPipelineTriggerChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerChartRecord, error)
 
 	DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*mgmtPB.User, error)
 	DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtPB.User, error)
