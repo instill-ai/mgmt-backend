@@ -16,13 +16,13 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 
 	errdomain "github.com/instill-ai/mgmt-backend/pkg/errors"
-	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
-	pipelinePB "github.com/instill-ai/protogen-go/vdp/pipeline/v1beta"
+	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	pipelinepb "github.com/instill-ai/protogen-go/vdp/pipeline/v1beta"
 )
 
 var ErrNoPermission = errors.New("no permission")
 
-func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.Filter, owner *mgmtPB.User) (*string, string, string, string, filtering.Filter, error) {
+func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.Filter, owner *mgmtpb.User) (*string, string, string, string, filtering.Filter, error) {
 	ownerID := owner.Id
 	ownerUID := owner.Uid
 	ownerType := "users"
@@ -71,7 +71,7 @@ func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.F
 	return ownerUID, ownerID, ownerType, ownerQueryString, filter, nil
 }
 
-func (s *service) pipelineUIDLookup(ctx context.Context, ownerID string, ownerType string, filter filtering.Filter, owner *mgmtPB.User) (filtering.Filter, error) {
+func (s *service) pipelineUIDLookup(ctx context.Context, ownerID string, ownerType string, filter filtering.Filter, owner *mgmtpb.User) (filtering.Filter, error) {
 
 	ctx = InjectOwnerToContext(ctx, *owner.Uid)
 
@@ -80,42 +80,26 @@ func (s *service) pipelineUIDLookup(ctx context.Context, ownerID string, ownerTy
 		pipelineID, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, false)
 
 		if pipelineID != "" {
-			if ownerType == "users" {
-				if respPipeline, err := s.pipelinePublicServiceClient.GetUserPipeline(ctx, &pipelinePB.GetUserPipelineRequest{
-					Name: fmt.Sprintf("%s/pipelines/%s", owner.Name, pipelineID),
-				}); err != nil {
-					return filter, err
-				} else {
-					repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, constant.PipelineUID, respPipeline.Pipeline.Uid, false)
+			respPipeline, err := s.pipelinePublicServiceClient.GetNamespacePipeline(ctx, &pipelinepb.GetNamespacePipelineRequest{
+				NamespaceId: strings.Split(owner.Name, "/")[1],
+				PipelineId:  pipelineID,
+			})
+			if err != nil {
+				return filter, err
+			}
 
-					// lookup pipeline release uid
-					pipelineReleaseID, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineReleaseID, false)
+			repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, constant.PipelineUID, respPipeline.Pipeline.Uid, false)
 
-					respPipelineRelease, err := s.pipelinePublicServiceClient.GetUserPipelineRelease(ctx, &pipelinePB.GetUserPipelineReleaseRequest{
-						Name: fmt.Sprintf("%s/pipelines/%s/releases/%s", owner.Name, pipelineID, pipelineReleaseID),
-					})
-					if err == nil {
-						repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, constant.PipelineUID, respPipelineRelease.Release.Uid, false)
-					}
-				}
-			} else if ownerType == "organizations" {
-				if respPipeline, err := s.pipelinePublicServiceClient.GetOrganizationPipeline(ctx, &pipelinePB.GetOrganizationPipelineRequest{
-					Name: fmt.Sprintf("organizations/%s/pipelines/%s", ownerID, pipelineID),
-				}); err != nil {
-					return filter, err
-				} else {
-					repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, constant.PipelineUID, respPipeline.Pipeline.Uid, false)
+			// lookup pipeline release uid
+			pipelineReleaseID, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineReleaseID, false)
 
-					// lookup pipeline release uid
-					pipelineReleaseID, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineReleaseID, false)
-
-					respPipelineRelease, err := s.pipelinePublicServiceClient.GetUserPipelineRelease(ctx, &pipelinePB.GetUserPipelineReleaseRequest{
-						Name: fmt.Sprintf("organizations/%s/pipelines/%s/releases/%s", ownerID, pipelineID, pipelineReleaseID),
-					})
-					if err == nil {
-						repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, constant.PipelineUID, respPipelineRelease.Release.Uid, false)
-					}
-				}
+			respPipelineRelease, err := s.pipelinePublicServiceClient.GetNamespacePipelineRelease(ctx, &pipelinepb.GetNamespacePipelineReleaseRequest{
+				NamespaceId: strings.Split(owner.Name, "/")[1],
+				PipelineId:  pipelineID,
+				ReleaseId:   pipelineReleaseID,
+			})
+			if err == nil {
+				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, constant.PipelineUID, respPipelineRelease.Release.Uid, false)
 			}
 		}
 	}
@@ -123,16 +107,16 @@ func (s *service) pipelineUIDLookup(ctx context.Context, ownerID string, ownerTy
 	return filter, nil
 }
 
-func (s *service) ListPipelineTriggerTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerTableRecord, int64, string, error) {
+func (s *service) ListPipelineTriggerTableRecords(ctx context.Context, owner *mgmtpb.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerTableRecord, int64, string, error) {
 
 	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
 	if err != nil {
-		return []*mgmtPB.PipelineTriggerTableRecord{}, 0, "", err
+		return []*mgmtpb.PipelineTriggerTableRecord{}, 0, "", err
 	}
 
 	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner)
 	if err != nil {
-		return []*mgmtPB.PipelineTriggerTableRecord{}, 0, "", nil
+		return []*mgmtpb.PipelineTriggerTableRecord{}, 0, "", nil
 	}
 
 	pipelineTriggerTableRecords, ps, pt, err := s.influxDB.QueryPipelineTriggerTableRecords(ctx, *ownerUID, ownerQueryString, pageSize, pageToken, filter)
@@ -143,16 +127,16 @@ func (s *service) ListPipelineTriggerTableRecords(ctx context.Context, owner *mg
 	return pipelineTriggerTableRecords, ps, pt, nil
 }
 
-func (s *service) ListPipelineTriggerChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerChartRecord, error) {
+func (s *service) ListPipelineTriggerChartRecords(ctx context.Context, owner *mgmtpb.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerChartRecord, error) {
 
 	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
 	if err != nil {
-		return []*mgmtPB.PipelineTriggerChartRecord{}, err
+		return []*mgmtpb.PipelineTriggerChartRecord{}, err
 	}
 
 	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner)
 	if err != nil {
-		return []*mgmtPB.PipelineTriggerChartRecord{}, nil
+		return []*mgmtpb.PipelineTriggerChartRecord{}, nil
 	}
 
 	pipelineTriggerChartRecords, err := s.influxDB.QueryPipelineTriggerChartRecords(ctx, *ownerUID, ownerQueryString, aggregationWindow, filter)
