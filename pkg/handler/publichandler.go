@@ -858,15 +858,15 @@ func (h *PublicHandler) ValidateToken(ctx context.Context, req *mgmtPB.ValidateT
 	return &mgmtPB.ValidateTokenResponse{UserUid: userUID}, nil
 }
 
-// GetPipelineTriggerCount returns the pipeline trigger count of a given
-// requester within a timespan.  Results are grouped by trigger status.
-func (h *PublicHandler) GetPipelineTriggerCount(ctx context.Context, req *mgmtPB.GetPipelineTriggerCountRequest) (*mgmtPB.GetPipelineTriggerCountResponse, error) {
-	eventName := "GetPipelineTriggerCount"
+func (h *PublicHandler) ListPipelineTriggerTableRecords(ctx context.Context, req *mgmtPB.ListPipelineTriggerTableRecordsRequest) (*mgmtPB.ListPipelineTriggerTableRecordsResponse, error) {
+
+	eventName := "ListPipelineTriggerTableRecords"
 	ctx, span := tracer.Start(ctx, eventName,
 		trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	logUUID, _ := uuid.NewV4()
+
 	logger, _ := logger.GetZapLogger(ctx)
 
 	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
@@ -874,32 +874,67 @@ func (h *PublicHandler) GetPipelineTriggerCount(ctx context.Context, req *mgmtPB
 		span.SetStatus(1, err.Error())
 		return nil, err
 	}
-
-	resp, err := h.Service.GetPipelineTriggerCount(ctx, req, ctxUserUID)
+	pbUser, err := h.Service.GetUserByUIDAdmin(ctx, ctxUserUID)
 	if err != nil {
 		span.SetStatus(1, err.Error())
-		return nil, fmt.Errorf("fetching credit chart records: %w", err)
+		return nil, err
+	}
+
+	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
+		filtering.DeclareStandardFunctions(),
+		filtering.DeclareIdent(constant.Start, filtering.TypeTimestamp),
+		filtering.DeclareIdent(constant.Stop, filtering.TypeTimestamp),
+		filtering.DeclareIdent(strcase.ToLowerCamel(constant.OwnerName), filtering.TypeString),
+		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineID), filtering.TypeString),
+		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineUID), filtering.TypeString),
+		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineReleaseID), filtering.TypeString),
+		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineReleaseUID), filtering.TypeString),
+	}...)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	filter, err := filtering.ParseFilter(req, declarations)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	pipelineTriggerTableRecords, totalSize, nextPageToken, err := h.Service.ListPipelineTriggerTableRecords(ctx, pbUser, int64(req.GetPageSize()), req.GetPageToken(), filter)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	resp := mgmtPB.ListPipelineTriggerTableRecordsResponse{
+		PipelineTriggerTableRecords: pipelineTriggerTableRecords,
+		NextPageToken:               nextPageToken,
+		TotalSize:                   int32(totalSize),
 	}
 
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
 		logUUID.String(),
-		ctxUserUID,
+		uuid.FromStringOrNil(*pbUser.Uid),
 		eventName,
+		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v", totalSize)),
 	)))
 
-	return resp, nil
+	return &resp, nil
 }
 
 // ListPipelineTriggerChartRecords returns a timeline of a requester's pipeline
 // trigger count.
 func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req *mgmtPB.ListPipelineTriggerChartRecordsRequest) (*mgmtPB.ListPipelineTriggerChartRecordsResponse, error) {
+
 	eventName := "ListPipelineTriggerChartRecords"
 	ctx, span := tracer.Start(ctx, eventName,
 		trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	logUUID, _ := uuid.NewV4()
+
 	logger, _ := logger.GetZapLogger(ctx)
 
 	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
@@ -907,21 +942,56 @@ func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req
 		span.SetStatus(1, err.Error())
 		return nil, err
 	}
-
-	resp, err := h.Service.ListPipelineTriggerChartRecords(ctx, req, ctxUserUID)
+	pbUser, err := h.Service.GetUserByUIDAdmin(ctx, ctxUserUID)
 	if err != nil {
 		span.SetStatus(1, err.Error())
-		return nil, fmt.Errorf("fetching credit chart records: %w", err)
+		return nil, err
+	}
+
+	var mode mgmtPB.Mode
+	var status mgmtPB.Status
+
+	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
+		filtering.DeclareStandardFunctions(),
+		filtering.DeclareIdent(constant.Start, filtering.TypeTimestamp),
+		filtering.DeclareIdent(constant.Stop, filtering.TypeTimestamp),
+		filtering.DeclareIdent(strcase.ToLowerCamel(constant.OwnerName), filtering.TypeString),
+		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineID), filtering.TypeString),
+		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineUID), filtering.TypeString),
+		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineReleaseID), filtering.TypeString),
+		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineReleaseUID), filtering.TypeString),
+		filtering.DeclareEnumIdent(strcase.ToLowerCamel(constant.TriggerMode), mode.Type()),
+		filtering.DeclareEnumIdent(constant.Status, status.Type()),
+	}...)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	filter, err := filtering.ParseFilter(req, declarations)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	pipelineTriggerChartRecords, err := h.Service.ListPipelineTriggerChartRecords(ctx, pbUser, int64(req.GetAggregationWindow()), filter)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	resp := mgmtPB.ListPipelineTriggerChartRecordsResponse{
+		PipelineTriggerChartRecords: pipelineTriggerChartRecords,
 	}
 
 	logger.Info(string(custom_otel.NewLogMessage(
 		span,
 		logUUID.String(),
-		ctxUserUID,
+		uuid.FromStringOrNil(*pbUser.Uid),
 		eventName,
 	)))
 
-	return resp, nil
+	return &resp, nil
 }
 
 func (h *PublicHandler) ListUserMemberships(ctx context.Context, req *mgmtPB.ListUserMembershipsRequest) (*mgmtPB.ListUserMembershipsResponse, error) {
