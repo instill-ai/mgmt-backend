@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.19.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.18.1-beta...v0.19.0-beta) (2024-07-29)
+
+
+### Features
+
+* add private endpoint `CheckNamespaceByUIDAdmin` ([#227](https://github.com/instill-ai/mgmt-backend/issues/227)) ([274d365](https://github.com/instill-ai/mgmt-backend/commit/274d365b4aaf2e63119ea963bf3c0f52b7a7198d))
+* **mgmt:** add knowledge base acl model ([#226](https://github.com/instill-ai/mgmt-backend/issues/226)) ([b4b813e](https://github.com/instill-ai/mgmt-backend/commit/b4b813ea27626be1c7ccaadc30497bf1e64ef06b))
+* unify pipeline trigger chart endpoint with credit chart ([#228](https://github.com/instill-ai/mgmt-backend/issues/228)) ([c2ccc17](https://github.com/instill-ai/mgmt-backend/commit/c2ccc17d3d6bd84149c42fa3c1cc7000175e8146))
+* use explicit user_id and organization_id in request params ([#224](https://github.com/instill-ai/mgmt-backend/issues/224)) ([3388190](https://github.com/instill-ai/mgmt-backend/commit/33881905b4a37d5f6a416470deea4210fa96ea0b))
+
+
+### Bug Fixes
+
+* restore pipeline dashboard enpoints ([#230](https://github.com/instill-ai/mgmt-backend/issues/230)) ([02e32df](https://github.com/instill-ai/mgmt-backend/commit/02e32dff8d174e8c9b4499fb05da9bdef51647b3))
+
 ## [0.18.1-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.18.0-beta...v0.18.1-beta) (2024-07-16)
 
 
