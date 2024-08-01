@@ -1082,8 +1082,6 @@ func (h *PublicHandler) UpdateUserMembership(ctx context.Context, req *mgmtPB.Up
 
 	logger, _ := logger.GetZapLogger(ctx)
 
-	userID := strings.Split(req.Membership.Name, "/")[1]
-	orgID := strings.Split(req.Membership.Name, "/")[3]
 	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
 	if err != nil {
 		span.SetStatus(1, err.Error())
@@ -1098,7 +1096,7 @@ func (h *PublicHandler) UpdateUserMembership(ctx context.Context, req *mgmtPB.Up
 		return nil, ErrCheckOutputOnlyFields
 	}
 
-	pbMembership, err := h.Service.UpdateUserMembership(ctx, ctxUserUID, userID, orgID, req.Membership)
+	pbMembership, err := h.Service.UpdateUserMembership(ctx, ctxUserUID, req.UserId, req.OrganizationId, req.Membership)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -1248,9 +1246,6 @@ func (h *PublicHandler) UpdateOrganizationMembership(ctx context.Context, req *m
 		return nil, err
 	}
 
-	orgID := strings.Split(req.Membership.Name, "/")[1]
-	userID := strings.Split(req.Membership.Name, "/")[3]
-
 	if err := checkfield.CheckRequiredFields(req.Membership, requiredFieldsForOrganizationMembership); err != nil {
 		return nil, ErrCheckRequiredFields
 	}
@@ -1259,7 +1254,7 @@ func (h *PublicHandler) UpdateOrganizationMembership(ctx context.Context, req *m
 		return nil, ErrCheckOutputOnlyFields
 	}
 
-	pbMembership, err := h.Service.UpdateOrganizationMembership(ctx, ctxUserUID, orgID, userID, req.Membership)
+	pbMembership, err := h.Service.UpdateOrganizationMembership(ctx, ctxUserUID, req.OrganizationId, req.UserId, req.Membership)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
