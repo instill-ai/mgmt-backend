@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.19.1-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.19.0-beta...v0.19.1-beta) (2024-08-01)
+
+
+### Bug Fixes
+
+* fix organization can not be updated ([#233](https://github.com/instill-ai/mgmt-backend/issues/233)) ([e811b0c](https://github.com/instill-ai/mgmt-backend/commit/e811b0cb5f879e3996c4e201a98f22c7259f8399))
+* fix the issue preventing users from inviting organization members ([#231](https://github.com/instill-ai/mgmt-backend/issues/231)) ([1f0c499](https://github.com/instill-ai/mgmt-backend/commit/1f0c49946386e331067907d10a8cd376dbaca743))
+
+
+### Miscellaneous Chores
+
+* release v0.19.1-beta ([94e7b39](https://github.com/instill-ai/mgmt-backend/commit/94e7b39f7cbadb471b912f9f237d528afe713088))
+
 ## [0.19.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.18.1-beta...v0.19.0-beta) (2024-07-29)
 
 
