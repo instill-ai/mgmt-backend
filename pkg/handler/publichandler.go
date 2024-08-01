@@ -532,11 +532,6 @@ func (h *PublicHandler) UpdateOrganization(ctx context.Context, req *mgmtPB.Upda
 		return nil, err
 	}
 
-	id, err := resource.GetRscNameID(req.GetOrganization().Name)
-	if err != nil {
-		return nil, err
-	}
-
 	pbOrgReq := req.GetOrganization()
 	pbUpdateMask := req.GetUpdateMask()
 
@@ -545,7 +540,7 @@ func (h *PublicHandler) UpdateOrganization(ctx context.Context, req *mgmtPB.Upda
 		return nil, ErrUpdateMask
 	}
 
-	getResp, err := h.GetOrganization(ctx, &mgmtPB.GetOrganizationRequest{OrganizationId: pbOrgReq.Id})
+	getResp, err := h.GetOrganization(ctx, &mgmtPB.GetOrganizationRequest{OrganizationId: req.OrganizationId})
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
@@ -578,7 +573,7 @@ func (h *PublicHandler) UpdateOrganization(ctx context.Context, req *mgmtPB.Upda
 		return nil, ErrFieldMask
 	}
 
-	pbOrg, err := h.Service.UpdateOrganization(ctx, ctxUserUID, id, pbOrgToUpdate)
+	pbOrg, err := h.Service.UpdateOrganization(ctx, ctxUserUID, req.OrganizationId, pbOrgToUpdate)
 
 	if err != nil {
 		return nil, err
