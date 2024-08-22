@@ -5,146 +5,87 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
-	"go.einride.tech/aip/filtering"
 	"gorm.io/gorm"
 
 	"github.com/gofrs/uuid"
-	"github.com/instill-ai/mgmt-backend/internal/resource"
 	"github.com/instill-ai/mgmt-backend/pkg/acl"
-	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 
 	errdomain "github.com/instill-ai/mgmt-backend/pkg/errors"
 	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
-	pipelinepb "github.com/instill-ai/protogen-go/vdp/pipeline/v1beta"
 )
 
-var ErrNoPermission = errors.New("no permission")
+func (s *service) GetPipelineTriggerCount(
+	ctx context.Context,
+	req *mgmtpb.GetPipelineTriggerCountRequest,
+	ctxUserUID uuid.UUID,
+) (*mgmtpb.GetPipelineTriggerCountResponse, error) {
+	nsUID, err := s.GrantedNamespaceUID(ctx, req.GetNamespaceId(), ctxUserUID)
+	if err != nil {
+		return nil, fmt.Errorf("checking user permissions: %w", err)
+	}
 
-func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.Filter, owner *mgmtpb.User) (*string, string, string, string, filtering.Filter, error) {
-	ownerID := owner.Id
-	ownerUID := owner.Uid
-	ownerType := "users"
-	ownerQueryString := ""
+	now := time.Now().UTC()
+	p := repository.GetPipelineTriggerCountParams{
+		NamespaceUID: nsUID,
 
-	if len(filter.CheckedExpr.GetExpr().GetCallExpr().GetArgs()) > 0 {
+		// Default values
+		Start: time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()),
+		Stop:  now,
+	}
 
-		ownerName, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, false)
+	if req.GetStart() != nil {
+		p.Start = req.GetStart().AsTime()
+	}
 
-		if ownerName != "" {
+	if req.GetStop() != nil {
+		p.Stop = req.GetStop().AsTime()
+	}
 
-			if strings.HasPrefix(ownerName, "users") {
-				if ownerName != fmt.Sprintf("users/%s", owner.Id) {
-					return nil, "", "", "", filter, ErrNoPermission
-				}
-				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.PipelineOwnerUID, *owner.Uid, false)
-			} else if strings.HasPrefix(ownerName, "organizations") {
-				ownerType = "organizations"
-				id, err := resource.GetRscNameID(ownerName)
-				if err != nil {
-					return nil, "", "", "", filter, err
-				}
-				ownerID = id
-				org, err := s.GetOrganizationAdmin(ctx, id)
-				if err != nil {
-					return nil, "", "", "", filter, err
-				}
-				granted, err := s.GetACLClient().CheckPermission(ctx, "organization", uuid.FromStringOrNil(org.Uid), "user", uuid.FromStringOrNil(owner.GetUid()), "", "member")
-				if err != nil {
-					return nil, "", "", "", filter, err
-				}
-				if !granted {
-					return nil, "", "", "", filter, ErrNoPermission
-				}
-				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.PipelineOwnerUID, org.Uid, false)
-				ownerUID = &org.Uid
-			} else {
-				return nil, "", "", "", filter, ErrInvalidOwnerNamespace
-			}
-		} else {
-			ownerQueryString = fmt.Sprintf("|> filter(fn: (r) => r[\"owner_uid\"] == \"%v\")", *owner.Uid)
+	return s.influxDB.GetPipelineTriggerCount(ctx, p)
+}
+
+func (s *service) ListPipelineTriggerChartRecords(
+	ctx context.Context,
+	req *mgmtpb.ListPipelineTriggerChartRecordsRequest,
+	ctxUserUID uuid.UUID,
+) (*mgmtpb.ListPipelineTriggerChartRecordsResponse, error) {
+	nsUID, err := s.GrantedNamespaceUID(ctx, req.GetNamespaceId(), ctxUserUID)
+	if err != nil {
+		return nil, fmt.Errorf("checking user permissions: %w", err)
+	}
+
+	now := time.Now().UTC()
+	p := repository.ListPipelineTriggerChartRecordsParams{
+		NamespaceID:  req.GetNamespaceId(),
+		NamespaceUID: nsUID,
+
+		// Default values
+		AggregationWindow: 1 * time.Hour,
+		Start:             time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()),
+		Stop:              now,
+	}
+
+	if req.GetAggregationWindow() != "" {
+		window, err := time.ParseDuration(req.GetAggregationWindow())
+		if err != nil {
+			return nil, fmt.Errorf("%w: extracting duration from aggregation window: %w", errdomain.ErrInvalidArgument, err)
 		}
-	} else {
-		ownerQueryString = fmt.Sprintf("|> filter(fn: (r) => r[\"owner_uid\"] == \"%v\")", *owner.Uid)
-	}
-	return ownerUID, ownerID, ownerType, ownerQueryString, filter, nil
-}
 
-func (s *service) pipelineUIDLookup(ctx context.Context, ownerID string, ownerType string, filter filtering.Filter, owner *mgmtpb.User) (filtering.Filter, error) {
-
-	ctx = InjectOwnerToContext(ctx, *owner.Uid)
-
-	// lookup pipeline uid
-	if len(filter.CheckedExpr.GetExpr().GetCallExpr().GetArgs()) > 0 {
-		pipelineID, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, false)
-
-		if pipelineID != "" {
-			respPipeline, err := s.pipelinePublicServiceClient.GetNamespacePipeline(ctx, &pipelinepb.GetNamespacePipelineRequest{
-				NamespaceId: strings.Split(owner.Name, "/")[1],
-				PipelineId:  pipelineID,
-			})
-			if err != nil {
-				return filter, err
-			}
-
-			repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, constant.PipelineUID, respPipeline.Pipeline.Uid, false)
-
-			// lookup pipeline release uid
-			pipelineReleaseID, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineReleaseID, false)
-
-			respPipelineRelease, err := s.pipelinePublicServiceClient.GetNamespacePipelineRelease(ctx, &pipelinepb.GetNamespacePipelineReleaseRequest{
-				NamespaceId: strings.Split(owner.Name, "/")[1],
-				PipelineId:  pipelineID,
-				ReleaseId:   pipelineReleaseID,
-			})
-			if err == nil {
-				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, constant.PipelineUID, respPipelineRelease.Release.Uid, false)
-			}
-		}
+		p.AggregationWindow = window
 	}
 
-	return filter, nil
-}
-
-func (s *service) ListPipelineTriggerTableRecords(ctx context.Context, owner *mgmtpb.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerTableRecord, int64, string, error) {
-
-	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
-	if err != nil {
-		return []*mgmtpb.PipelineTriggerTableRecord{}, 0, "", err
+	if req.GetStart() != nil {
+		p.Start = req.GetStart().AsTime()
 	}
 
-	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner)
-	if err != nil {
-		return []*mgmtpb.PipelineTriggerTableRecord{}, 0, "", nil
+	if req.GetStop() != nil {
+		p.Stop = req.GetStop().AsTime()
 	}
 
-	pipelineTriggerTableRecords, ps, pt, err := s.influxDB.QueryPipelineTriggerTableRecords(ctx, *ownerUID, ownerQueryString, pageSize, pageToken, filter)
-	if err != nil {
-		return nil, 0, "", err
-	}
-
-	return pipelineTriggerTableRecords, ps, pt, nil
-}
-
-func (s *service) ListPipelineTriggerChartRecords(ctx context.Context, owner *mgmtpb.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerChartRecord, error) {
-
-	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
-	if err != nil {
-		return []*mgmtpb.PipelineTriggerChartRecord{}, err
-	}
-
-	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner)
-	if err != nil {
-		return []*mgmtpb.PipelineTriggerChartRecord{}, nil
-	}
-
-	pipelineTriggerChartRecords, err := s.influxDB.QueryPipelineTriggerChartRecords(ctx, *ownerUID, ownerQueryString, aggregationWindow, filter)
-	if err != nil {
-		return nil, err
-	}
-
-	return pipelineTriggerChartRecords, nil
+	return s.influxDB.ListPipelineTriggerChartRecords(ctx, p)
 }
 
 // GrantedNamespaceUID returns the UID of a namespace, provided the
