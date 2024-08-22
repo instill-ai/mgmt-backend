@@ -292,8 +292,6 @@ service MgmtPublicService {
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {tags: "Metric"};
   }
 
-  // List pipeline trigger time charts
-  //
   // Returns a timeline of pipline trigger counts for a given requester. The
   // response will contain one set of records (datapoints), representing the
   // amount of triggers in a time bucket.
