@@ -144,7 +144,7 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 	// TODO: design better filter expression to flux transpiler
 	expr, err := i.transpileFilter(filter)
 	if err != nil {
-		return nil, 0, "", status.Errorf(codes.Internal, err.Error())
+		return nil, 0, "", status.Error(codes.Internal, err.Error())
 	}
 
 	if expr != "" {
@@ -320,7 +320,7 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 	// TODO: design better filter expression to flux transpiler
 	expr, err := i.transpileFilter(filter)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if expr != "" {

@@ -10,13 +10,6 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
-	"github.com/instill-ai/mgmt-backend/config"
-	"github.com/instill-ai/mgmt-backend/pkg/acl"
-	"github.com/instill-ai/mgmt-backend/pkg/constant"
-	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
-	"github.com/instill-ai/mgmt-backend/pkg/logger"
-	"github.com/instill-ai/mgmt-backend/pkg/repository"
-	"github.com/instill-ai/mgmt-backend/pkg/service"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/crypto/bcrypt"
@@ -24,11 +17,20 @@ import (
 	"google.golang.org/grpc/status"
 	"gorm.io/gorm"
 
-	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	openfga "github.com/openfga/go-sdk/client"
 
+	"github.com/instill-ai/mgmt-backend/cmd/init/preset"
+	"github.com/instill-ai/mgmt-backend/config"
+	"github.com/instill-ai/mgmt-backend/pkg/acl"
+	"github.com/instill-ai/mgmt-backend/pkg/constant"
+	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
+	"github.com/instill-ai/mgmt-backend/pkg/logger"
+	"github.com/instill-ai/mgmt-backend/pkg/repository"
+	"github.com/instill-ai/mgmt-backend/pkg/service"
+
 	database "github.com/instill-ai/mgmt-backend/pkg/db"
-	custom_otel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
+	customotel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
 	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 )
 
@@ -101,34 +103,6 @@ func createDefaultUser(ctx context.Context, r repository.Repository) error {
 	return nil
 }
 
-func createPresetOrg(ctx context.Context, r repository.Repository) error {
-
-	// In Instill Core, we provide a "preset" namespace for storing preset
-	// resources, such as preset pipelines.
-	presetOrg := &datamodel.Owner{
-		Base:        datamodel.Base{UID: uuid.FromStringOrNil(constant.PresetOrgUID)},
-		ID:          constant.PresetOrgID,
-		OwnerType:   sql.NullString{String: service.PBUserType2DBUserType[mgmtPB.OwnerType_OWNER_TYPE_ORGANIZATION], Valid: true},
-		DisplayName: sql.NullString{String: constant.PresetOrgDisplayName, Valid: true},
-	}
-
-	_, err := r.GetOrganization(context.Background(), constant.PresetOrgID, false)
-	if err == nil {
-		return nil
-	}
-
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return status.Errorf(codes.Internal, "error %v", err)
-	}
-
-	// Create the default preset organization
-	err = r.CreateOrganization(ctx, presetOrg)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func main() {
 	if err := config.Init(config.ParseConfigFlag()); err != nil {
 		log.Fatal(err.Error())
@@ -137,7 +111,7 @@ func main() {
 	// setup tracing and metrics
 	ctx, cancel := context.WithCancel(context.Background())
 
-	if tp, err := custom_otel.SetupTracing(ctx, "mgmt-backend-init"); err != nil {
+	if tp, err := customotel.SetupTracing(ctx, "mgmt-backend-init"); err != nil {
 		panic(err)
 	} else {
 		defer func() {
@@ -156,7 +130,7 @@ func main() {
 		// can't handle the error due to https://github.com/uber-go/zap/issues/880
 		_ = logger.Sync()
 	}()
-	grpc_zap.ReplaceGrpcLoggerV2(logger)
+	grpczap.ReplaceGrpcLoggerV2(logger)
 
 	db := database.GetConnection(&config.Config.Database)
 	defer database.Close(db)
@@ -170,8 +144,8 @@ func main() {
 		logger.Fatal(err.Error())
 	}
 
-	// Create template organization
-	if err := createPresetOrg(ctx, r); err != nil {
+	// Create preset organization
+	if err := preset.CreatePresetOrg(ctx, r); err != nil {
 		logger.Fatal(err.Error())
 	}
 
