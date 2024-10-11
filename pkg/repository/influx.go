@@ -3,35 +3,28 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
+	"github.com/gofrs/uuid"
 	"github.com/influxdata/influxdb-client-go/v2/api"
 	"github.com/influxdata/influxdb-client-go/v2/log"
-	"go.einride.tech/aip/filtering"
 	"go.uber.org/zap"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	client "github.com/influxdata/influxdb-client-go/v2"
 
 	"github.com/instill-ai/mgmt-backend/config"
-	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
-	"github.com/instill-ai/x/paginate"
 
+	errdomain "github.com/instill-ai/mgmt-backend/pkg/errors"
 	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 )
 
-// Default aggregate window
-var defaultAggregationWindow = time.Hour.Nanoseconds()
-
 // InfluxDB interface
 type InfluxDB interface {
-	QueryPipelineTriggerTableRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerTableRecord, totalSize int64, nextPageToken string, err error)
-	QueryPipelineTriggerChartRecords(ctx context.Context, owner string, ownerQueryString string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerChartRecord, err error)
+	ListPipelineTriggerChartRecords(ctx context.Context, p ListPipelineTriggerChartRecordsParams) (*mgmtpb.ListPipelineTriggerChartRecordsResponse, error)
+	GetPipelineTriggerCount(ctx context.Context, p GetPipelineTriggerCountParams) (*mgmtpb.GetPipelineTriggerCountResponse, error)
 
 	Bucket() string
 	QueryAPI() api.QueryAPI
@@ -107,347 +100,169 @@ func (i *influxDB) Bucket() string {
 	return i.bucket
 }
 
-// AggregationWindowOffset computes the offset to apply to InfluxDB's
-// aggregateWindow function when aggregating by day. This function computes
-// windows independently, starting from the Unix epoch, rather than from the
-// provided time range start. This function computes the offset to shift the
-// windows correctly.
-func AggregationWindowOffset(t time.Time) time.Duration {
-	startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
-	return t.Sub(startOfDay)
+const qPipelineTriggerChartRecords = `
+from(bucket: "%s")
+	|> range(start: %s, stop: %s)
+	|> filter(fn: (r) => r._measurement == "pipeline.trigger" and r.requester_uid == "%s")
+	|> filter(fn: (r) => r._field == "trigger_time")
+	|> group(columns:["requester_uid"])
+	|> aggregateWindow(every: %s, column:"_value", fn: count, createEmpty: true, offset: %s)
+`
+
+// ListPipelineTriggerChartRecordsParams contains the required information to
+// query the pipeline triggers of a namespace.
+// TODO jvallesm: this should be defined in the service package for better
+// decoupling. At the moment this implies breaking an import cycle with many
+// dependencies.
+type ListPipelineTriggerChartRecordsParams struct {
+	NamespaceID       string
+	NamespaceUID      uuid.UUID
+	AggregationWindow time.Duration
+	Start             time.Time
+	Stop              time.Time
 }
 
-func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerTableRecord, totalSize int64, nextPageToken string, err error) {
-
-	logger, _ := logger.GetZapLogger(ctx)
-
-	if pageSize == 0 {
-		pageSize = DefaultPageSize
-	} else if pageSize > MaxPageSize {
-		pageSize = MaxPageSize
-	}
-
-	start := time.Time{}.Format(time.RFC3339Nano)
-	stop := time.Now().Format(time.RFC3339Nano)
-	mostRecetTimeFilter := time.Now().Format(time.RFC3339Nano)
-
-	// TODO: validate owner uid from token
-	if pageToken != "" {
-		mostRecetTime, _, err := paginate.DecodeToken(pageToken)
-		if err != nil {
-			return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid page token: %s", err.Error())
-		}
-		mostRecetTime = mostRecetTime.Add(time.Duration(-1))
-		mostRecetTimeFilter = mostRecetTime.Format(time.RFC3339Nano)
-	}
-
-	// TODO: design better filter expression to flux transpiler
-	expr, err := i.transpileFilter(filter)
-	if err != nil {
-		return nil, 0, "", status.Error(codes.Internal, err.Error())
-	}
-
-	if expr != "" {
-		exprs := strings.Split(expr, "&&")
-		for i, expr := range exprs {
-			if strings.HasPrefix(expr, constant.Start) {
-				start = strings.Split(expr, "@")[1]
-				exprs[i] = ""
-			}
-			if strings.HasPrefix(expr, constant.Stop) {
-				stop = strings.Split(expr, "@")[1]
-				exprs[i] = ""
-			}
-		}
-		expr = strings.Join(exprs, "")
-	}
-
-	baseQuery := fmt.Sprintf(
-		`base =
-			from(bucket: "%v")
-				|> range(start: %v, stop: %v)
-				|> filter(fn: (r) => r["_measurement"] == "pipeline.trigger")
-				|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-				%v
-				%v
-		triggerRank =
-			base
-				|> drop(
-					columns: [
-						"owner_uid",
-						"trigger_mode",
-						"compute_time_duration",
-						"pipeline_trigger_id",
-						"status",
-					],
-				)
-				|> group(columns: ["pipeline_uid"])
-				|> map(fn: (r) => ({r with trigger_time: time(v: r.trigger_time)}))
-				|> max(column: "trigger_time")
-				|> rename(columns: {trigger_time: "most_recent_trigger_time"})
-		triggerCount =
-			base
-				|> drop(
-					columns: ["owner_uid", "trigger_mode", "compute_time_duration", "pipeline_trigger_id"],
-				)
-				|> group(columns: ["pipeline_uid", "status"])
-				|> count(column: "trigger_time")
-				|> rename(columns: {trigger_time: "trigger_count"})
-				|> group(columns: ["pipeline_uid"])
-		triggerTable =
-			join(tables: {t1: triggerRank, t2: triggerCount}, on: ["pipeline_uid"])
-				|> group()
-				|> pivot(
-					rowKey: ["pipeline_uid", "most_recent_trigger_time"],
-					columnKey: ["status"],
-					valueColumn: "trigger_count",
-				)
-				|> filter(
-					fn: (r) => r["most_recent_trigger_time"] < time(v: %v)
-				)
-		nameMap =
-			base
-				|> keep(columns: ["trigger_time", "pipeline_id", "pipeline_uid"])
-				|> group(columns: ["pipeline_uid"])
-				|> top(columns: ["trigger_time"], n: 1)
-				|> drop(columns: ["trigger_time"])
-				|> group()
-		join(tables: {t1: triggerTable, t2: nameMap}, on: ["pipeline_uid"])`,
-		i.bucket,
-		start,
-		stop,
-		ownerQueryString,
-		expr,
-		mostRecetTimeFilter,
-	)
+func (i *influxDB) ListPipelineTriggerChartRecords(
+	ctx context.Context,
+	p ListPipelineTriggerChartRecordsParams,
+) (*mgmtpb.ListPipelineTriggerChartRecordsResponse, error) {
+	l, _ := logger.GetZapLogger(ctx)
+	l = l.With(zap.Reflect("triggerChartParams", p))
 
 	query := fmt.Sprintf(
-		`%v
-		|> group()
-		|> sort(columns: ["most_recent_trigger_time"], desc: true)
-		|> limit(n: %v)`,
-		baseQuery,
-		pageSize,
+		qPipelineTriggerChartRecords,
+		i.Bucket(),
+		p.Start.Format(time.RFC3339Nano),
+		p.Stop.Format(time.RFC3339Nano),
+		p.NamespaceUID.String(),
+		p.AggregationWindow,
+		aggregationWindowOffset(p.Start).String(),
 	)
-
-	totalQuery := fmt.Sprintf(
-		`%v
-		|> group()
-		|> count(column: "pipeline_uid")`,
-		baseQuery,
-	)
-
-	var lastTimestamp time.Time
-
-	result, err := i.api.Query(ctx, query)
+	result, err := i.QueryAPI().Query(ctx, query)
 	if err != nil {
-		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
-	} else {
-		// Iterate over query response
-		for result.Next() {
-			// Notice when group key has changed
-			if result.TableChanged() {
-				logger.Debug(fmt.Sprintf("table: %s\n", result.TableMetadata().String()))
-			}
-
-			tableRecord := &mgmtpb.PipelineTriggerTableRecord{}
-
-			if v, match := result.Record().ValueByKey(constant.PipelineID).(string); match {
-				tableRecord.PipelineId = v
-			}
-			if v, match := result.Record().ValueByKey(constant.PipelineUID).(string); match {
-				tableRecord.PipelineUid = v
-			}
-			if v, match := result.Record().ValueByKey(constant.PipelineReleaseID).(string); match {
-				tableRecord.PipelineReleaseId = v
-			}
-			if v, match := result.Record().ValueByKey(constant.PipelineReleaseUID).(string); match {
-				tableRecord.PipelineReleaseUid = v
-			}
-			if v, match := result.Record().ValueByKey(mgmtpb.Status_STATUS_COMPLETED.String()).(int64); match {
-				tableRecord.TriggerCountCompleted = int32(v)
-			}
-			if v, match := result.Record().ValueByKey(mgmtpb.Status_STATUS_ERRORED.String()).(int64); match {
-				tableRecord.TriggerCountErrored = int32(v)
-			}
-
-			records = append(records, tableRecord)
-		}
-
-		// Check for an error
-		if result.Err() != nil {
-			return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
-		}
-		if result.Record() == nil {
-			return nil, 0, "", nil
-		}
-
-		if v, match := result.Record().ValueByKey("most_recent_trigger_time").(time.Time); match {
-			lastTimestamp = v
-		}
+		return nil, fmt.Errorf("%w: querying data from InfluxDB: %w", errdomain.ErrInvalidArgument, err)
 	}
 
-	var total int64
-	totalQueryResult, err := i.api.Query(ctx, totalQuery)
-	if err != nil {
-		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid total query: %s", err.Error())
-	} else {
-		if totalQueryResult.Next() {
-			total = totalQueryResult.Record().ValueByKey(constant.PipelineUID).(int64)
-		}
+	defer result.Close()
+
+	record := &mgmtpb.PipelineTriggerChartRecord{
+		NamespaceId:   p.NamespaceID,
+		TimeBuckets:   []*timestamppb.Timestamp{},
+		TriggerCounts: []int32{},
 	}
 
-	if int64(len(records)) < total {
-		pageToken = paginate.EncodeToken(lastTimestamp, owner)
-	} else {
-		pageToken = ""
-	}
+	// Until filtering and grouping are implemented, we'll only have one record
+	// (total triggers by requester).
+	records := []*mgmtpb.PipelineTriggerChartRecord{record}
 
-	return records, int64(len(records)), pageToken, nil
-}
-
-func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner string, ownerQueryString string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerChartRecord, err error) {
-
-	logger, _ := logger.GetZapLogger(ctx)
-
-	start := time.Time{}.Format(time.RFC3339Nano)
-	stop := time.Now().Format(time.RFC3339Nano)
-
-	if aggregationWindow < time.Minute.Nanoseconds() {
-		aggregationWindow = defaultAggregationWindow
-	}
-
-	// TODO: design better filter expression to flux transpiler
-	expr, err := i.transpileFilter(filter)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	if expr != "" {
-		exprs := strings.Split(expr, "&&")
-		for i, expr := range exprs {
-			if strings.HasPrefix(expr, constant.Start) {
-				start = strings.Split(expr, "@")[1]
-				exprs[i] = ""
-			}
-			if strings.HasPrefix(expr, constant.Stop) {
-				stop = strings.Split(expr, "@")[1]
-				exprs[i] = ""
-			}
-		}
-		expr = strings.Join(exprs, "")
-	}
-
-	query := fmt.Sprintf(
-		`base =
-			from(bucket: "%v")
-				|> range(start: %v, stop: %v)
-				|> filter(fn: (r) => r["_measurement"] == "pipeline.trigger")
-				|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-				%v
-				%v
-		bucketBase =
-			base
-				|> group(columns: ["pipeline_uid"])
-				|> sort(columns: ["trigger_time"])
-		bucketTrigger =
-			bucketBase
-				|> aggregateWindow(
-					every: duration(v: %v),
-					column: "trigger_time",
-					fn: count,
-					createEmpty: false,
-				)
-		bucketDuration =
-			bucketBase
-				|> aggregateWindow(
-					every: duration(v: %v),
-					fn: sum,
-					column: "compute_time_duration",
-					createEmpty: false,
-				)
-		bucket =
-			join(
-				tables: {t1: bucketTrigger, t2: bucketDuration},
-				on: ["_start", "_stop", "_time", "pipeline_uid"],
-			)
-		nameMap =
-			base
-				|> keep(columns: ["trigger_time", "pipeline_id", "pipeline_uid"])
-				|> group(columns: ["pipeline_uid"])
-				|> top(columns: ["trigger_time"], n: 1)
-				|> drop(columns: ["trigger_time"])
-		join(tables: {t1: bucket, t2: nameMap}, on: ["pipeline_uid"])`,
-		i.bucket,
-		start,
-		stop,
-		ownerQueryString,
-		expr,
-		aggregationWindow,
-		aggregationWindow,
-	)
-
-	result, err := i.api.Query(ctx, query)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
-	}
-
-	var currentTablePosition = -1
-	var chartRecord *mgmtpb.PipelineTriggerChartRecord
-
-	// Iterate over query response
 	for result.Next() {
-		// Notice when group key has changed
-		if result.TableChanged() {
-			logger.Debug(fmt.Sprintf("table: %s\n", result.TableMetadata().String()))
+		t := result.Record().Time()
+		record.TimeBuckets = append(record.TimeBuckets, timestamppb.New(t))
+
+		v, match := result.Record().Value().(int64)
+		if !match {
+			l.With(zap.Time("_time", result.Record().Time())).
+				Error("Missing count on pipeline trigger chart record.")
 		}
 
-		if result.Record().Table() != currentTablePosition {
-			chartRecord = &mgmtpb.PipelineTriggerChartRecord{}
-
-			if v, match := result.Record().ValueByKey(constant.PipelineID).(string); match {
-				chartRecord.PipelineId = v
-			}
-			if v, match := result.Record().ValueByKey(constant.PipelineUID).(string); match {
-				chartRecord.PipelineUid = v
-			}
-			if v, match := result.Record().ValueByKey(constant.PipelineReleaseID).(string); match {
-				chartRecord.PipelineReleaseId = v
-			}
-			if v, match := result.Record().ValueByKey(constant.PipelineReleaseUID).(string); match {
-				chartRecord.PipelineReleaseUid = v
-			}
-			chartRecord.TimeBuckets = []*timestamppb.Timestamp{}
-			chartRecord.TriggerCounts = []int32{}
-			chartRecord.ComputeTimeDuration = []float32{}
-			records = append(records, chartRecord)
-			currentTablePosition = result.Record().Table()
-		}
-
-		if v, match := result.Record().ValueByKey("_time").(time.Time); match {
-			chartRecord.TimeBuckets = append(chartRecord.TimeBuckets, timestamppb.New(v))
-		}
-		if v, match := result.Record().ValueByKey(constant.TriggerTime).(int64); match {
-			chartRecord.TriggerCounts = append(chartRecord.TriggerCounts, int32(v))
-		}
-		if v, match := result.Record().ValueByKey(constant.ComputeTimeDuration).(float64); match {
-			chartRecord.ComputeTimeDuration = append(chartRecord.ComputeTimeDuration, float32(v))
-		}
+		record.TriggerCounts = append(record.TriggerCounts, int32(v))
 	}
-	// Check for an error
+
 	if result.Err() != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
+		return nil, fmt.Errorf("collecting information from pipeline trigger chart records: %w", err)
 	}
+
 	if result.Record() == nil {
 		return nil, nil
 	}
 
-	return records, nil
+	return &mgmtpb.ListPipelineTriggerChartRecordsResponse{
+		PipelineTriggerChartRecords: records,
+	}, nil
 }
 
-// TranspileFilter transpiles a parsed AIP filter expression to Flux query expression
-func (i *influxDB) transpileFilter(filter filtering.Filter) (string, error) {
-	return (&Transpiler{
-		filter: filter,
-	}).Transpile()
+const qPipelineTriggerCount = `
+from(bucket: "%s")
+	|> range(start: %s, stop: %s)
+	|> filter(fn: (r) => r._measurement == "pipeline.trigger" and r.requester_uid == "%s")
+	|> filter(fn: (r) => r._field == "trigger_time")
+	|> group(columns: ["requester_uid", "status"])
+	|> count(column: "_value")
+`
+
+// GetPipelineTriggerCountParams contains the required information to
+// query the pipeline trigger count of a namespace.
+// TODO jvallesm: this should be defined in the service package for better
+// decoupling. At the moment this implies breaking an import cycle with many
+// dependencies.
+type GetPipelineTriggerCountParams struct {
+	NamespaceUID uuid.UUID
+	Start        time.Time
+	Stop         time.Time
+}
+
+func (i *influxDB) GetPipelineTriggerCount(
+	ctx context.Context,
+	p GetPipelineTriggerCountParams,
+) (*mgmtpb.GetPipelineTriggerCountResponse, error) {
+	l, _ := logger.GetZapLogger(ctx)
+	l = l.With(zap.Reflect("triggerCountParams", p))
+
+	query := fmt.Sprintf(
+		qPipelineTriggerCount,
+		i.Bucket(),
+		p.Start.Format(time.RFC3339Nano),
+		p.Stop.Format(time.RFC3339Nano),
+		p.NamespaceUID.String(),
+	)
+	result, err := i.QueryAPI().Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("%w: querying data from InfluxDB: %w", errdomain.ErrInvalidArgument, err)
+	}
+
+	defer result.Close()
+
+	// We'll have one record per status.
+	countRecords := make([]*mgmtpb.PipelineTriggerCount, 0, 2)
+	for result.Next() {
+		l := l.With(zap.Time("_time", result.Record().Time()))
+
+		statusStr := result.Record().ValueByKey("status").(string)
+		status := mgmtpb.Status(mgmtpb.Status_value[statusStr])
+		if status == mgmtpb.Status_STATUS_UNSPECIFIED {
+			l.Error("Missing status on trigger count record.")
+		}
+
+		count, match := result.Record().Value().(int64)
+		if !match {
+			l.Error("Missing count on pipeline trigger count record.")
+		}
+
+		countRecords = append(countRecords, &mgmtpb.PipelineTriggerCount{
+			TriggerCount: int32(count),
+			Status:       &status,
+		})
+	}
+
+	if result.Err() != nil {
+		return nil, fmt.Errorf("collecting information from pipeline trigger count records: %w", err)
+	}
+
+	if result.Record() == nil {
+		return nil, nil
+	}
+
+	return &mgmtpb.GetPipelineTriggerCountResponse{
+		PipelineTriggerCounts: countRecords,
+	}, nil
+}
+
+// aggregationWindowOffset computes the offset to apply to InfluxDB's
+// aggregateWindow function when aggregating by day. This function computes
+// windows independently, starting from the Unix epoch, rather than from the
+// provided time range start. This function computes the offset to shift the
+// windows correctly.
+func aggregationWindowOffset(t time.Time) time.Duration {
+	startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+	return t.Sub(startOfDay)
 }
