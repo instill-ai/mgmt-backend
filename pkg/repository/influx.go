@@ -183,7 +183,8 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 				)
 				|> group(columns: ["pipeline_uid"])
 				|> map(fn: (r) => ({r with trigger_time: time(v: r.trigger_time)}))
-				|> max(column: "trigger_time")
+				|> sort(columns: ["trigger_time"], desc: true)
+				|> first(column: "trigger_time")
 				|> rename(columns: {trigger_time: "most_recent_trigger_time"})
 		triggerCount =
 			base
