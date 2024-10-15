@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.1-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.20.0-beta...v0.20.1-beta) (2024-10-14)
+
+
+### Bug Fixes
+
+* **dashboard:** broken InfluxDB query on trigger count ([#241](https://github.com/instill-ai/mgmt-backend/issues/241)) ([15a3b2e](https://github.com/instill-ai/mgmt-backend/commit/15a3b2e54c7ad9d21a0ee631f3e69838f5331ce9))
+
 ## [0.20.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.19.2-beta...v0.20.0-beta) (2024-10-08)
 
 
