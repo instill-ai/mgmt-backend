@@ -30,8 +30,6 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
-	openfgaClient "github.com/openfga/go-sdk/client"
-
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/acl"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
@@ -138,43 +136,43 @@ func main() {
 	redisClient := redis.NewClient(&config.Config.Cache.Redis.RedisOptions)
 	defer redisClient.Close()
 
-	fgaClient, err := openfgaClient.NewSdkClient(&openfgaClient.ClientConfiguration{
-		ApiScheme: "http",
-		ApiHost:   fmt.Sprintf("%s:%d", config.Config.OpenFGA.Host, config.Config.OpenFGA.Port),
-	})
+	// fgaClient, err := openfgaClient.NewSdkClient(&openfgaClient.ClientConfiguration{
+	// 	ApiScheme: "http",
+	// 	ApiHost:   fmt.Sprintf("%s:%d", config.Config.OpenFGA.Host, config.Config.OpenFGA.Port),
+	// })
+	//
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	if err != nil {
-		panic(err)
-	}
-
-	var fgaReplicaClient *openfgaClient.OpenFgaClient
-	if config.Config.OpenFGA.Replica.Host != "" {
-
-		fgaReplicaClient, err = openfgaClient.NewSdkClient(&openfgaClient.ClientConfiguration{
-			ApiScheme: "http",
-			ApiHost:   fmt.Sprintf("%s:%d", config.Config.OpenFGA.Replica.Host, config.Config.OpenFGA.Replica.Port),
-		})
-		if err != nil {
-			panic(err)
-		}
-	}
+	// var fgaReplicaClient *openfgaClient.OpenFgaClient
+	// if config.Config.OpenFGA.Replica.Host != "" {
+	//
+	// 	fgaReplicaClient, err = openfgaClient.NewSdkClient(&openfgaClient.ClientConfiguration{
+	// 		ApiScheme: "http",
+	// 		ApiHost:   fmt.Sprintf("%s:%d", config.Config.OpenFGA.Replica.Host, config.Config.OpenFGA.Replica.Port),
+	// 	})
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// }
 
 	var aclClient acl.ACLClient
-	if stores, err := fgaClient.ListStores(context.Background()).Execute(); err == nil {
-		fgaClient.SetStoreId(*(*stores.Stores)[0].Id)
-		if fgaReplicaClient != nil {
-			fgaReplicaClient.SetStoreId(*(*stores.Stores)[0].Id)
-		}
-		if models, err := fgaClient.ReadAuthorizationModels(context.Background()).Execute(); err == nil {
-			aclClient = acl.NewACLClient(fgaClient, fgaReplicaClient, redisClient, (*models.AuthorizationModels)[0].Id)
-		}
-		if err != nil {
-			panic(err)
-		}
-
-	} else {
-		panic(err)
-	}
+	// if stores, err := fgaClient.ListStores(context.Background()).Execute(); err == nil {
+	// 	fgaClient.SetStoreId(*(*stores.Stores)[0].Id)
+	// 	if fgaReplicaClient != nil {
+	// 		fgaReplicaClient.SetStoreId(*(*stores.Stores)[0].Id)
+	// 	}
+	// 	if models, err := fgaClient.ReadAuthorizationModels(context.Background()).Execute(); err == nil {
+	// 		aclClient = acl.NewACLClient(fgaClient, fgaReplicaClient, redisClient, (*models.AuthorizationModels)[0].Id)
+	// 	}
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	//
+	// } else {
+	// 	panic(err)
+	// }
 
 	if config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "" {
 		tlsConfig = &tls.Config{

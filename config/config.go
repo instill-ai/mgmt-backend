@@ -172,7 +172,7 @@ func ValidateConfig(_ *AppConfig) error {
 	return nil
 }
 
-var defaultConfigPath = "config/config.yaml"
+var defaultConfigPath = "config/config.local.yaml"
 
 // ParseConfigFlag allows clients to specify the relative path to the file from
 // which the configuration will be loaded.

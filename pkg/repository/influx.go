@@ -136,7 +136,7 @@ func (i *influxDB) ListPipelineTriggerChartRecords(
 		p.Stop.Format(time.RFC3339Nano),
 		p.NamespaceUID.String(),
 		p.AggregationWindow,
-		aggregationWindowOffset(p.Start).String(),
+		AggregationWindowOffset(p.Start).String(),
 	)
 	result, err := i.QueryAPI().Query(ctx, query)
 	if err != nil {
@@ -257,12 +257,12 @@ func (i *influxDB) GetPipelineTriggerCount(
 	}, nil
 }
 
-// aggregationWindowOffset computes the offset to apply to InfluxDB's
+// AggregationWindowOffset computes the offset to apply to InfluxDB's
 // aggregateWindow function when aggregating by day. This function computes
 // windows independently, starting from the Unix epoch, rather than from the
 // provided time range start. This function computes the offset to shift the
 // windows correctly.
-func aggregationWindowOffset(t time.Time) time.Duration {
+func AggregationWindowOffset(t time.Time) time.Duration {
 	startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 	return t.Sub(startOfDay)
 }

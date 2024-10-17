@@ -1,0 +1,62 @@
+server:
+  privateport: 3084
+  publicport: 8084
+  https:
+    cert:
+    key:
+  edition: local-ce:dev
+  usage:
+    enabled: true
+    tlsenabled: true
+    host: usage.instill.tech
+    port: 443
+  debug: true
+  defaultuseruid:
+  instillcorehost: http://localhost:8080
+pipelinebackend:
+  host: pipeline-backend
+  publicport: 8081
+  https:
+    cert:
+    key:
+database:
+  username: postgres
+  password: password
+  host: localhost
+  port: 5432
+  name: mgmt
+  version: 5
+  timezone: Etc/UTC
+  pool:
+    idleconnections: 5
+    maxconnections: 10
+    connlifetime: 30m # In minutes, e.g., '60m'
+cache:
+  redis:
+    redisoptions:
+      addr: redis:6379
+influxdb:
+  url: http://localhost:8086
+  token: i-love-instill-ai
+  org: instill-ai
+  bucket: instill-ai
+  flushinterval: 10s
+  https:
+    cert:
+    key:
+log:
+  external: false
+  otelcollector:
+    host: otel-collector
+    port: 8095
+openfga:
+  host: localhost
+  port: 8080
+temporal:
+  hostport: localhost:7233
+  namespace: mgmt-backend
+  retention: 1d
+  ca:
+  cert:
+  key:
+  servername:
