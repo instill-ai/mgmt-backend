@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.2-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.20.1-beta...v0.20.2-beta) (2024-10-23)
+
+
+### Bug Fixes
+
+* **metric:** reintroduce /metrics/vdp/pipeline/triggers endpoint ([#243](https://github.com/instill-ai/mgmt-backend/issues/243)) ([d595d16](https://github.com/instill-ai/mgmt-backend/commit/d595d167eda4c0cd9468dc8d6ec91066bda5dd9a))
+
 ## [0.20.1-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.20.0-beta...v0.20.1-beta) (2024-10-14)
 
 
