@@ -239,84 +239,71 @@ export function CheckPublicGetRemainingCredit(header) {
 }
 
 export function CheckPublicMetrics(header) {
+  let pipeline_id = randomString(10);
+
+  client.connect(constant.mgmtPublicGRPCHost, {
+    plaintext: true
+  });
+
+  group(`Management Public API: List Pipeline Trigger Records`, () => {
+    let emptyPipelineTriggerRecordResponse = {
+      "pipelineTriggerRecords": [],
+      "nextPageToken": "",
+      "totalSize": 0
+    };
+
+    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords', {}, header), {
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords status': (r) => r && r.status == grpc.StatusOK,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords response has pipelineTriggerRecords': (r) => r && r.message.pipelineTriggerRecords !== undefined,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords response has totalSize': (r) => r && r.message.totalSize !== undefined,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords response has nextPageToken': (r) => r && r.message.nextPageToken !== undefined,
+    });
+
+    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords', {
+      filter: `pipelineId="${pipeline_id}" AND triggerMode=MODE_SYNC`,
+    }, header), {
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords with filter status': (r) =>  r && r.status == grpc.StatusOK,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords with filter response pipelineTriggerRecords length is 0': (r) => r && r.message.pipelineTriggerRecords.length === 0,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords with filter response totalSize is 0': (r) => r && r.message.totalSize === emptyPipelineTriggerRecordResponse.totalSize,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerRecords with filter response nextPageToken is empty': (r) => r && r.message.nextPageToken === emptyPipelineTriggerRecordResponse.nextPageToken,
+    });
+  });
+
   group(`Management Public API: List Pipeline Trigger Table Records`, () => {
-
-    let pipeline_id = randomString(10)
-
     let emptyPipelineTriggerTableRecordResponse = {
       "pipelineTriggerTableRecords": [],
       "nextPageToken": "",
       "totalSize": 0
-    }
+    };
 
-    check(
-      http.request(
-        "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/tables`,
-        null,
-        header,
-      ),
-      {
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables response status is 200`]:
-          (r) => r.status === 200,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables response has pipelineTriggerTableRecords`]:
-          (r) => r.json().pipelineTriggerTableRecords !== undefined,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables response has nextPageToken`]:
-          (r) => r.json().totalSize !== undefined,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables response has totalSize`]:
-          (r) => r.json().nextPageToken !== undefined,
-      }
-    )
-    check(
-      http.request(
-        "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/tables?filter=pipelineId=%22${pipeline_id}%22`,
-        null,
-        header,
-      ),
-      {
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables with filter response status is 200`]:
-          (r) => r.status === 200,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables with filter response pipelineTriggerTableRecords length is 0`]:
-          (r) => r.json().pipelineTriggerTableRecords.length === 0,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables with filter response nextPageToken is empty`]:
-          (r) => r.json().nextPageToken === emptyPipelineTriggerTableRecordResponse.nextPageToken,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables with filter response totalSize is 0`]:
-          (r) => r.json().totalSize === emptyPipelineTriggerTableRecordResponse.totalSize,
-      }
-    )
-  })
+    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords', {}, header), {
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords status': (r) => r && r.status == grpc.StatusOK,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords response has pipelineTriggerTableRecords': (r) => r && r.message.pipelineTriggerTableRecords !== undefined,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords response has totalSize': (r) => r && r.message.totalSize !== undefined,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords response has nextPageToken': (r) => r && r.message.nextPageToken !== undefined,
+    });
+    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords', {
+      filter: `pipelineId="${pipeline_id}"`,
+    }, header), {
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords with filter status': (r) => r && r.status == grpc.StatusOK,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords with filter response pipelineTriggerTableRecords length is 0': (r) => r && r.message.pipelineTriggerTableRecords.length === 0,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords with filter response totalSize is 0': (r) => r && r.message.totalSize === emptyPipelineTriggerTableRecordResponse.totalSize,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerTableRecords with filter response nextPageToken is empty': (r) => r && r.message.nextPageToken === emptyPipelineTriggerTableRecordResponse.nextPageToken,
+    });
+  });
+
   group(`Management Public API: List Pipeline Trigger Chart Records`, () => {
+    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecords', {}, header), {
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecords status': (r) => r && r.status == grpc.StatusOK,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecords response has pipelineTriggerChartRecords': (r) => r && r.message.pipelineTriggerChartRecords !== undefined,
+    });
+    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecords', {
+      filter: `pipelineId="${pipeline_id}" AND triggerMode=MODE_SYNC`,
+    }, header), {
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecords with filter status': (r) => r && r.status == grpc.StatusOK,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecords with filter response pipelineTriggerChartRecords lenght is 0': (r) => r && r.message.pipelineTriggerChartRecords.length === 0,
+    });
+  });
 
-    let pipeline_id = randomString(10)
-
-    check(
-      http.request(
-        "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/charts`,
-        null,
-        header,
-      ),
-      {
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/charts response status is 200`]:
-          (r) => r.status === 200,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/charts response has pipelineTriggerRecords`]:
-          (r) => r.json().pipelineTriggerChartRecords !== undefined,
-      }
-    )
-    check(
-      http.request(
-        "GET",
-        `${constant.mgmtPublicHost}/metrics/vdp/pipeline/charts?filter=triggerMode=MODE_SYNC%20AND%20pipelineId=%22${pipeline_id}%22`,
-        null,
-        header,
-      ),
-      {
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/charts with filter response status is 200`]:
-          (r) => r.status === 200,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/charts with filter response pipelineTriggerRecords length is 0`]:
-          (r) => r.json().pipelineTriggerChartRecords.length === 0,
-      }
-    )
-  })
+  client.close();
 }

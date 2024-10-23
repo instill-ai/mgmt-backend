@@ -19,50 +19,50 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 
 	errdomain "github.com/instill-ai/mgmt-backend/pkg/errors"
-	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
-	pipelinePB "github.com/instill-ai/protogen-go/vdp/pipeline/v1beta"
+	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	pipelinepb "github.com/instill-ai/protogen-go/vdp/pipeline/v1beta"
 )
 
 // Service interface
 type Service interface {
 	ExtractCtxUser(ctx context.Context, allowVisitor bool) (userUID uuid.UUID, err error)
 
-	CreateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.AuthenticatedUser) (*mgmtPB.AuthenticatedUser, error)
-	GetAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID) (*mgmtPB.AuthenticatedUser, error)
-	UpdateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.AuthenticatedUser) (*mgmtPB.AuthenticatedUser, error)
+	CreateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtpb.AuthenticatedUser) (*mgmtpb.AuthenticatedUser, error)
+	GetAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID) (*mgmtpb.AuthenticatedUser, error)
+	UpdateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtpb.AuthenticatedUser) (*mgmtpb.AuthenticatedUser, error)
 
-	ListUsers(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.User, int64, string, error)
-	GetUser(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.User, error)
+	ListUsers(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtpb.User, int64, string, error)
+	GetUser(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtpb.User, error)
 	DeleteUser(ctx context.Context, ctxUserUID uuid.UUID, id string) error
 
-	ListUsersAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.User, int64, string, error)
-	ListAuthenticatedUsersAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.AuthenticatedUser, int64, string, error)
-	GetUserAdmin(ctx context.Context, id string) (*mgmtPB.User, error)
-	GetUserByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtPB.User, error)
+	ListUsersAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtpb.User, int64, string, error)
+	ListAuthenticatedUsersAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtpb.AuthenticatedUser, int64, string, error)
+	GetUserAdmin(ctx context.Context, id string) (*mgmtpb.User, error)
+	GetUserByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtpb.User, error)
 
-	CreateOrganization(ctx context.Context, ctxUserUID uuid.UUID, org *mgmtPB.Organization) (*mgmtPB.Organization, error)
-	ListOrganizations(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.Organization, int64, string, error)
-	GetOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.Organization, error)
-	UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string, org *mgmtPB.Organization) (*mgmtPB.Organization, error)
+	CreateOrganization(ctx context.Context, ctxUserUID uuid.UUID, org *mgmtpb.Organization) (*mgmtpb.Organization, error)
+	ListOrganizations(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtpb.Organization, int64, string, error)
+	GetOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtpb.Organization, error)
+	UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string, org *mgmtpb.Organization) (*mgmtpb.Organization, error)
 	DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string) error
 
-	ListOrganizationsAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.Organization, int64, string, error)
-	GetOrganizationAdmin(ctx context.Context, id string) (*mgmtPB.Organization, error)
-	GetOrganizationByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtPB.Organization, error)
+	ListOrganizationsAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtpb.Organization, int64, string, error)
+	GetOrganizationAdmin(ctx context.Context, id string) (*mgmtpb.Organization, error)
+	GetOrganizationByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtpb.Organization, error)
 
-	ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID, userID string) ([]*mgmtPB.UserMembership, error)
-	GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) (*mgmtPB.UserMembership, error)
-	UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string, membership *mgmtPB.UserMembership) (*mgmtPB.UserMembership, error)
+	ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID, userID string) ([]*mgmtpb.UserMembership, error)
+	GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) (*mgmtpb.UserMembership, error)
+	UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string, membership *mgmtpb.UserMembership) (*mgmtpb.UserMembership, error)
 	DeleteUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) error
 
-	ListOrganizationMemberships(ctx context.Context, ctxUserUID uuid.UUID, orgID string) ([]*mgmtPB.OrganizationMembership, error)
-	GetOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) (*mgmtPB.OrganizationMembership, error)
-	UpdateOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string, membership *mgmtPB.OrganizationMembership) (*mgmtPB.OrganizationMembership, error)
+	ListOrganizationMemberships(ctx context.Context, ctxUserUID uuid.UUID, orgID string) ([]*mgmtpb.OrganizationMembership, error)
+	GetOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) (*mgmtpb.OrganizationMembership, error)
+	UpdateOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string, membership *mgmtpb.OrganizationMembership) (*mgmtpb.OrganizationMembership, error)
 	DeleteOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) error
 
-	CreateToken(ctx context.Context, ctxUserUID uuid.UUID, token *mgmtPB.ApiToken) error
-	ListTokens(ctx context.Context, ctxUserUID uuid.UUID, pageSize int64, pageToken string) ([]*mgmtPB.ApiToken, int64, string, error)
-	GetToken(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.ApiToken, error)
+	CreateToken(ctx context.Context, ctxUserUID uuid.UUID, token *mgmtpb.ApiToken) error
+	ListTokens(ctx context.Context, ctxUserUID uuid.UUID, pageSize int64, pageToken string) ([]*mgmtpb.ApiToken, int64, string, error)
+	GetToken(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtpb.ApiToken, error)
 	DeleteToken(ctx context.Context, ctxUserUID uuid.UUID, id string) error
 	ValidateToken(ctx context.Context, accessToken string) (string, error)
 	UpdateTokenLastUseTime(ctx context.Context, accessToken string) error
@@ -70,17 +70,18 @@ type Service interface {
 	CheckUserPassword(ctx context.Context, uid uuid.UUID, password string) error
 	UpdateUserPassword(ctx context.Context, uid uuid.UUID, newPassword string) error
 
-	ListPipelineTriggerTableRecords(ctx context.Context, owner *mgmtPB.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerTableRecord, int64, string, error)
-	ListPipelineTriggerChartRecords(ctx context.Context, owner *mgmtPB.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtPB.PipelineTriggerChartRecord, error)
+	ListPipelineTriggerRecords(ctx context.Context, owner *mgmtpb.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerRecord, int64, string, error)
+	ListPipelineTriggerTableRecords(ctx context.Context, owner *mgmtpb.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerTableRecord, int64, string, error)
+	ListPipelineTriggerChartRecords(ctx context.Context, owner *mgmtpb.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerChartRecord, error)
 
-	DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*mgmtPB.User, error)
-	DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtPB.User, error)
-	PBAuthenticatedUser2DBUser(ctx context.Context, pbUser *mgmtPB.AuthenticatedUser) (*datamodel.Owner, error)
-	DBUsers2PBAuthenticatedUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtPB.AuthenticatedUser, error)
+	DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*mgmtpb.User, error)
+	DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtpb.User, error)
+	PBAuthenticatedUser2DBUser(ctx context.Context, pbUser *mgmtpb.AuthenticatedUser) (*datamodel.Owner, error)
+	DBUsers2PBAuthenticatedUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtpb.AuthenticatedUser, error)
 
-	DBToken2PBToken(ctx context.Context, dbToken *datamodel.Token) (*mgmtPB.ApiToken, error)
-	DBTokens2PBTokens(ctx context.Context, dbTokens []*datamodel.Token) ([]*mgmtPB.ApiToken, error)
-	PBToken2DBToken(ctx context.Context, pbToken *mgmtPB.ApiToken) (*datamodel.Token, error)
+	DBToken2PBToken(ctx context.Context, dbToken *datamodel.Token) (*mgmtpb.ApiToken, error)
+	DBTokens2PBTokens(ctx context.Context, dbTokens []*datamodel.Token) ([]*mgmtpb.ApiToken, error)
+	PBToken2DBToken(ctx context.Context, pbToken *mgmtpb.ApiToken) (*datamodel.Token, error)
 
 	GetRedisClient() *redis.Client
 	GetInfluxClient() repository.InfluxDB
@@ -92,14 +93,14 @@ type Service interface {
 type service struct {
 	repository                  repository.Repository
 	influxDB                    repository.InfluxDB
-	pipelinePublicServiceClient pipelinePB.PipelinePublicServiceClient
+	pipelinePublicServiceClient pipelinepb.PipelinePublicServiceClient
 	redisClient                 *redis.Client
 	aclClient                   *acl.ACLClient
 	instillCoreHost             string
 }
 
 // NewService initiates a service instance
-func NewService(r repository.Repository, rc *redis.Client, i repository.InfluxDB, p pipelinePB.PipelinePublicServiceClient, acl *acl.ACLClient, h string) Service {
+func NewService(r repository.Repository, rc *redis.Client, i repository.InfluxDB, p pipelinepb.PipelinePublicServiceClient, acl *acl.ACLClient, h string) Service {
 	return &service{
 		repository:                  r,
 		influxDB:                    i,
@@ -160,7 +161,7 @@ func (s *service) ExtractCtxUser(ctx context.Context, allowVisitor bool) (userUI
 
 }
 
-func (s *service) ListUsers(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) (users []*mgmtPB.User, totalSize int64, nextPageToken string, err error) {
+func (s *service) ListUsers(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) (users []*mgmtpb.User, totalSize int64, nextPageToken string, err error) {
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 	dbUsers, totalSize, nextPageToken, err := s.repository.ListUsers(ctx, pageSize, pageToken, filter)
 	if err != nil {
@@ -170,7 +171,7 @@ func (s *service) ListUsers(ctx context.Context, ctxUserUID uuid.UUID, pageSize 
 	return users, totalSize, nextPageToken, err
 }
 
-func (s *service) CreateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.AuthenticatedUser) (*mgmtPB.AuthenticatedUser, error) {
+func (s *service) CreateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtpb.AuthenticatedUser) (*mgmtpb.AuthenticatedUser, error) {
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 	dbUser, err := s.PBAuthenticatedUser2DBUser(ctx, user)
 	if err != nil {
@@ -184,7 +185,7 @@ func (s *service) CreateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.U
 	return s.GetAuthenticatedUser(ctx, ctxUserUID)
 }
 
-func (s *service) GetUser(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.User, error) {
+func (s *service) GetUser(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtpb.User, error) {
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 	id, err := s.convertUserIDAlias(ctx, ctxUserUID, id)
 	if err != nil {
@@ -213,7 +214,7 @@ func (s *service) GetUser(ctx context.Context, ctxUserUID uuid.UUID, id string) 
 	return pbUser, nil
 }
 
-func (s *service) GetUserAdmin(ctx context.Context, id string) (*mgmtPB.User, error) {
+func (s *service) GetUserAdmin(ctx context.Context, id string) (*mgmtpb.User, error) {
 
 	if pbUser := s.getUserFromCacheByID(ctx, id); pbUser != nil {
 		return pbUser, nil
@@ -233,7 +234,7 @@ func (s *service) GetUserAdmin(ctx context.Context, id string) (*mgmtPB.User, er
 	return pbUser, nil
 }
 
-func (s *service) GetUserByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtPB.User, error) {
+func (s *service) GetUserByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtpb.User, error) {
 
 	if pbUser := s.getUserFromCacheByUID(ctx, uid); pbUser != nil {
 		return pbUser, nil
@@ -253,7 +254,7 @@ func (s *service) GetUserByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtPB
 	return pbUser, nil
 }
 
-func (s *service) ListUsersAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.User, int64, string, error) {
+func (s *service) ListUsersAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtpb.User, int64, string, error) {
 	dbUsers, totalSize, nextPageToken, err := s.repository.ListUsers(ctx, pageSize, pageToken, filter)
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("users/ with page_size=%d page_token=%s: %w", pageSize, pageToken, err)
@@ -262,7 +263,7 @@ func (s *service) ListUsersAdmin(ctx context.Context, pageSize int, pageToken st
 	return pbUsers, totalSize, nextPageToken, err
 }
 
-func (s *service) ListAuthenticatedUsersAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.AuthenticatedUser, int64, string, error) {
+func (s *service) ListAuthenticatedUsersAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtpb.AuthenticatedUser, int64, string, error) {
 	dbUsers, totalSize, nextPageToken, err := s.repository.ListUsers(ctx, pageSize, pageToken, filter)
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("users/ with page_size=%d page_token=%s: %w", pageSize, pageToken, err)
@@ -271,7 +272,7 @@ func (s *service) ListAuthenticatedUsersAdmin(ctx context.Context, pageSize int,
 	return pbUsers, totalSize, nextPageToken, err
 }
 
-func (s *service) GetAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID) (*mgmtPB.AuthenticatedUser, error) {
+func (s *service) GetAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID) (*mgmtpb.AuthenticatedUser, error) {
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 	dbUser, err := s.repository.GetUserByUID(ctx, ctxUserUID)
 	if err != nil {
@@ -287,7 +288,7 @@ func (s *service) GetAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID
 }
 
 // UpdateUser updates a user by UUID
-func (s *service) UpdateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtPB.AuthenticatedUser) (*mgmtPB.AuthenticatedUser, error) {
+func (s *service) UpdateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtpb.AuthenticatedUser) (*mgmtpb.AuthenticatedUser, error) {
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
 	// Check if the user exists
@@ -328,7 +329,7 @@ func (s *service) DeleteUser(ctx context.Context, ctxUserUID uuid.UUID, id strin
 	return nil
 }
 
-func (s *service) ListOrganizations(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.Organization, int64, string, error) {
+func (s *service) ListOrganizations(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtpb.Organization, int64, string, error) {
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 	dbOrgs, totalSize, nextPageToken, err := s.repository.ListOrganizations(ctx, pageSize, pageToken, filter)
 	if err != nil {
@@ -338,7 +339,7 @@ func (s *service) ListOrganizations(ctx context.Context, ctxUserUID uuid.UUID, p
 	return pbOrgs, totalSize, nextPageToken, err
 }
 
-func (s *service) CreateOrganization(ctx context.Context, ctxUserUID uuid.UUID, org *mgmtPB.Organization) (*mgmtPB.Organization, error) {
+func (s *service) CreateOrganization(ctx context.Context, ctxUserUID uuid.UUID, org *mgmtpb.Organization) (*mgmtpb.Organization, error) {
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
 	uid, _ := uuid.NewV4()
@@ -360,7 +361,7 @@ func (s *service) CreateOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 	return s.GetOrganization(ctx, ctxUserUID, org.Id)
 }
 
-func (s *service) GetOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.Organization, error) {
+func (s *service) GetOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtpb.Organization, error) {
 
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
@@ -383,7 +384,7 @@ func (s *service) GetOrganization(ctx context.Context, ctxUserUID uuid.UUID, id 
 	return pbOrg, nil
 }
 
-func (s *service) UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string, org *mgmtPB.Organization) (*mgmtPB.Organization, error) {
+func (s *service) UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string, org *mgmtpb.Organization) (*mgmtpb.Organization, error) {
 
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
@@ -446,7 +447,7 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 		// TODO: optimize this cascade delete
 		//nolint:staticcheck
 		resp, err := s.pipelinePublicServiceClient.ListOrganizationPipelines(InjectOwnerToContext(ctx, ctxUserUID.String()),
-			&pipelinePB.ListOrganizationPipelinesRequest{
+			&pipelinepb.ListOrganizationPipelinesRequest{
 				Parent:    fmt.Sprintf("organizations/%s", id),
 				PageToken: &pageToken})
 		if err != nil {
@@ -464,7 +465,7 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 	for _, pipelineID := range pipelineIDList {
 		//nolint:staticcheck
 		_, _ = s.pipelinePublicServiceClient.DeleteOrganizationPipeline(InjectOwnerToContext(ctx, ctxUserUID.String()),
-			&pipelinePB.DeleteOrganizationPipelineRequest{
+			&pipelinepb.DeleteOrganizationPipelineRequest{
 				Name: fmt.Sprintf("organizations/%s/pipelines/%s", id, pipelineID),
 			})
 	}
@@ -482,7 +483,7 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 	return nil
 }
 
-func (s *service) GetOrganizationAdmin(ctx context.Context, id string) (*mgmtPB.Organization, error) {
+func (s *service) GetOrganizationAdmin(ctx context.Context, id string) (*mgmtpb.Organization, error) {
 
 	if pbOrg := s.getOrganizationFromCacheByID(ctx, id); pbOrg != nil {
 		return pbOrg, nil
@@ -504,7 +505,7 @@ func (s *service) GetOrganizationAdmin(ctx context.Context, id string) (*mgmtPB.
 	return pbOrg, nil
 }
 
-func (s *service) GetOrganizationByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtPB.Organization, error) {
+func (s *service) GetOrganizationByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtpb.Organization, error) {
 
 	if pbOrg := s.getOrganizationFromCacheByUID(ctx, uid); pbOrg != nil {
 		return pbOrg, nil
@@ -525,7 +526,7 @@ func (s *service) GetOrganizationByUIDAdmin(ctx context.Context, uid uuid.UUID) 
 	return pbOrg, nil
 }
 
-func (s *service) ListOrganizationsAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtPB.Organization, int64, string, error) {
+func (s *service) ListOrganizationsAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtpb.Organization, int64, string, error) {
 
 	dbOrganizations, totalSize, nextPageToken, err := s.repository.ListOrganizations(ctx, pageSize, pageToken, filter)
 	if err != nil {
@@ -568,7 +569,7 @@ func (s *service) UpdateUserPassword(ctx context.Context, uid uuid.UUID, newPass
 	return s.repository.UpdateUserPasswordHash(ctx, uid, string(passwordBytes), time.Now())
 }
 
-func (s *service) CreateToken(ctx context.Context, ctxUserUID uuid.UUID, token *mgmtPB.ApiToken) error {
+func (s *service) CreateToken(ctx context.Context, ctxUserUID uuid.UUID, token *mgmtpb.ApiToken) error {
 
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
@@ -582,10 +583,10 @@ func (s *service) CreateToken(ctx context.Context, ctxUserUID uuid.UUID, token *
 	curTime := time.Now()
 	dbToken.CreateTime = curTime
 	dbToken.UpdateTime = curTime
-	dbToken.State = datamodel.TokenState(mgmtPB.ApiToken_STATE_ACTIVE)
+	dbToken.State = datamodel.TokenState(mgmtpb.ApiToken_STATE_ACTIVE)
 
 	switch token.GetExpiration().(type) {
-	case *mgmtPB.ApiToken_Ttl:
+	case *mgmtpb.ApiToken_Ttl:
 		if token.GetTtl() >= 0 {
 			dbToken.ExpireTime = curTime.Add(time.Second * time.Duration(token.GetTtl()))
 		} else if token.GetTtl() == -1 {
@@ -593,7 +594,7 @@ func (s *service) CreateToken(ctx context.Context, ctxUserUID uuid.UUID, token *
 		} else {
 			return ErrInvalidTokenTTL
 		}
-	case *mgmtPB.ApiToken_ExpireTime:
+	case *mgmtpb.ApiToken_ExpireTime:
 		dbToken.ExpireTime = token.GetExpireTime().AsTime()
 	}
 
@@ -608,7 +609,7 @@ func (s *service) CreateToken(ctx context.Context, ctxUserUID uuid.UUID, token *
 
 	return nil
 }
-func (s *service) ListTokens(ctx context.Context, ctxUserUID uuid.UUID, pageSize int64, pageToken string) ([]*mgmtPB.ApiToken, int64, string, error) {
+func (s *service) ListTokens(ctx context.Context, ctxUserUID uuid.UUID, pageSize int64, pageToken string) ([]*mgmtpb.ApiToken, int64, string, error) {
 
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
@@ -622,7 +623,7 @@ func (s *service) ListTokens(ctx context.Context, ctxUserUID uuid.UUID, pageSize
 	return pbTokens, pageSize, pageToken, err
 
 }
-func (s *service) GetToken(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtPB.ApiToken, error) {
+func (s *service) GetToken(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtpb.ApiToken, error) {
 
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
@@ -676,7 +677,7 @@ func (s *service) ValidateToken(ctx context.Context, accessToken string) (string
 	return uid.String(), nil
 }
 
-func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID, userID string) ([]*mgmtPB.UserMembership, error) {
+func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID, userID string) ([]*mgmtpb.UserMembership, error) {
 
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
@@ -703,7 +704,7 @@ func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID,
 		return nil, err
 	}
 
-	memberships := []*mgmtPB.UserMembership{}
+	memberships := []*mgmtpb.UserMembership{}
 	for _, orgRelation := range orgRelations {
 		org, err := s.repository.GetOrganizationByUID(ctx, orgRelation.UID)
 		if err == nil {
@@ -712,13 +713,13 @@ func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID,
 				return nil, err
 			}
 			role := orgRelation.Relation
-			state := mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE
+			state := mgmtpb.MembershipState_MEMBERSHIP_STATE_ACTIVE
 			if strings.HasPrefix(role, "pending") {
 				role = strings.Replace(role, "pending_", "", -1)
-				state = mgmtPB.MembershipState_MEMBERSHIP_STATE_PENDING
+				state = mgmtpb.MembershipState_MEMBERSHIP_STATE_PENDING
 			}
 
-			memberships = append(memberships, &mgmtPB.UserMembership{
+			memberships = append(memberships, &mgmtpb.UserMembership{
 				Name:         fmt.Sprintf("users/%s/memberships/%s", user.ID, org.ID),
 				Role:         role,
 				User:         pbUser,
@@ -730,7 +731,7 @@ func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID,
 	return memberships, nil
 }
 
-func (s *service) GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) (*mgmtPB.UserMembership, error) {
+func (s *service) GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) (*mgmtpb.UserMembership, error) {
 
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
@@ -764,12 +765,12 @@ func (s *service) GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, u
 		return nil, err
 	}
 
-	state := mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE
+	state := mgmtpb.MembershipState_MEMBERSHIP_STATE_ACTIVE
 	if strings.HasPrefix(role, "pending") {
 		role = strings.Replace(role, "pending_", "", -1)
-		state = mgmtPB.MembershipState_MEMBERSHIP_STATE_PENDING
+		state = mgmtpb.MembershipState_MEMBERSHIP_STATE_PENDING
 	}
-	membership := &mgmtPB.UserMembership{
+	membership := &mgmtpb.UserMembership{
 		Name:         fmt.Sprintf("users/%s/memberships/%s", user.ID, org.ID),
 		Role:         role,
 		User:         pbUser,
@@ -779,7 +780,7 @@ func (s *service) GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, u
 	return membership, nil
 }
 
-func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string, membership *mgmtPB.UserMembership) (*mgmtPB.UserMembership, error) {
+func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string, membership *mgmtpb.UserMembership) (*mgmtpb.UserMembership, error) {
 
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
@@ -809,7 +810,7 @@ func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 		return nil, err
 	}
 
-	if membership.State == mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE {
+	if membership.State == mgmtpb.MembershipState_MEMBERSHIP_STATE_ACTIVE {
 		curRole, err := s.aclClient.GetOrganizationUserMembership(ctx, org.UID, user.UID)
 		if err != nil {
 			return nil, err
@@ -824,12 +825,12 @@ func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 			return nil, err
 		}
 
-		updatedMembership := &mgmtPB.UserMembership{
+		updatedMembership := &mgmtpb.UserMembership{
 			Name:         fmt.Sprintf("users/%s/memberships/%s", user.ID, org.ID),
 			Role:         curRole,
 			User:         pbUser,
 			Organization: pbOrg,
-			State:        mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE,
+			State:        mgmtpb.MembershipState_MEMBERSHIP_STATE_ACTIVE,
 		}
 		return updatedMembership, nil
 	}
@@ -864,7 +865,7 @@ func (s *service) DeleteUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 	return nil
 }
 
-func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uuid.UUID, orgID string) ([]*mgmtPB.OrganizationMembership, error) {
+func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uuid.UUID, orgID string) ([]*mgmtpb.OrganizationMembership, error) {
 
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
@@ -896,7 +897,7 @@ func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uu
 		return nil, err
 	}
 
-	memberships := []*mgmtPB.OrganizationMembership{}
+	memberships := []*mgmtpb.OrganizationMembership{}
 	for _, userRelation := range userRelations {
 		user, err := s.repository.GetUserByUID(ctx, userRelation.UID)
 		if err != nil {
@@ -907,13 +908,13 @@ func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uu
 			return nil, err
 		}
 		role := userRelation.Relation
-		state := mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE
+		state := mgmtpb.MembershipState_MEMBERSHIP_STATE_ACTIVE
 		if strings.HasPrefix(role, "pending") {
 			role = strings.Replace(role, "pending_", "", -1)
-			state = mgmtPB.MembershipState_MEMBERSHIP_STATE_PENDING
+			state = mgmtpb.MembershipState_MEMBERSHIP_STATE_PENDING
 		}
-		if state != mgmtPB.MembershipState_MEMBERSHIP_STATE_PENDING || canSetMembership {
-			memberships = append(memberships, &mgmtPB.OrganizationMembership{
+		if state != mgmtpb.MembershipState_MEMBERSHIP_STATE_PENDING || canSetMembership {
+			memberships = append(memberships, &mgmtpb.OrganizationMembership{
 				Name:         fmt.Sprintf("organizations/%s/memberships/%s", org.ID, user.ID),
 				Role:         role,
 				User:         pbUser,
@@ -925,7 +926,7 @@ func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uu
 	return memberships, nil
 }
 
-func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) (*mgmtPB.OrganizationMembership, error) {
+func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) (*mgmtpb.OrganizationMembership, error) {
 
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
@@ -969,18 +970,18 @@ func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid
 		return nil, err
 	}
 
-	state := mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE
+	state := mgmtpb.MembershipState_MEMBERSHIP_STATE_ACTIVE
 	if strings.HasPrefix(role, "pending") {
 		role = strings.Replace(role, "pending_", "", -1)
-		state = mgmtPB.MembershipState_MEMBERSHIP_STATE_PENDING
+		state = mgmtpb.MembershipState_MEMBERSHIP_STATE_PENDING
 	}
 
-	if state == mgmtPB.MembershipState_MEMBERSHIP_STATE_PENDING && ctxUserUID != uuid.FromStringOrNil(*pbUser.Uid) {
+	if state == mgmtpb.MembershipState_MEMBERSHIP_STATE_PENDING && ctxUserUID != uuid.FromStringOrNil(*pbUser.Uid) {
 		if !canSetMembership {
 			return nil, errdomain.ErrUnauthorized
 		}
 	}
-	membership := &mgmtPB.OrganizationMembership{
+	membership := &mgmtpb.OrganizationMembership{
 		Name:         fmt.Sprintf("organizations/%s/memberships/%s", org.ID, user.ID),
 		Role:         role,
 		User:         pbUser,
@@ -990,7 +991,7 @@ func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid
 	return membership, nil
 }
 
-func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string, membership *mgmtPB.OrganizationMembership) (*mgmtPB.OrganizationMembership, error) {
+func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string, membership *mgmtpb.OrganizationMembership) (*mgmtpb.OrganizationMembership, error) {
 
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
@@ -1037,12 +1038,12 @@ func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID u
 			return nil, err
 		}
 
-		updatedMembership := &mgmtPB.OrganizationMembership{
+		updatedMembership := &mgmtpb.OrganizationMembership{
 			Name:         fmt.Sprintf("organizations/%s/memberships/%s", org.ID, user.ID),
 			Role:         membership.Role,
 			User:         pbUser,
 			Organization: pbOrg,
-			State:        mgmtPB.MembershipState_MEMBERSHIP_STATE_ACTIVE,
+			State:        mgmtpb.MembershipState_MEMBERSHIP_STATE_ACTIVE,
 		}
 		return updatedMembership, nil
 	} else {
@@ -1051,12 +1052,12 @@ func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID u
 			return nil, err
 		}
 
-		updatedMembership := &mgmtPB.OrganizationMembership{
+		updatedMembership := &mgmtpb.OrganizationMembership{
 			Name:         fmt.Sprintf("organizations/%s/memberships/%s", org.ID, user.ID),
 			Role:         membership.Role,
 			User:         pbUser,
 			Organization: pbOrg,
-			State:        mgmtPB.MembershipState_MEMBERSHIP_STATE_PENDING,
+			State:        mgmtpb.MembershipState_MEMBERSHIP_STATE_PENDING,
 		}
 		return updatedMembership, nil
 	}
