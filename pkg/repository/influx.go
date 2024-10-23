@@ -30,6 +30,7 @@ var defaultAggregationWindow = time.Hour.Nanoseconds()
 
 // InfluxDB interface
 type InfluxDB interface {
+	QueryPipelineTriggerRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (pipelines []*mgmtpb.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error)
 	QueryPipelineTriggerTableRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerTableRecord, totalSize int64, nextPageToken string, err error)
 	QueryPipelineTriggerChartRecords(ctx context.Context, owner string, ownerQueryString string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerChartRecord, err error)
 
@@ -451,4 +452,166 @@ func (i *influxDB) transpileFilter(filter filtering.Filter) (string, error) {
 	return (&Transpiler{
 		filter: filter,
 	}).Transpile()
+}
+
+func (i *influxDB) constructRecordQuery(
+	ctx context.Context,
+	ownerQueryString string,
+	pageSize int64,
+	pageToken string,
+	filter filtering.Filter,
+	measurement string,
+	sortKey string,
+) (query string, total int64, err error) {
+	if pageSize == 0 {
+		pageSize = DefaultPageSize
+	} else if pageSize > MaxPageSize {
+		pageSize = MaxPageSize
+	}
+	start := time.Time{}.Format(time.RFC3339Nano)
+	stop := time.Now().Format(time.RFC3339Nano)
+	// TODO: design better filter expression to flux transpiler
+	expr, err := i.transpileFilter(filter)
+	if err != nil {
+		return "", 0, status.Errorf(codes.Internal, err.Error())
+	}
+	if expr != "" {
+		exprs := strings.Split(expr, "&&")
+		for i, expr := range exprs {
+			if strings.HasPrefix(expr, constant.Start) {
+				start = strings.Split(expr, "@")[1]
+				exprs[i] = ""
+			}
+			if strings.HasPrefix(expr, constant.Stop) {
+				stop = strings.Split(expr, "@")[1]
+				exprs[i] = ""
+			}
+		}
+		expr = strings.Join(exprs, "")
+	}
+	if pageToken != "" {
+		startTime, _, err := paginate.DecodeToken(pageToken)
+		if err != nil {
+			return "", 0, status.Errorf(codes.InvalidArgument, "Invalid page token: %s", err.Error())
+		}
+		startTime = startTime.Add(time.Duration(1))
+		start = startTime.Format(time.RFC3339Nano)
+	}
+	baseQuery := fmt.Sprintf(
+		`from(bucket: "%v")
+			|> range(start: %v, stop: %v)
+			|> filter(fn: (r) => r["_measurement"] == "%v")
+			|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+			%v
+			%v
+			|> group()
+			|> sort(columns: ["%v"])`,
+		i.bucket,
+		start,
+		stop,
+		measurement,
+		ownerQueryString,
+		expr,
+		sortKey,
+	)
+	query = fmt.Sprintf(
+		`%v
+		|> limit(n: %v)`,
+		baseQuery,
+		pageSize,
+	)
+	totalQuery := fmt.Sprintf(
+		`%v
+		|> count(column: "%v")`,
+		baseQuery,
+		sortKey,
+	)
+	totalQueryResult, err := i.api.Query(ctx, totalQuery)
+	if err != nil {
+		return "", 0, status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
+	}
+
+	if totalQueryResult.Next() {
+		total = totalQueryResult.Record().ValueByKey(sortKey).(int64)
+	}
+
+	return query, total, nil
+}
+
+func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error) {
+	logger, _ := logger.GetZapLogger(ctx)
+	query, total, err := i.constructRecordQuery(ctx, ownerQueryString, pageSize, pageToken, filter, constant.PipelineTriggerMeasurement, constant.TriggerTime)
+	if err != nil {
+		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
+	}
+	result, err := i.api.Query(ctx, query)
+	var lastTimestamp time.Time
+	if err != nil {
+		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
+	} else {
+		// Iterate over query response
+		for result.Next() {
+			// Notice when group key has changed
+			if result.TableChanged() {
+				logger.Debug(fmt.Sprintf("table: %s\n", result.TableMetadata().String()))
+			}
+			record := &mgmtpb.PipelineTriggerRecord{}
+			if v, match := result.Record().ValueByKey(constant.TriggerTime).(string); match {
+				triggerTime, err := time.Parse(time.RFC3339Nano, v)
+				if err != nil {
+					return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid parse key: %s", err.Error())
+				}
+				record.TriggerTime = timestamppb.New(triggerTime)
+			}
+			if v, match := result.Record().ValueByKey(constant.PipelineTriggerID).(string); match {
+				record.PipelineTriggerId = v
+			}
+			if v, match := result.Record().ValueByKey(constant.PipelineID).(string); match {
+				record.PipelineId = v
+			}
+			if v, match := result.Record().ValueByKey(constant.PipelineUID).(string); match {
+				record.PipelineUid = v
+			}
+			if v, match := result.Record().ValueByKey(constant.PipelineReleaseID).(string); match {
+				record.PipelineReleaseId = v
+			}
+			if v, match := result.Record().ValueByKey(constant.PipelineReleaseUID).(string); match {
+				record.PipelineReleaseUid = v
+			}
+			if v, match := result.Record().ValueByKey(constant.TriggerMode).(string); match {
+				record.TriggerMode = mgmtpb.Mode(mgmtpb.Mode_value[v])
+			}
+			if v, match := result.Record().ValueByKey(constant.ComputeTimeDuration).(float64); match {
+				record.ComputeTimeDuration = float32(v)
+			}
+			// TODO: temporary solution for legacy data format, currently there is no way to update the tags in influxdb
+			if v, match := result.Record().ValueByKey(constant.Status).(string); match {
+				if v == constant.Completed {
+					record.Status = mgmtpb.Status_STATUS_COMPLETED
+				} else if v == constant.Errored {
+					record.Status = mgmtpb.Status_STATUS_ERRORED
+				} else {
+					record.Status = mgmtpb.Status(mgmtpb.Status_value[v])
+				}
+			}
+			if v, match := result.Record().ValueByKey(constant.PipelineMode).(string); match {
+				record.TriggerMode = mgmtpb.Mode(mgmtpb.Mode_value[v])
+			}
+			records = append(records, record)
+		}
+		// Check for an error
+		if result.Err() != nil {
+			return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
+		}
+		if result.Record() == nil {
+			return nil, 0, "", nil
+		}
+		lastTimestamp = result.Record().Time()
+	}
+	if int64(len(records)) < total {
+		pageToken = paginate.EncodeToken(lastTimestamp, owner)
+	} else {
+		pageToken = ""
+	}
+	return records, int64(len(records)), pageToken, nil
 }

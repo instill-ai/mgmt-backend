@@ -107,6 +107,22 @@ func (s *service) pipelineUIDLookup(ctx context.Context, ownerID string, ownerTy
 	return filter, nil
 }
 
+func (s *service) ListPipelineTriggerRecords(ctx context.Context, owner *mgmtpb.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerRecord, int64, string, error) {
+	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
+	if err != nil {
+		return []*mgmtpb.PipelineTriggerRecord{}, 0, "", err
+	}
+	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner)
+	if err != nil {
+		return []*mgmtpb.PipelineTriggerRecord{}, 0, "", nil
+	}
+	pipelineTriggerRecords, ps, pt, err := s.influxDB.QueryPipelineTriggerRecords(ctx, *ownerUID, ownerQueryString, pageSize, pageToken, filter)
+	if err != nil {
+		return nil, 0, "", err
+	}
+	return pipelineTriggerRecords, ps, pt, nil
+}
+
 func (s *service) ListPipelineTriggerTableRecords(ctx context.Context, owner *mgmtpb.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerTableRecord, int64, string, error) {
 
 	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
