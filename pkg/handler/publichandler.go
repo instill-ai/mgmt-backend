@@ -23,11 +23,11 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 	"github.com/instill-ai/mgmt-backend/pkg/usage"
+	"github.com/instill-ai/x/checkfield"
 
 	custom_otel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
 	healthcheckPB "github.com/instill-ai/protogen-go/common/healthcheck/v1beta"
 	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
-	checkfield "github.com/instill-ai/x/checkfield"
 )
 
 // TODO: Validate mask based on the field behavior. Currently, the fields are hard-coded.
@@ -1047,6 +1047,40 @@ func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req
 	)))
 
 	return &resp, nil
+}
+
+// ListModelTriggerChartRecords returns a timeline of model trigger counts for a given requester. The
+// response will contain one set of records (datapoints), representing the amount of triggers in a time bucket.
+func (h *PublicHandler) ListModelTriggerChartRecords(ctx context.Context, req *mgmtPB.ListModelTriggerChartRecordsRequest) (*mgmtPB.ListModelTriggerChartRecordsResponse, error) {
+
+	eventName := "ListModelTriggerChartRecords"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+	logger, _ := logger.GetZapLogger(ctx)
+
+	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	resp, err := h.Service.ListModelTriggerChartRecords(ctx, req, ctxUserUID)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, fmt.Errorf("fetching credit chart records: %w", err)
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		ctxUserUID,
+		eventName,
+	)))
+
+	return resp, nil
 }
 
 func (h *PublicHandler) ListUserMemberships(ctx context.Context, req *mgmtPB.ListUserMembershipsRequest) (*mgmtPB.ListUserMembershipsResponse, error) {
