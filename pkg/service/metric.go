@@ -5,11 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/gofrs/uuid"
 	"go.einride.tech/aip/filtering"
 	"gorm.io/gorm"
 
-	"github.com/gofrs/uuid"
 	"github.com/instill-ai/mgmt-backend/internal/resource"
 	"github.com/instill-ai/mgmt-backend/pkg/acl"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
@@ -161,6 +162,47 @@ func (s *service) ListPipelineTriggerChartRecords(ctx context.Context, owner *mg
 	}
 
 	return pipelineTriggerChartRecords, nil
+}
+
+func (s *service) ListModelTriggerChartRecords(
+	ctx context.Context,
+	req *mgmtpb.ListModelTriggerChartRecordsRequest,
+	ctxUserUID uuid.UUID,
+) (*mgmtpb.ListModelTriggerChartRecordsResponse, error) {
+	nsUID, err := s.GrantedNamespaceUID(ctx, req.GetRequesterId(), ctxUserUID)
+	if err != nil {
+		return nil, fmt.Errorf("checking user permissions: %w", err)
+	}
+
+	now := time.Now().UTC()
+	p := repository.ListModelTriggerChartRecordsParams{
+		RequesterID:  req.GetRequesterId(),
+		RequesterUID: nsUID,
+
+		// Default values
+		AggregationWindow: 1 * time.Hour,
+		Start:             time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()),
+		Stop:              now,
+	}
+
+	if req.GetAggregationWindow() != "" {
+		window, err := time.ParseDuration(req.GetAggregationWindow())
+		if err != nil {
+			return nil, fmt.Errorf("%w: extracting duration from aggregation window: %w", errdomain.ErrInvalidArgument, err)
+		}
+
+		p.AggregationWindow = window
+	}
+
+	if req.GetStart() != nil {
+		p.Start = req.GetStart().AsTime()
+	}
+
+	if req.GetStop() != nil {
+		p.Stop = req.GetStop().AsTime()
+	}
+
+	return s.influxDB.ListModelTriggerChartRecords(ctx, p)
 }
 
 // GrantedNamespaceUID returns the UID of a namespace, provided the
