@@ -176,7 +176,7 @@ func (s *service) ListModelTriggerChartRecords(
 
 	now := time.Now().UTC()
 	p := repository.ListModelTriggerChartRecordsParams{
-		NamespaceID:  req.GetRequesterId(),
+		RequesterID:  req.GetRequesterId(),
 		RequesterUID: nsUID,
 
 		// Default values

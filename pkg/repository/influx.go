@@ -23,6 +23,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/x/paginate"
 
+	errdomain "github.com/instill-ai/mgmt-backend/pkg/errors"
 	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 )
 
@@ -406,8 +407,8 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 			logger.Debug(fmt.Sprintf("table: %s\n", result.TableMetadata().String()))
 		}
 
-		if result.Record().Table() != currentTablePosition {
-			chartRecord = &mgmtpb.PipelineTriggerChartRecord{} // only insert a new object when iterated to a new model
+		if result.Record().Table() != currentTablePosition { // only insert a new object when iterated to a new pipeline
+			chartRecord = &mgmtpb.PipelineTriggerChartRecord{}
 
 			if v, match := result.Record().ValueByKey(constant.PipelineID).(string); match {
 				chartRecord.PipelineId = v
@@ -449,20 +450,19 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 	return records, nil
 }
 
-// todo: merge changes for new pipeline dashboard endpoints and refactor this part
-// const qModelTriggerChartRecords = `
-// from(bucket: "%s")
-// 	|> range(start: %s, stop: %s)
-// 	|> filter(fn: (r) => r._measurement == "model.trigger.v1" and r.requester_uid == "%s")
-// 	|> filter(fn: (r) => r._field == "trigger_time")
-// 	|> group(columns:["requester_uid"])
-// 	|> aggregateWindow(every: %s, column:"_value", fn: count, createEmpty: true, offset: %s)
-// `
+const qModelTriggerChartRecords = `
+from(bucket: "%s")
+	|> range(start: %s, stop: %s)
+	|> filter(fn: (r) => r._measurement == "model.trigger.v1" and r.requester_uid == "%s")
+	|> filter(fn: (r) => r._field == "trigger_time")
+	|> group(columns:["requester_uid"])
+	|> aggregateWindow(every: %s, column:"_value", fn: count, createEmpty: true, offset: %s)
+`
 
 // ListModelTriggerChartRecordsParams contains the required information to
 // query the model triggers of a namespace.
 type ListModelTriggerChartRecordsParams struct {
-	NamespaceID       string
+	RequesterID       string
 	RequesterUID      uuid.UUID
 	AggregationWindow time.Duration
 	Start             time.Time
@@ -473,146 +473,52 @@ func (i *influxDB) ListModelTriggerChartRecords(
 	ctx context.Context,
 	p ListModelTriggerChartRecordsParams,
 ) (*mgmtpb.ListModelTriggerChartRecordsResponse, error) {
-	// todo: merge changes for new pipeline dashboard endpoints and refactor this part
-	// l, _ := logger.GetZapLogger(ctx)
-	// l = l.With(zap.Reflect("triggerChartParams", p))
-
-	// query := fmt.Sprintf(
-	// 	qModelTriggerChartRecords,
-	// 	i.Bucket(),
-	// 	p.Start.Format(time.RFC3339Nano),
-	// 	p.Stop.Format(time.RFC3339Nano),
-	// 	p.RequesterUID.String(),
-	// 	p.AggregationWindow,
-	// 	AggregationWindowOffset(p.Start).String(),
-	// )
-	// result, err := i.QueryAPI().Query(ctx, query)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("%w: querying data from InfluxDB: %w", errdomain.ErrInvalidArgument, err)
-	// }
-	//
-	// defer result.Close()
-	//
-	// record := &mgmtpb.ModelTriggerChartRecord{
-	// 	RequesterId:   p.NamespaceID,
-	// 	TimeBuckets:   []*timestamppb.Timestamp{},
-	// 	TriggerCounts: []int32{},
-	// }
-	//
-	// // Until filtering and grouping are implemented, we'll only have one record
-	// // (total triggers by requester).
-	// records := []*mgmtpb.ModelTriggerChartRecord{record}
-	//
-	// for result.Next() {
-	// 	t := result.Record().Time()
-	// 	record.TimeBuckets = append(record.TimeBuckets, timestamppb.New(t))
-	//
-	// 	v, match := result.Record().Value().(int64)
-	// 	if !match {
-	// 		l.With(zap.Time("_time", result.Record().Time())).
-	// 			Error("Missing count on model trigger chart record.")
-	// 	}
-	//
-	// 	record.TriggerCounts = append(record.TriggerCounts, int32(v))
-	// }
-	//
-	// if result.Err() != nil {
-	// 	return nil, fmt.Errorf("collecting information from model trigger chart records: %w", err)
-	// }
-	//
-	// if result.Record() == nil {
-	// 	return nil, nil
-	// }
-	//
-	// return &mgmtpb.ListModelTriggerChartRecordsResponse{
-	// 	ModelTriggerChartRecords: records,
-	// }, nil
-	logger, _ := logger.GetZapLogger(ctx)
+	l, _ := logger.GetZapLogger(ctx)
+	l = l.With(zap.Reflect("triggerChartParams", p))
 
 	query := fmt.Sprintf(
-		`base =
-			from(bucket: "%s")
-				|> range(start: %v, stop: %v)
-				|> filter(fn: (r) => r["_measurement"] == "model.trigger.v1" and r.requester_uid == "%s")
-				|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-		bucketBase =
-			base
-				|> group(columns: ["model_uid"])
-				|> sort(columns: ["trigger_time"])
-		bucketTrigger =
-			bucketBase
-				|> aggregateWindow(
-					every: %v,
-					column: "trigger_time",
-					fn: count,
-					createEmpty: false,
-				)
-		bucketDuration =
-			bucketBase
-				|> aggregateWindow(
-					every: %v,
-					fn: sum,
-					column: "compute_time_duration",
-					createEmpty: false,
-				)
-		bucket =
-			join(
-				tables: {t1: bucketTrigger, t2: bucketDuration},
-				on: ["_start", "_stop", "_time", "model_uid"],
-			)
-		nameMap =
-			base
-				|> keep(columns: ["trigger_time", "model_id", "model_uid"])
-				|> group(columns: ["model_uid"])
-				|> top(columns: ["trigger_time"], n: 1)
-				|> drop(columns: ["trigger_time"])
-		join(tables: {t1: bucket, t2: nameMap}, on: ["model_uid"])`,
-		i.bucket,
+		qModelTriggerChartRecords,
+		i.Bucket(),
 		p.Start.Format(time.RFC3339Nano),
 		p.Stop.Format(time.RFC3339Nano),
 		p.RequesterUID.String(),
 		p.AggregationWindow,
-		p.AggregationWindow,
+		AggregationWindowOffset(p.Start).String(),
 	)
-
-	result, err := i.api.Query(ctx, query)
+	result, err := i.QueryAPI().Query(ctx, query)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
+		return nil, fmt.Errorf("%w: querying data from InfluxDB: %w", errdomain.ErrInvalidArgument, err)
 	}
 
-	var currentTablePosition = -1
-	var chartRecord *mgmtpb.ModelTriggerChartRecord
-	var records []*mgmtpb.ModelTriggerChartRecord
-	// Iterate over query response
+	defer result.Close()
+
+	record := &mgmtpb.ModelTriggerChartRecord{
+		RequesterId:   p.RequesterID,
+		TimeBuckets:   []*timestamppb.Timestamp{},
+		TriggerCounts: []int32{},
+	}
+
+	// Until filtering and grouping are implemented, we'll only have one record
+	// (total triggers by requester).
+	records := []*mgmtpb.ModelTriggerChartRecord{record}
+
 	for result.Next() {
-		// Notice when group key has changed
-		if result.TableChanged() {
-			logger.Debug(fmt.Sprintf("table: %s\n", result.TableMetadata().String()))
+		t := result.Record().Time()
+		record.TimeBuckets = append(record.TimeBuckets, timestamppb.New(t))
+
+		v, match := result.Record().Value().(int64)
+		if !match {
+			l.With(zap.Time("_time", result.Record().Time())).
+				Error("Missing count on model trigger chart record.")
 		}
 
-		if result.Record().Table() != currentTablePosition {
-			chartRecord = &mgmtpb.ModelTriggerChartRecord{}
-
-			if v, match := result.Record().ValueByKey(constant.ModelID).(string); match {
-				chartRecord.ModelId = &v
-			}
-			chartRecord.TimeBuckets = []*timestamppb.Timestamp{}
-			chartRecord.TriggerCounts = []int32{}
-			records = append(records, chartRecord)
-			currentTablePosition = result.Record().Table()
-		}
-
-		if v, match := result.Record().ValueByKey("_time").(time.Time); match {
-			chartRecord.TimeBuckets = append(chartRecord.TimeBuckets, timestamppb.New(v))
-		}
-		if v, match := result.Record().ValueByKey(constant.TriggerTime).(int64); match {
-			chartRecord.TriggerCounts = append(chartRecord.TriggerCounts, int32(v))
-		}
+		record.TriggerCounts = append(record.TriggerCounts, int32(v))
 	}
-	// Check for an error
+
 	if result.Err() != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())
+		return nil, fmt.Errorf("collecting information from model trigger chart records: %w", err)
 	}
+
 	if result.Record() == nil {
 		return nil, nil
 	}

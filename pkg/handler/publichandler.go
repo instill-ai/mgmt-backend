@@ -1070,7 +1070,7 @@ func (h *PublicHandler) ListModelTriggerChartRecords(ctx context.Context, req *m
 	resp, err := h.Service.ListModelTriggerChartRecords(ctx, req, ctxUserUID)
 	if err != nil {
 		span.SetStatus(1, err.Error())
-		return nil, fmt.Errorf("fetching credit chart records: %w", err)
+		return nil, err
 	}
 
 	logger.Info(string(custom_otel.NewLogMessage(
