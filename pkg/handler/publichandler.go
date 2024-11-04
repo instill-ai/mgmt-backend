@@ -853,6 +853,39 @@ func (h *PublicHandler) ValidateToken(ctx context.Context, req *mgmtPB.ValidateT
 	return &mgmtPB.ValidateTokenResponse{UserUid: userUID}, nil
 }
 
+// GetModelTriggerCount returns the model trigger count of a given
+// requester within a timespan. Results are grouped by trigger status.
+func (h *PublicHandler) GetModelTriggerCount(ctx context.Context, req *mgmtPB.GetModelTriggerCountRequest) (*mgmtPB.GetModelTriggerCountResponse, error) {
+	eventName := "GetModelTriggerCount"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+	logger, _ := logger.GetZapLogger(ctx)
+
+	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	resp, err := h.Service.GetModelTriggerCount(ctx, req, ctxUserUID)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, fmt.Errorf("fetching credit chart records: %w", err)
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		ctxUserUID,
+		eventName,
+	)))
+
+	return resp, nil
+}
+
 func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgmtPB.ListPipelineTriggerRecordsRequest) (*mgmtPB.ListPipelineTriggerRecordsResponse, error) {
 	eventName := "ListPipelineTriggerRecords"
 	ctx, span := tracer.Start(ctx, eventName,
