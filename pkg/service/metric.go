@@ -164,6 +164,32 @@ func (s *service) ListPipelineTriggerChartRecords(ctx context.Context, owner *mg
 	return pipelineTriggerChartRecords, nil
 }
 
+func (s *service) GetModelTriggerCount(ctx context.Context, req *mgmtpb.GetModelTriggerCountRequest, ctxUserUID uuid.UUID) (*mgmtpb.GetModelTriggerCountResponse, error) {
+	requesterUID, err := s.GrantedNamespaceUID(ctx, req.GetRequesterId(), ctxUserUID)
+	if err != nil {
+		return nil, fmt.Errorf("checking user permissions: %w", err)
+	}
+
+	now := time.Now().UTC()
+	p := repository.GetModelTriggerCountParams{
+		RequesterUID: requesterUID,
+
+		// Default values
+		Start: time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()),
+		Stop:  now,
+	}
+
+	if req.GetStart() != nil {
+		p.Start = req.GetStart().AsTime()
+	}
+
+	if req.GetStop() != nil {
+		p.Stop = req.GetStop().AsTime()
+	}
+
+	return s.influxDB.GetModelTriggerCount(ctx, p)
+}
+
 func (s *service) ListModelTriggerChartRecords(
 	ctx context.Context,
 	req *mgmtpb.ListModelTriggerChartRecordsRequest,
