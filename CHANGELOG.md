@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.21.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.20.2-beta...v0.21.0-beta) (2024-11-04)
+
+
+### Features
+
+* **metric:** model trigger chart record api ([#245](https://github.com/instill-ai/mgmt-backend/issues/245)) ([89cce72](https://github.com/instill-ai/mgmt-backend/commit/89cce7259833ddab40ffa8b8a7a8acb97d192695))
+* **metric:** model trigger counts api ([#248](https://github.com/instill-ai/mgmt-backend/issues/248)) ([7294d49](https://github.com/instill-ai/mgmt-backend/commit/7294d49b653af3076a49f7c51a03273c735be45a))
+
+
+### Bug Fixes
+
+* **metric:** fix path conflicts ([#249](https://github.com/instill-ai/mgmt-backend/issues/249)) ([c6cebe6](https://github.com/instill-ai/mgmt-backend/commit/c6cebe6b88e80ee93f201207bc8164d73aabfe4d))
+
 ## [0.20.2-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.20.1-beta...v0.20.2-beta) (2024-10-23)
 
 
