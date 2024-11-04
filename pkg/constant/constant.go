@@ -41,6 +41,8 @@ const (
 	PipelineUID        string = "pipeline_uid"
 	PipelineReleaseID  string = "pipeline_release_id"
 	PipelineReleaseUID string = "pipeline_release_uid"
+	ModelID            string = "model_id"
+	ModelUID           string = "model_uid"
 	TriggerMode        string = "trigger_mode"
 	Status             string = "status"
 )

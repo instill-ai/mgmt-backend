@@ -979,6 +979,70 @@ func (h *PublicHandler) ListPipelineTriggerTableRecords(ctx context.Context, req
 	return &resp, nil
 }
 
+func (h *PublicHandler) ListModelTriggerTableRecords(ctx context.Context, req *mgmtPB.ListModelTriggerTableRecordsRequest) (*mgmtPB.ListModelTriggerTableRecordsResponse, error) {
+
+	eventName := "ListModelTriggerTableRecords"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+
+	logger, _ := logger.GetZapLogger(ctx)
+
+	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+	pbUser, err := h.Service.GetUserByUIDAdmin(ctx, ctxUserUID)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
+		filtering.DeclareStandardFunctions(),
+		filtering.DeclareIdent(constant.Start, filtering.TypeTimestamp),
+		filtering.DeclareIdent(constant.Stop, filtering.TypeTimestamp),
+		filtering.DeclareIdent(strcase.ToLowerCamel(constant.OwnerName), filtering.TypeString),
+		filtering.DeclareIdent(strcase.ToLowerCamel(constant.ModelID), filtering.TypeString),
+		filtering.DeclareIdent(strcase.ToLowerCamel(constant.ModelUID), filtering.TypeString),
+	}...)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	filter, err := filtering.ParseFilter(req, declarations)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	modelTriggerTableRecords, totalSize, nextPageToken, err := h.Service.ListModelTriggerTableRecords(ctx, pbUser, int64(req.GetPageSize()), req.GetPageToken(), filter)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	resp := mgmtPB.ListModelTriggerTableRecordsResponse{
+		ModelTriggerTableRecords: modelTriggerTableRecords,
+		NextPageToken:            nextPageToken,
+		TotalSize:                int32(totalSize),
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		uuid.FromStringOrNil(*pbUser.Uid),
+		eventName,
+		custom_otel.SetEventResult(fmt.Sprintf("Total records retrieved: %v", totalSize)),
+	)))
+
+	return &resp, nil
+}
+
 // ListPipelineTriggerChartRecords returns a timeline of a requester's pipeline
 // trigger count.
 func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req *mgmtPB.ListPipelineTriggerChartRecordsRequest) (*mgmtPB.ListPipelineTriggerChartRecordsResponse, error) {

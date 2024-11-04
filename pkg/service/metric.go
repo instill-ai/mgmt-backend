@@ -144,6 +144,21 @@ func (s *service) ListPipelineTriggerTableRecords(ctx context.Context, owner *mg
 	return pipelineTriggerTableRecords, ps, pt, nil
 }
 
+func (s *service) ListModelTriggerTableRecords(ctx context.Context, owner *mgmtpb.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtpb.ModelTriggerTableRecord, int64, string, error) {
+
+	ownerUID, _, _, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
+	if err != nil {
+		return []*mgmtpb.ModelTriggerTableRecord{}, 0, "", err
+	}
+
+	modelTriggerTableRecords, ps, pt, err := s.influxDB.QueryModelTriggerTableRecords(ctx, *ownerUID, ownerQueryString, pageSize, pageToken, filter)
+	if err != nil {
+		return nil, 0, "", err
+	}
+
+	return modelTriggerTableRecords, ps, pt, nil
+}
+
 func (s *service) ListPipelineTriggerChartRecords(ctx context.Context, owner *mgmtpb.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerChartRecord, error) {
 
 	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
