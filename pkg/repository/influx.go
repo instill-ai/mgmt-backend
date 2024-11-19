@@ -35,7 +35,8 @@ type InfluxDB interface {
 	QueryPipelineTriggerRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (pipelines []*mgmtpb.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error)
 	QueryPipelineTriggerTableRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerTableRecord, totalSize int64, nextPageToken string, err error)
 	QueryPipelineTriggerChartRecords(ctx context.Context, owner string, ownerQueryString string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerChartRecord, err error)
-	GetModelTriggerCount(ctx context.Context, p GetModelTriggerCountParams) (*mgmtpb.GetModelTriggerCountResponse, error)
+	GetPipelineTriggerCount(context.Context, GetTriggerCountParams) (*mgmtpb.GetPipelineTriggerCountResponse, error)
+	GetModelTriggerCount(context.Context, GetTriggerCountParams) (*mgmtpb.GetModelTriggerCountResponse, error)
 	ListModelTriggerChartRecords(ctx context.Context, p ListModelTriggerChartRecordsParams) (*mgmtpb.ListModelTriggerChartRecordsResponse, error)
 
 	Bucket() string
@@ -451,38 +452,45 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 	return records, nil
 }
 
-const qModelTriggerCount = `
+const (
+	pipelineTriggerMeasurement = "pipeline.trigger.v1"
+	modelTriggerMeasurement    = "model.trigger.v1"
+)
+
+const qTriggerCount = `
 from(bucket: "%s")
 	|> range(start: %s, stop: %s)
-	|> filter(fn: (r) => r._measurement == "model.trigger.v1" and r.requester_uid == "%s")
+	|> filter(fn: (r) => r._measurement == "%s" and r.requester_uid == "%s")
 	|> filter(fn: (r) => r._field == "trigger_time")
 	|> group(columns: ["requester_uid", "status"])
 	|> count(column: "_value")
 `
 
-// GetModelTriggerCountParams contains the required information to
-// query the model trigger count of a namespace.
+// GetTriggerCountParams contains the required information to query the
+// pipeline or model trigger count of a namespace.
 // TODO jvallesm: this should be defined in the service package for better
 // decoupling. At the moment this implies breaking an import cycle with many
 // dependencies.
-type GetModelTriggerCountParams struct {
+type GetTriggerCountParams struct {
 	RequesterUID uuid.UUID
 	Start        time.Time
 	Stop         time.Time
 }
 
-func (i *influxDB) GetModelTriggerCount(
+func (i *influxDB) getTriggerCount(
 	ctx context.Context,
-	p GetModelTriggerCountParams,
-) (*mgmtpb.GetModelTriggerCountResponse, error) {
+	p GetTriggerCountParams,
+	measurement string,
+) ([]*mgmtpb.TriggerCount, error) {
 	l, _ := logger.GetZapLogger(ctx)
 	l = l.With(zap.Reflect("triggerCountParams", p))
 
 	query := fmt.Sprintf(
-		qModelTriggerCount,
+		qTriggerCount,
 		i.Bucket(),
 		p.Start.Format(time.RFC3339Nano),
 		p.Stop.Format(time.RFC3339Nano),
+		measurement,
 		p.RequesterUID.String(),
 	)
 	result, err := i.QueryAPI().Query(ctx, query)
@@ -505,7 +513,7 @@ func (i *influxDB) GetModelTriggerCount(
 
 		count, match := result.Record().Value().(int64)
 		if !match {
-			l.Error("Missing count on model trigger count record.")
+			l.Error("Missing count on trigger count record.")
 		}
 
 		countRecords = append(countRecords, &mgmtpb.TriggerCount{
@@ -515,11 +523,31 @@ func (i *influxDB) GetModelTriggerCount(
 	}
 
 	if result.Err() != nil {
-		return nil, fmt.Errorf("collecting information from model trigger count records: %w", err)
+		return nil, fmt.Errorf("collecting information from trigger count records: %w", err)
 	}
 
 	if result.Record() == nil {
 		return nil, nil
+	}
+
+	return countRecords, nil
+}
+
+func (i *influxDB) GetPipelineTriggerCount(ctx context.Context, p GetTriggerCountParams) (*mgmtpb.GetPipelineTriggerCountResponse, error) {
+	countRecords, err := i.getTriggerCount(ctx, p, pipelineTriggerMeasurement)
+	if err != nil {
+		return nil, err
+	}
+
+	return &mgmtpb.GetPipelineTriggerCountResponse{
+		PipelineTriggerCounts: countRecords,
+	}, nil
+}
+
+func (i *influxDB) GetModelTriggerCount(ctx context.Context, p GetTriggerCountParams) (*mgmtpb.GetModelTriggerCountResponse, error) {
+	countRecords, err := i.getTriggerCount(ctx, p, modelTriggerMeasurement)
+	if err != nil {
+		return nil, err
 	}
 
 	return &mgmtpb.GetModelTriggerCountResponse{
