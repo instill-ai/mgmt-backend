@@ -34,7 +34,7 @@ var defaultAggregationWindow = time.Hour.Nanoseconds()
 type InfluxDB interface {
 	QueryPipelineTriggerRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (pipelines []*mgmtpb.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error)
 	QueryPipelineTriggerTableRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerTableRecord, totalSize int64, nextPageToken string, err error)
-	QueryPipelineTriggerChartRecords(ctx context.Context, owner string, ownerQueryString string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerChartRecord, err error)
+	QueryPipelineTriggerChartRecordsV0(ctx context.Context, owner string, ownerQueryString string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerChartRecordV0, err error)
 	GetPipelineTriggerCount(context.Context, GetTriggerCountParams) (*mgmtpb.GetPipelineTriggerCountResponse, error)
 	GetModelTriggerCount(context.Context, GetTriggerCountParams) (*mgmtpb.GetModelTriggerCountResponse, error)
 	ListModelTriggerChartRecords(ctx context.Context, p ListModelTriggerChartRecordsParams) (*mgmtpb.ListModelTriggerChartRecordsResponse, error)
@@ -313,7 +313,7 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 	return records, int64(len(records)), pageToken, nil
 }
 
-func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner string, ownerQueryString string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerChartRecord, err error) {
+func (i *influxDB) QueryPipelineTriggerChartRecordsV0(ctx context.Context, owner string, ownerQueryString string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerChartRecordV0, err error) {
 
 	logger, _ := logger.GetZapLogger(ctx)
 
@@ -400,7 +400,7 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 	}
 
 	var currentTablePosition = -1
-	var chartRecord *mgmtpb.PipelineTriggerChartRecord
+	var chartRecord *mgmtpb.PipelineTriggerChartRecordV0
 
 	// Iterate over query response
 	for result.Next() {
@@ -410,7 +410,7 @@ func (i *influxDB) QueryPipelineTriggerChartRecords(ctx context.Context, owner s
 		}
 
 		if result.Record().Table() != currentTablePosition { // only insert a new object when iterated to a new pipeline
-			chartRecord = &mgmtpb.PipelineTriggerChartRecord{}
+			chartRecord = &mgmtpb.PipelineTriggerChartRecordV0{}
 
 			if v, match := result.Record().ValueByKey(constant.PipelineID).(string); match {
 				chartRecord.PipelineId = v

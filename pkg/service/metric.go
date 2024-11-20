@@ -144,19 +144,19 @@ func (s *service) ListPipelineTriggerTableRecords(ctx context.Context, owner *mg
 	return pipelineTriggerTableRecords, ps, pt, nil
 }
 
-func (s *service) ListPipelineTriggerChartRecords(ctx context.Context, owner *mgmtpb.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerChartRecord, error) {
+func (s *service) ListPipelineTriggerChartRecordsV0(ctx context.Context, owner *mgmtpb.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerChartRecordV0, error) {
 
 	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
 	if err != nil {
-		return []*mgmtpb.PipelineTriggerChartRecord{}, err
+		return []*mgmtpb.PipelineTriggerChartRecordV0{}, err
 	}
 
 	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner)
 	if err != nil {
-		return []*mgmtpb.PipelineTriggerChartRecord{}, nil
+		return []*mgmtpb.PipelineTriggerChartRecordV0{}, nil
 	}
 
-	pipelineTriggerChartRecords, err := s.influxDB.QueryPipelineTriggerChartRecords(ctx, *ownerUID, ownerQueryString, aggregationWindow, filter)
+	pipelineTriggerChartRecords, err := s.influxDB.QueryPipelineTriggerChartRecordsV0(ctx, *ownerUID, ownerQueryString, aggregationWindow, filter)
 	if err != nil {
 		return nil, err
 	}

@@ -1045,11 +1045,11 @@ func (h *PublicHandler) ListPipelineTriggerTableRecords(ctx context.Context, req
 	return &resp, nil
 }
 
-// ListPipelineTriggerChartRecords returns a timeline of a requester's pipeline
+// ListPipelineTriggerChartRecordsV0 returns a timeline of a requester's pipeline
 // trigger count.
-func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req *mgmtPB.ListPipelineTriggerChartRecordsRequest) (*mgmtPB.ListPipelineTriggerChartRecordsResponse, error) {
+func (h *PublicHandler) ListPipelineTriggerChartRecordsV0(ctx context.Context, req *mgmtPB.ListPipelineTriggerChartRecordsV0Request) (*mgmtPB.ListPipelineTriggerChartRecordsV0Response, error) {
 
-	eventName := "ListPipelineTriggerChartRecords"
+	eventName := "ListPipelineTriggerChartRecordsV0"
 	ctx, span := tracer.Start(ctx, eventName,
 		trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
@@ -1095,13 +1095,13 @@ func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req
 		return nil, err
 	}
 
-	pipelineTriggerChartRecords, err := h.Service.ListPipelineTriggerChartRecords(ctx, pbUser, int64(req.GetAggregationWindow()), filter)
+	pipelineTriggerChartRecords, err := h.Service.ListPipelineTriggerChartRecordsV0(ctx, pbUser, int64(req.GetAggregationWindow()), filter)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
 	}
 
-	resp := mgmtPB.ListPipelineTriggerChartRecordsResponse{
+	resp := mgmtPB.ListPipelineTriggerChartRecordsV0Response{
 		PipelineTriggerChartRecords: pipelineTriggerChartRecords,
 	}
 

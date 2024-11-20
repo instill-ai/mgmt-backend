@@ -293,15 +293,15 @@ export function CheckPublicMetrics(header) {
   });
 
   group(`Management Public API: List Pipeline Trigger Chart Records`, () => {
-    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecords', {}, header), {
-      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecords status': (r) => r && r.status == grpc.StatusOK,
-      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecords response has pipelineTriggerChartRecords': (r) => r && r.message.pipelineTriggerChartRecords !== undefined,
+    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecordsV0', {}, header), {
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecordsV0 status': (r) => r && r.status == grpc.StatusOK,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecordsV0 response has pipelineTriggerChartRecords': (r) => r && r.message.pipelineTriggerChartRecords !== undefined,
     });
-    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecords', {
+    check(client.invoke('core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecordsV0', {
       filter: `pipelineId="${pipeline_id}" AND triggerMode=MODE_SYNC`,
     }, header), {
-      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecords with filter status': (r) => r && r.status == grpc.StatusOK,
-      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecords with filter response pipelineTriggerChartRecords lenght is 0': (r) => r && r.message.pipelineTriggerChartRecords.length === 0,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecordsV0 with filter status': (r) => r && r.status == grpc.StatusOK,
+      'core.mgmt.v1beta.MgmtPublicService/ListPipelineTriggerChartRecordsV0 with filter response pipelineTriggerChartRecords lenght is 0': (r) => r && r.message.pipelineTriggerChartRecords.length === 0,
     });
   });
 
