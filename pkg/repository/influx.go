@@ -35,9 +35,12 @@ type InfluxDB interface {
 	QueryPipelineTriggerRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (pipelines []*mgmtpb.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error)
 	QueryPipelineTriggerTableRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerTableRecord, totalSize int64, nextPageToken string, err error)
 	QueryPipelineTriggerChartRecordsV0(ctx context.Context, owner string, ownerQueryString string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerChartRecordV0, err error)
+
+	ListPipelineTriggerChartRecords(context.Context, ListTriggerChartRecordsParams) (*mgmtpb.ListPipelineTriggerChartRecordsResponse, error)
 	GetPipelineTriggerCount(context.Context, GetTriggerCountParams) (*mgmtpb.GetPipelineTriggerCountResponse, error)
+
+	ListModelTriggerChartRecords(context.Context, ListTriggerChartRecordsParams) (*mgmtpb.ListModelTriggerChartRecordsResponse, error)
 	GetModelTriggerCount(context.Context, GetTriggerCountParams) (*mgmtpb.GetModelTriggerCountResponse, error)
-	ListModelTriggerChartRecords(ctx context.Context, p ListModelTriggerChartRecordsParams) (*mgmtpb.ListModelTriggerChartRecordsResponse, error)
 
 	Bucket() string
 	QueryAPI() api.QueryAPI
@@ -111,16 +114,6 @@ func (i *influxDB) QueryAPI() api.QueryAPI {
 // Bucket returns the InfluxDB bucket the repository reads from.
 func (i *influxDB) Bucket() string {
 	return i.bucket
-}
-
-// AggregationWindowOffset computes the offset to apply to InfluxDB's
-// aggregateWindow function when aggregating by day. This function computes
-// windows independently, starting from the Unix epoch, rather than from the
-// provided time range start. This function computes the offset to shift the
-// windows correctly.
-func AggregationWindowOffset(t time.Time) time.Duration {
-	startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
-	return t.Sub(startOfDay)
 }
 
 func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerTableRecord, totalSize int64, nextPageToken string, err error) {
@@ -483,7 +476,10 @@ func (i *influxDB) getTriggerCount(
 	measurement string,
 ) ([]*mgmtpb.TriggerCount, error) {
 	l, _ := logger.GetZapLogger(ctx)
-	l = l.With(zap.Reflect("triggerCountParams", p))
+	l = l.With(
+		zap.Reflect("triggerCountParams", p),
+		zap.String("measurement", measurement),
+	)
 
 	query := fmt.Sprintf(
 		qTriggerCount,
@@ -555,37 +551,26 @@ func (i *influxDB) GetModelTriggerCount(ctx context.Context, p GetTriggerCountPa
 	}, nil
 }
 
-const qModelTriggerChartRecords = `
+const qTriggerChartRecords = `
 from(bucket: "%s")
 	|> range(start: %s, stop: %s)
-	|> filter(fn: (r) => r._measurement == "model.trigger.v1" and r.requester_uid == "%s")
+	|> filter(fn: (r) => r._measurement == "%s" and r.requester_uid == "%s")
 	|> filter(fn: (r) => r._field == "trigger_time")
 	|> group(columns:["requester_uid"])
 	|> aggregateWindow(every: %s, column:"_value", fn: count, createEmpty: true, offset: %s)
 `
 
-// ListModelTriggerChartRecordsParams contains the required information to
-// query the model triggers of a namespace.
-type ListModelTriggerChartRecordsParams struct {
-	RequesterID       string
-	RequesterUID      uuid.UUID
-	AggregationWindow time.Duration
-	Start             time.Time
-	Stop              time.Time
-}
-
-func (i *influxDB) ListModelTriggerChartRecords(
+func (i *influxDB) listTriggerChartRecords(
 	ctx context.Context,
-	p ListModelTriggerChartRecordsParams,
-) (*mgmtpb.ListModelTriggerChartRecordsResponse, error) {
-	l, _ := logger.GetZapLogger(ctx)
-	l = l.With(zap.Reflect("triggerChartParams", p))
-
+	p ListTriggerChartRecordsParams,
+	measurement string,
+) (*api.QueryTableResult, error) {
 	query := fmt.Sprintf(
-		qModelTriggerChartRecords,
+		qTriggerChartRecords,
 		i.Bucket(),
 		p.Start.Format(time.RFC3339Nano),
 		p.Stop.Format(time.RFC3339Nano),
+		measurement,
 		p.RequesterUID.String(),
 		p.AggregationWindow,
 		AggregationWindowOffset(p.Start).String(),
@@ -593,6 +578,90 @@ func (i *influxDB) ListModelTriggerChartRecords(
 	result, err := i.QueryAPI().Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("%w: querying data from InfluxDB: %w", errdomain.ErrInvalidArgument, err)
+	}
+
+	return result, nil
+}
+
+// ListTriggerChartRecordsParams contains the required information to query the
+// triggers of a requester.
+// TODO jvallesm: this should be defined in the service package for better
+// decoupling. At the moment this implies breaking an import cycle with many
+// dependencies.
+type ListTriggerChartRecordsParams struct {
+	RequesterID       string
+	RequesterUID      uuid.UUID
+	AggregationWindow time.Duration
+	Start             time.Time
+	Stop              time.Time
+}
+
+func (i *influxDB) ListPipelineTriggerChartRecords(
+	ctx context.Context,
+	p ListTriggerChartRecordsParams,
+) (*mgmtpb.ListPipelineTriggerChartRecordsResponse, error) {
+	l, _ := logger.GetZapLogger(ctx)
+	l = l.With(
+		zap.Reflect("triggerChartParams", p),
+		zap.String("measurement", pipelineTriggerMeasurement),
+	)
+
+	result, err := i.listTriggerChartRecords(ctx, p, pipelineTriggerMeasurement)
+	if err != nil {
+		return nil, err
+	}
+
+	defer result.Close()
+
+	record := &mgmtpb.PipelineTriggerChartRecord{
+		RequesterId:   p.RequesterID,
+		TimeBuckets:   []*timestamppb.Timestamp{},
+		TriggerCounts: []int32{},
+	}
+
+	// Until filtering and grouping are implemented, we'll only have one record
+	// (total triggers by requester).
+	records := []*mgmtpb.PipelineTriggerChartRecord{record}
+
+	for result.Next() {
+		t := result.Record().Time()
+		record.TimeBuckets = append(record.TimeBuckets, timestamppb.New(t))
+
+		v, match := result.Record().Value().(int64)
+		if !match {
+			l.With(zap.Time("_time", result.Record().Time())).
+				Error("Missing count on trigger chart record.")
+		}
+
+		record.TriggerCounts = append(record.TriggerCounts, int32(v))
+	}
+
+	if result.Err() != nil {
+		return nil, fmt.Errorf("collecting information from trigger chart records: %w", err)
+	}
+
+	if result.Record() == nil {
+		return nil, nil
+	}
+
+	return &mgmtpb.ListPipelineTriggerChartRecordsResponse{
+		PipelineTriggerChartRecords: records,
+	}, nil
+}
+
+func (i *influxDB) ListModelTriggerChartRecords(
+	ctx context.Context,
+	p ListTriggerChartRecordsParams,
+) (*mgmtpb.ListModelTriggerChartRecordsResponse, error) {
+	l, _ := logger.GetZapLogger(ctx)
+	l = l.With(
+		zap.Reflect("triggerChartParams", p),
+		zap.String("measurement", modelTriggerMeasurement),
+	)
+
+	result, err := i.listTriggerChartRecords(ctx, p, modelTriggerMeasurement)
+	if err != nil {
+		return nil, err
 	}
 
 	defer result.Close()
@@ -800,4 +869,14 @@ func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string
 		pageToken = ""
 	}
 	return records, int64(len(records)), pageToken, nil
+}
+
+// AggregationWindowOffset computes the offset to apply to InfluxDB's
+// aggregateWindow function when aggregating by day. This function computes
+// windows independently, starting from the Unix epoch, rather than from the
+// provided time range start. This function computes the offset to shift the
+// windows correctly.
+func AggregationWindowOffset(t time.Time) time.Duration {
+	startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+	return t.Sub(startOfDay)
 }

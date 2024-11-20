@@ -1045,6 +1045,39 @@ func (h *PublicHandler) ListPipelineTriggerTableRecords(ctx context.Context, req
 	return &resp, nil
 }
 
+// ListPipelineTriggerChartRecords returns a timeline of a requester's pipeline
+// trigger count.
+func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req *mgmtPB.ListPipelineTriggerChartRecordsRequest) (*mgmtPB.ListPipelineTriggerChartRecordsResponse, error) {
+	eventName := "ListPipelineTriggerChartRecords"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+	logger, _ := logger.GetZapLogger(ctx)
+
+	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	resp, err := h.Service.ListPipelineTriggerChartRecords(ctx, req, ctxUserUID)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, fmt.Errorf("fetching credit chart records: %w", err)
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		ctxUserUID,
+		eventName,
+	)))
+
+	return resp, nil
+}
+
 // ListPipelineTriggerChartRecordsV0 returns a timeline of a requester's pipeline
 // trigger count.
 func (h *PublicHandler) ListPipelineTriggerChartRecordsV0(ctx context.Context, req *mgmtPB.ListPipelineTriggerChartRecordsV0Request) (*mgmtPB.ListPipelineTriggerChartRecordsV0Response, error) {
