@@ -853,6 +853,39 @@ func (h *PublicHandler) ValidateToken(ctx context.Context, req *mgmtPB.ValidateT
 	return &mgmtPB.ValidateTokenResponse{UserUid: userUID}, nil
 }
 
+// GetPipelineTriggerCount returns the pipeline trigger count of a given
+// requester within a timespan.  Results are grouped by trigger status.
+func (h *PublicHandler) GetPipelineTriggerCount(ctx context.Context, req *mgmtPB.GetPipelineTriggerCountRequest) (*mgmtPB.GetPipelineTriggerCountResponse, error) {
+	eventName := "GetPipelineTriggerCount"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+	logger, _ := logger.GetZapLogger(ctx)
+
+	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	resp, err := h.Service.GetPipelineTriggerCount(ctx, req, ctxUserUID)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, fmt.Errorf("fetching pipeline trigger count: %w", err)
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		ctxUserUID,
+		eventName,
+	)))
+
+	return resp, nil
+}
+
 // GetModelTriggerCount returns the model trigger count of a given
 // requester within a timespan. Results are grouped by trigger status.
 func (h *PublicHandler) GetModelTriggerCount(ctx context.Context, req *mgmtPB.GetModelTriggerCountRequest) (*mgmtPB.GetModelTriggerCountResponse, error) {
@@ -873,7 +906,7 @@ func (h *PublicHandler) GetModelTriggerCount(ctx context.Context, req *mgmtPB.Ge
 	resp, err := h.Service.GetModelTriggerCount(ctx, req, ctxUserUID)
 	if err != nil {
 		span.SetStatus(1, err.Error())
-		return nil, fmt.Errorf("fetching credit chart records: %w", err)
+		return nil, fmt.Errorf("fetching model trigger count: %w", err)
 	}
 
 	logger.Info(string(custom_otel.NewLogMessage(
@@ -1015,8 +1048,41 @@ func (h *PublicHandler) ListPipelineTriggerTableRecords(ctx context.Context, req
 // ListPipelineTriggerChartRecords returns a timeline of a requester's pipeline
 // trigger count.
 func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req *mgmtPB.ListPipelineTriggerChartRecordsRequest) (*mgmtPB.ListPipelineTriggerChartRecordsResponse, error) {
-
 	eventName := "ListPipelineTriggerChartRecords"
+	ctx, span := tracer.Start(ctx, eventName,
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logUUID, _ := uuid.NewV4()
+	logger, _ := logger.GetZapLogger(ctx)
+
+	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, err
+	}
+
+	resp, err := h.Service.ListPipelineTriggerChartRecords(ctx, req, ctxUserUID)
+	if err != nil {
+		span.SetStatus(1, err.Error())
+		return nil, fmt.Errorf("fetching credit chart records: %w", err)
+	}
+
+	logger.Info(string(custom_otel.NewLogMessage(
+		span,
+		logUUID.String(),
+		ctxUserUID,
+		eventName,
+	)))
+
+	return resp, nil
+}
+
+// ListPipelineTriggerChartRecordsV0 returns a timeline of a requester's pipeline
+// trigger count.
+func (h *PublicHandler) ListPipelineTriggerChartRecordsV0(ctx context.Context, req *mgmtPB.ListPipelineTriggerChartRecordsV0Request) (*mgmtPB.ListPipelineTriggerChartRecordsV0Response, error) {
+
+	eventName := "ListPipelineTriggerChartRecordsV0"
 	ctx, span := tracer.Start(ctx, eventName,
 		trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
@@ -1062,13 +1128,13 @@ func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req
 		return nil, err
 	}
 
-	pipelineTriggerChartRecords, err := h.Service.ListPipelineTriggerChartRecords(ctx, pbUser, int64(req.GetAggregationWindow()), filter)
+	pipelineTriggerChartRecords, err := h.Service.ListPipelineTriggerChartRecordsV0(ctx, pbUser, int64(req.GetAggregationWindow()), filter)
 	if err != nil {
 		span.SetStatus(1, err.Error())
 		return nil, err
 	}
 
-	resp := mgmtPB.ListPipelineTriggerChartRecordsResponse{
+	resp := mgmtPB.ListPipelineTriggerChartRecordsV0Response{
 		PipelineTriggerChartRecords: pipelineTriggerChartRecords,
 	}
 

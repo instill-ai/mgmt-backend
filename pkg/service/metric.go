@@ -144,24 +144,95 @@ func (s *service) ListPipelineTriggerTableRecords(ctx context.Context, owner *mg
 	return pipelineTriggerTableRecords, ps, pt, nil
 }
 
-func (s *service) ListPipelineTriggerChartRecords(ctx context.Context, owner *mgmtpb.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerChartRecord, error) {
+func (s *service) ListPipelineTriggerChartRecords(
+	ctx context.Context,
+	req *mgmtpb.ListPipelineTriggerChartRecordsRequest,
+	ctxUserUID uuid.UUID,
+) (*mgmtpb.ListPipelineTriggerChartRecordsResponse, error) {
+	nsUID, err := s.GrantedNamespaceUID(ctx, req.GetRequesterId(), ctxUserUID)
+	if err != nil {
+		return nil, fmt.Errorf("checking user permissions: %w", err)
+	}
+
+	now := time.Now().UTC()
+	p := repository.ListTriggerChartRecordsParams{
+		RequesterID:  req.GetRequesterId(),
+		RequesterUID: nsUID,
+
+		// Default values
+		AggregationWindow: 1 * time.Hour,
+		Start:             time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()),
+		Stop:              now,
+	}
+
+	if req.GetAggregationWindow() != "" {
+		window, err := time.ParseDuration(req.GetAggregationWindow())
+		if err != nil {
+			return nil, fmt.Errorf("%w: extracting duration from aggregation window: %w", errdomain.ErrInvalidArgument, err)
+		}
+
+		p.AggregationWindow = window
+	}
+
+	if req.GetStart() != nil {
+		p.Start = req.GetStart().AsTime()
+	}
+
+	if req.GetStop() != nil {
+		p.Stop = req.GetStop().AsTime()
+	}
+
+	return s.influxDB.ListPipelineTriggerChartRecords(ctx, p)
+}
+
+func (s *service) ListPipelineTriggerChartRecordsV0(ctx context.Context, owner *mgmtpb.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerChartRecordV0, error) {
 
 	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
 	if err != nil {
-		return []*mgmtpb.PipelineTriggerChartRecord{}, err
+		return []*mgmtpb.PipelineTriggerChartRecordV0{}, err
 	}
 
 	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner)
 	if err != nil {
-		return []*mgmtpb.PipelineTriggerChartRecord{}, nil
+		return []*mgmtpb.PipelineTriggerChartRecordV0{}, nil
 	}
 
-	pipelineTriggerChartRecords, err := s.influxDB.QueryPipelineTriggerChartRecords(ctx, *ownerUID, ownerQueryString, aggregationWindow, filter)
+	pipelineTriggerChartRecords, err := s.influxDB.QueryPipelineTriggerChartRecordsV0(ctx, *ownerUID, ownerQueryString, aggregationWindow, filter)
 	if err != nil {
 		return nil, err
 	}
 
 	return pipelineTriggerChartRecords, nil
+}
+
+func (s *service) GetPipelineTriggerCount(
+	ctx context.Context,
+	req *mgmtpb.GetPipelineTriggerCountRequest,
+	ctxUserUID uuid.UUID,
+) (*mgmtpb.GetPipelineTriggerCountResponse, error) {
+	requesterUID, err := s.GrantedNamespaceUID(ctx, req.GetRequesterId(), ctxUserUID)
+	if err != nil {
+		return nil, fmt.Errorf("checking user permissions: %w", err)
+	}
+
+	now := time.Now().UTC()
+	p := repository.GetTriggerCountParams{
+		RequesterUID: requesterUID,
+
+		// Default values
+		Start: time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()),
+		Stop:  now,
+	}
+
+	if req.GetStart() != nil {
+		p.Start = req.GetStart().AsTime()
+	}
+
+	if req.GetStop() != nil {
+		p.Stop = req.GetStop().AsTime()
+	}
+
+	return s.influxDB.GetPipelineTriggerCount(ctx, p)
 }
 
 func (s *service) GetModelTriggerCount(ctx context.Context, req *mgmtpb.GetModelTriggerCountRequest, ctxUserUID uuid.UUID) (*mgmtpb.GetModelTriggerCountResponse, error) {
@@ -171,7 +242,7 @@ func (s *service) GetModelTriggerCount(ctx context.Context, req *mgmtpb.GetModel
 	}
 
 	now := time.Now().UTC()
-	p := repository.GetModelTriggerCountParams{
+	p := repository.GetTriggerCountParams{
 		RequesterUID: requesterUID,
 
 		// Default values
@@ -201,7 +272,7 @@ func (s *service) ListModelTriggerChartRecords(
 	}
 
 	now := time.Now().UTC()
-	p := repository.ListModelTriggerChartRecordsParams{
+	p := repository.ListTriggerChartRecordsParams{
 		RequesterID:  req.GetRequesterId(),
 		RequesterUID: nsUID,
 
