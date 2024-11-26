@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.21.0-beta...v0.22.0-beta) (2024-11-26)
+
+
+### Features
+
+* **metric:** implement new pipeline dashboard endpoints ([#238](https://github.com/instill-ai/mgmt-backend/issues/238)) ([afc27e8](https://github.com/instill-ai/mgmt-backend/commit/afc27e8dd5e655a595e4573a067b663e8c0ac7b9))
+
 ## [0.21.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.20.2-beta...v0.21.0-beta) (2024-11-04)
 
 
