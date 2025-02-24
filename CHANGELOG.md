@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.1-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.22.0-beta...v0.22.1-beta) (2025-02-24)
+
+
+### Bug Fixes
+
+* **mod:** update golang.org/x/net module to fix vulnerability issue ([02f4ddf](https://github.com/instill-ai/mgmt-backend/commit/02f4ddf15d9cb5d4133672cd45ea6a9cebcde9e0))
+
 ## [0.22.0-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.21.0-beta...v0.22.0-beta) (2024-11-26)
 
 
