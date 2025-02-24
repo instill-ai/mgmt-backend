@@ -42,7 +42,7 @@ jobs:
       # mono occupies port 8084 which conflicts with mgmt-backend
       - name: Stop mono service
         run: |
-          sudo kill -9 `sudo lsof -t -i:8084`
+          sudo lsof -t -i:8084 | xargs -r sudo kill -9
           sudo lsof -i -P -n | grep LISTEN
 
       - name: Free disk space
@@ -102,6 +102,7 @@ jobs:
       - name: Launch Instill Core
         run: |
           COMPOSE_PROFILES=all \
+          COMPONENT_ENV=.env.component-test \
           EDITION=local-ce:test \
           RAY_LATEST_TAG=latest \
           RAY_RELEASE_TAG=${RAY_SERVER_VERSION} \
