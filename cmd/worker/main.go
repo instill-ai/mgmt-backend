@@ -12,15 +12,15 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
-
-	"github.com/instill-ai/x/temporal"
-	"github.com/instill-ai/x/zapadapter"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
+	"github.com/instill-ai/x/temporal"
+	"github.com/instill-ai/x/zapadapter"
 
-	custom_otel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
-	mgmtWorker "github.com/instill-ai/mgmt-backend/pkg/worker"
+	customotel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
+	mgmtworker "github.com/instill-ai/mgmt-backend/pkg/worker"
 )
 
 func initTemporalNamespace(ctx context.Context, client client.Client) {
@@ -42,7 +42,7 @@ func initTemporalNamespace(ctx context.Context, client client.Client) {
 		if _, err := client.WorkflowService().RegisterNamespace(ctx,
 			&workflowservice.RegisterNamespaceRequest{
 				Namespace: config.Config.Temporal.Namespace,
-				WorkflowExecutionRetentionPeriod: func() *time.Duration {
+				WorkflowExecutionRetentionPeriod: func() *durationpb.Duration {
 					// Check if the string ends with "d" for day.
 					s := config.Config.Temporal.Retention
 					if strings.HasSuffix(s, "d") {
@@ -53,7 +53,7 @@ func initTemporalNamespace(ctx context.Context, client client.Client) {
 						}
 						// Convert days to hours and then to a duration.
 						t := time.Hour * 24 * time.Duration(days)
-						return &t
+						return durationpb.New(t)
 					}
 					logger.Fatal(fmt.Sprintf("Unable to parse retention period in day: %s", err))
 					return nil
@@ -74,7 +74,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// setup tracing and metrics
-	if tp, err := custom_otel.SetupTracing(ctx, "mgmt-backend-worker"); err != nil {
+	if tp, err := customotel.SetupTracing(ctx, "mgmt-backend-worker"); err != nil {
 		panic(err)
 	} else {
 		defer func() {
@@ -129,7 +129,7 @@ func main() {
 		initTemporalNamespace(ctx, temporalClient)
 	}
 
-	w := worker.New(temporalClient, mgmtWorker.TaskQueue, worker.Options{
+	w := worker.New(temporalClient, mgmtworker.TaskQueue, worker.Options{
 		MaxConcurrentActivityExecutionSize: 2,
 	})
 
