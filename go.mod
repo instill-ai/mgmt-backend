@@ -1,6 +1,8 @@
 module github.com/instill-ai/mgmt-backend
 
-go 1.22.5
+go 1.23.0
+
+toolchain go1.23.6
 
 retract v0.3.2 // Published accidentally.
 
@@ -16,7 +18,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/influxdata/influxdb-client-go/v2 v2.12.3
-	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20241120170237-ee31d10bc9c8
+	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20250327024010-44cf729ab567
 	github.com/instill-ai/usage-client v0.2.4-alpha.0.20240123081026-6c78d9a5197a
 	github.com/instill-ai/x v0.4.0-alpha
 	github.com/knadh/koanf v1.5.0
@@ -36,9 +38,9 @@ require (
 	go.temporal.io/api v1.44.1
 	go.temporal.io/sdk v1.32.1
 	go.uber.org/zap v1.26.0
-	golang.org/x/crypto v0.31.0
+	golang.org/x/crypto v0.35.0
 	golang.org/x/image v0.18.0
-	golang.org/x/net v0.33.0
+	golang.org/x/net v0.36.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20240827150818-7e3bb234dfed
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240827150818-7e3bb234dfed
 	google.golang.org/grpc v1.66.0
@@ -105,9 +107,9 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/exp v0.0.0-20231127185646-65229373498e // indirect
-	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/sync v0.11.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/genproto v0.0.0-20240116215550-a9fa1716bcac // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
