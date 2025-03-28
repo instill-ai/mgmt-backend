@@ -288,9 +288,9 @@ export function CheckPublicMetrics(header) {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response has pipelineTriggerRecords`]:
           (r) => r.json().pipelineTriggerRecords !== undefined,
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response has nextPageToken`]:
-          (r) => r.json().totalSize !== undefined,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response has totalSize`]:
           (r) => r.json().nextPageToken !== undefined,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/triggers response has totalSize`]:
+          (r) => r.json().totalSize !== undefined,
       }
     );
 
@@ -334,9 +334,9 @@ export function CheckPublicMetrics(header) {
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables response has pipelineTriggerTableRecords`]:
           (r) => r.json().pipelineTriggerTableRecords !== undefined,
         [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables response has nextPageToken`]:
-          (r) => r.json().totalSize !== undefined,
-        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables response has totalSize`]:
           (r) => r.json().nextPageToken !== undefined,
+        [`GET /${constant.mgmtVersion}/metrics/vdp/pipeline/tables response has totalSize`]:
+          (r) => r.json().totalSize !== undefined,
       }
     );
     check(
