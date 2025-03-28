@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.2-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.22.1-beta...v0.22.2-beta) (2025-03-28)
+
+
+### Bug Fixes
+
+* **test:** fix wrong property in testing ([#253](https://github.com/instill-ai/mgmt-backend/issues/253)) ([f9b9fa3](https://github.com/instill-ai/mgmt-backend/commit/f9b9fa3f8591bd7e73734b7a9e9ba568f81cfb56))
+
 ## [0.22.1-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.22.0-beta...v0.22.1-beta) (2025-02-24)
 
 
