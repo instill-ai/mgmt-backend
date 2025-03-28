@@ -47,8 +47,8 @@ require (
 	google.golang.org/protobuf v1.34.2
 	gorm.io/datatypes v1.2.0
 	gorm.io/driver/postgres v1.5.0
-	gorm.io/gorm v1.25.2
-	gorm.io/plugin/dbresolver v1.5.1
+	gorm.io/gorm v1.25.12
+	gorm.io/plugin/dbresolver v1.5.3
 )
 
 require (
@@ -113,5 +113,5 @@ require (
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/genproto v0.0.0-20240116215550-a9fa1716bcac // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	gorm.io/driver/mysql v1.4.7 // indirect
+	gorm.io/driver/mysql v1.5.7 // indirect
 )
