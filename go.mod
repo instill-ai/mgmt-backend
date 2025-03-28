@@ -1,7 +1,6 @@
 module github.com/instill-ai/mgmt-backend
 
 go 1.22.5
-
 retract v0.3.2 // Published accidentally.
 
 require (
@@ -22,7 +21,7 @@ require (
 	github.com/knadh/koanf v1.5.0
 	github.com/mennanov/fieldmask-utils v1.0.0
 	github.com/openfga/go-sdk v0.2.3
-	github.com/redis/go-redis/v9 v9.5.1
+	github.com/redis/go-redis/v9 v9.5.5
 	go.einride.tech/aip v0.60.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.17.0
 	go.opentelemetry.io/otel v1.24.0
