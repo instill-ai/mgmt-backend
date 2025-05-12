@@ -728,7 +728,7 @@ func (i *influxDB) constructRecordQuery(
 	// TODO: design better filter expression to flux transpiler
 	expr, err := i.transpileFilter(filter)
 	if err != nil {
-		return "", 0, status.Errorf(codes.Internal, err.Error())
+		return "", 0, status.Errorf(codes.Internal, "%s", err.Error())
 	}
 	if expr != "" {
 		exprs := strings.Split(expr, "&&")
@@ -841,11 +841,12 @@ func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string
 			}
 			// TODO: temporary solution for legacy data format, currently there is no way to update the tags in influxdb
 			if v, match := result.Record().ValueByKey(constant.Status).(string); match {
-				if v == constant.Completed {
+				switch v {
+				case constant.Completed:
 					record.Status = mgmtpb.Status_STATUS_COMPLETED
-				} else if v == constant.Errored {
+				case constant.Errored:
 					record.Status = mgmtpb.Status_STATUS_ERRORED
-				} else {
+				default:
 					record.Status = mgmtpb.Status(mgmtpb.Status_value[v])
 				}
 			}

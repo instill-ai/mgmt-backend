@@ -719,7 +719,7 @@ func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID,
 			role := orgRelation.Relation
 			state := mgmtpb.MembershipState_MEMBERSHIP_STATE_ACTIVE
 			if strings.HasPrefix(role, "pending") {
-				role = strings.Replace(role, "pending_", "", -1)
+				role = strings.ReplaceAll(role, "pending_", "")
 				state = mgmtpb.MembershipState_MEMBERSHIP_STATE_PENDING
 			}
 
@@ -771,7 +771,7 @@ func (s *service) GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, u
 
 	state := mgmtpb.MembershipState_MEMBERSHIP_STATE_ACTIVE
 	if strings.HasPrefix(role, "pending") {
-		role = strings.Replace(role, "pending_", "", -1)
+		role = strings.ReplaceAll(role, "pending_", "")
 		state = mgmtpb.MembershipState_MEMBERSHIP_STATE_PENDING
 	}
 	membership := &mgmtpb.UserMembership{
@@ -914,7 +914,7 @@ func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uu
 		role := userRelation.Relation
 		state := mgmtpb.MembershipState_MEMBERSHIP_STATE_ACTIVE
 		if strings.HasPrefix(role, "pending") {
-			role = strings.Replace(role, "pending_", "", -1)
+			role = strings.ReplaceAll(role, "pending_", "")
 			state = mgmtpb.MembershipState_MEMBERSHIP_STATE_PENDING
 		}
 		if state != mgmtpb.MembershipState_MEMBERSHIP_STATE_PENDING || canSetMembership {
@@ -976,7 +976,7 @@ func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid
 
 	state := mgmtpb.MembershipState_MEMBERSHIP_STATE_ACTIVE
 	if strings.HasPrefix(role, "pending") {
-		role = strings.Replace(role, "pending_", "", -1)
+		role = strings.ReplaceAll(role, "pending_", "")
 		state = mgmtpb.MembershipState_MEMBERSHIP_STATE_PENDING
 	}
 
