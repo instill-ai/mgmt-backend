@@ -1,7 +1,26 @@
+version: "2"
 linters:
   enable:
-    - stylecheck
-
-linters-settings:
-  stylecheck:
-    checks: [ "all" ]
+    - staticcheck
+  settings:
+    staticcheck:
+      checks:
+        - all
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

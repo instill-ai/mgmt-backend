@@ -108,7 +108,7 @@ func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*
 	}
 
 	id := dbUser.ID
-	uid := dbUser.Base.UID.String()
+	uid := dbUser.UID.String()
 
 	socialProfileLinks := map[string]string{}
 	if dbUser.SocialProfileLinks != nil {
@@ -121,8 +121,8 @@ func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*
 		Name:       fmt.Sprintf("users/%s", id),
 		Uid:        &uid,
 		Id:         id,
-		CreateTime: timestamppb.New(dbUser.Base.CreateTime),
-		UpdateTime: timestamppb.New(dbUser.Base.UpdateTime),
+		CreateTime: timestamppb.New(dbUser.CreateTime),
+		UpdateTime: timestamppb.New(dbUser.UpdateTime),
 		Profile: &mgmtPB.UserProfile{
 			DisplayName:        &dbUser.DisplayName.String,
 			CompanyName:        &dbUser.CompanyName.String,
@@ -141,7 +141,7 @@ func (s *service) DBUser2PBAuthenticatedUser(ctx context.Context, dbUser *datamo
 	}
 
 	id := dbUser.ID
-	uid := dbUser.Base.UID.String()
+	uid := dbUser.UID.String()
 	socialProfileLinks := map[string]string{}
 	if dbUser.SocialProfileLinks != nil {
 		b, _ := dbUser.SocialProfileLinks.MarshalJSON()
@@ -153,8 +153,8 @@ func (s *service) DBUser2PBAuthenticatedUser(ctx context.Context, dbUser *datamo
 		Name:                   fmt.Sprintf("users/%s", id),
 		Uid:                    &uid,
 		Id:                     id,
-		CreateTime:             timestamppb.New(dbUser.Base.CreateTime),
-		UpdateTime:             timestamppb.New(dbUser.Base.UpdateTime),
+		CreateTime:             timestamppb.New(dbUser.CreateTime),
+		UpdateTime:             timestamppb.New(dbUser.UpdateTime),
 		Email:                  dbUser.Email,
 		CustomerId:             dbUser.CustomerID,
 		Role:                   &dbUser.Role.String,
@@ -284,9 +284,9 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 	}
 
 	id := dbOrg.ID
-	uid := dbOrg.Base.UID.String()
+	uid := dbOrg.UID.String()
 
-	relations, err := s.aclClient.GetOrganizationUsers(ctx, dbOrg.Base.UID)
+	relations, err := s.aclClient.GetOrganizationUsers(ctx, dbOrg.UID)
 	if err != nil {
 		return nil, err
 	}
@@ -322,8 +322,8 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 		Name:       fmt.Sprintf("organizations/%s", id),
 		Uid:        uid,
 		Id:         id,
-		CreateTime: timestamppb.New(dbOrg.Base.CreateTime),
-		UpdateTime: timestamppb.New(dbOrg.Base.UpdateTime),
+		CreateTime: timestamppb.New(dbOrg.CreateTime),
+		UpdateTime: timestamppb.New(dbOrg.UpdateTime),
 		Profile: &mgmtPB.OrganizationProfile{
 			DisplayName:        &dbOrg.DisplayName.String,
 			PublicEmail:        &dbOrg.PublicEmail.String,
@@ -420,14 +420,14 @@ func (s *service) DBToken2PBToken(ctx context.Context, dbToken *datamodel.Token)
 
 	return &mgmtPB.ApiToken{
 		Name:        fmt.Sprintf("tokens/%s", id),
-		Uid:         dbToken.Base.UID.String(),
+		Uid:         dbToken.UID.String(),
 		Id:          id,
 		State:       state,
 		AccessToken: dbToken.AccessToken,
 		TokenType:   dbToken.TokenType,
 		Expiration:  &mgmtPB.ApiToken_ExpireTime{ExpireTime: timestamppb.New(dbToken.ExpireTime)},
-		CreateTime:  timestamppb.New(dbToken.Base.CreateTime),
-		UpdateTime:  timestamppb.New(dbToken.Base.UpdateTime),
+		CreateTime:  timestamppb.New(dbToken.CreateTime),
+		UpdateTime:  timestamppb.New(dbToken.UpdateTime),
 		LastUseTime: func() *timestamppb.Timestamp {
 			if dbToken.LastUseTime.IsZero() {
 				return nil
