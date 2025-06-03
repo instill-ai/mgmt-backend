@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.22.4-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.22.3-beta...v0.22.4-beta) (2025-06-03)
+
+
+### Miscellaneous
+
+* **deps:** upgrade packages in go.mod to resolve missing package ([#262](https://github.com/instill-ai/mgmt-backend/issues/262)) ([ce5b456](https://github.com/instill-ai/mgmt-backend/commit/ce5b456beca4583e5ba45eba8691068fa62763b0))
+* **domain:** update production domain ([#263](https://github.com/instill-ai/mgmt-backend/issues/263)) ([63f971d](https://github.com/instill-ai/mgmt-backend/commit/63f971d4668e9cc07e8179688ce2e833d43c0760))
+
 ## [0.22.3-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.22.2-beta...v0.22.3-beta) (2025-05-20)
 
 
