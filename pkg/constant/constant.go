@@ -3,7 +3,7 @@ package constant
 // default user
 const DefaultUserID = "admin"
 const DefaultUserPassword = "password"
-const DefaultUserEmail = "hello@instill.tech"
+const DefaultUserEmail = "hello@instill-ai.com"
 const DefaultUserCustomerID = ""
 const DefaultUserCompanyName = "Instill AI"
 const DefaultUserDisplayName = "Instill"

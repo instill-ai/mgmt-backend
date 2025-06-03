@@ -45,7 +45,7 @@ export const grpcParamsWithInstillUserUid = {
 export const defaultUser = {
   name: "users/admin",
   id: "admin",
-  email: "hello@instill.tech",
+  email: "hello@instill-ai.com",
   customerId: "",
   profile: {
     displayName: "Instill AI",
