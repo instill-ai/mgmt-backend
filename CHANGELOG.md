@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.5-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.22.4-beta...v0.22.5-beta) (2025-06-11)
+
+
+### Bug Fixes
+
+* **service:** fix avatar path ([#265](https://github.com/instill-ai/mgmt-backend/issues/265)) ([c975318](https://github.com/instill-ai/mgmt-backend/commit/c975318f85998a1321d53536f2bbea89b0140cf0))
+
 ## [0.22.4-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.22.3-beta...v0.22.4-beta) (2025-06-03)
 
 
