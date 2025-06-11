@@ -116,7 +116,7 @@ func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*
 		_ = json.Unmarshal(b, &socialProfileLinks)
 	}
 
-	avatar := fmt.Sprintf("%s/core/v1beta/users/%s/avatar", s.instillCoreHost, dbUser.ID)
+	avatar := fmt.Sprintf("%s/v1beta/users/%s/avatar", s.instillCoreHost, dbUser.ID)
 	return &mgmtPB.User{
 		Name:       fmt.Sprintf("users/%s", id),
 		Uid:        &uid,
@@ -148,7 +148,7 @@ func (s *service) DBUser2PBAuthenticatedUser(ctx context.Context, dbUser *datamo
 		_ = json.Unmarshal(b, &socialProfileLinks)
 	}
 
-	avatar := fmt.Sprintf("%s/core/v1beta/users/%s/avatar", s.instillCoreHost, dbUser.ID)
+	avatar := fmt.Sprintf("%s/v1beta/users/%s/avatar", s.instillCoreHost, dbUser.ID)
 	return &mgmtPB.AuthenticatedUser{
 		Name:                   fmt.Sprintf("users/%s", id),
 		Uid:                    &uid,
@@ -308,7 +308,7 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 		_ = json.Unmarshal(b, &socialProfileLinks)
 	}
 
-	avatar := fmt.Sprintf("%s/core/v1beta/organizations/%s/avatar", s.instillCoreHost, dbOrg.ID)
+	avatar := fmt.Sprintf("%s/v1beta/organizations/%s/avatar", s.instillCoreHost, dbOrg.ID)
 	canUpdateOrganization := false
 	ctxUserUID, err := s.ExtractCtxUser(ctx, true)
 	if err == nil {
