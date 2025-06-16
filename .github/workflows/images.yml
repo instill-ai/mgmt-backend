@@ -2,6 +2,13 @@ name: Build and Push Images
 
 on:
   workflow_call:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "README.md"
+    tags:
+      - "*-rc"
   release:
     types: [published]
 
@@ -35,13 +42,13 @@ jobs:
           context: .
           push: true
           build-args: |
-            SERVICE_NAME=mgmt-backend
+            SERVICE_NAME=${{ env.SERVICE_NAME }}
           tags: instill/mgmt-backend:latest
           cache-from: type=registry,ref=instill/mgmt-backend:buildcache
           cache-to: type=registry,ref=instill/mgmt-backend:buildcache,mode=max
 
       - name: Set Versions
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
         uses: actions/github-script@v6
         id: set_version
         with:
@@ -51,15 +58,15 @@ jobs:
             core.setOutput('tag', tag)
             core.setOutput('no_v_tag', no_v_tag)
 
-      - name: Build and push (release)
-        if: github.event_name == 'release'
+      - name: Build and push (rc/release)
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'
         uses: docker/build-push-action@v6
         with:
           platforms: linux/amd64,linux/arm64
           context: .
           push: true
           build-args: |
-            SERVICE_NAME=mgmt-backend
+            SERVICE_NAME=${{ env.SERVICE_NAME }}
           tags: instill/mgmt-backend:${{steps.set_version.outputs.no_v_tag}}
           cache-from: type=registry,ref=instill/mgmt-backend:buildcache
           cache-to: type=registry,ref=instill/mgmt-backend:buildcache,mode=max
