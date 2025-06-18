@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.23.0](https://github.com/instill-ai/mgmt-backend/compare/v0.22.4-beta...v0.23.0) (2025-06-18)
+
+
+### Bug Fixes
+
+* **service:** fix avatar path ([#265](https://github.com/instill-ai/mgmt-backend/issues/265)) ([c975318](https://github.com/instill-ai/mgmt-backend/commit/c975318f85998a1321d53536f2bbea89b0140cf0))
+
+
+### Miscellaneous
+
+* **proto:** adopt latest `protogen-go` package ([#268](https://github.com/instill-ai/mgmt-backend/issues/268)) ([8f10899](https://github.com/instill-ai/mgmt-backend/commit/8f108993e0d392bdee272e6474c2e18c11f88c48))
+* release v0.23.0 ([b060460](https://github.com/instill-ai/mgmt-backend/commit/b060460645aed69ec25dff4917f289cf3b71ad03))
+* release v0.23.0 ([369993b](https://github.com/instill-ai/mgmt-backend/commit/369993bc3e361070ae6cd02564ee5b693875a70c))
+
 ## [0.22.4-beta](https://github.com/instill-ai/mgmt-backend/compare/v0.22.3-beta...v0.22.4-beta) (2025-06-03)
 
 
