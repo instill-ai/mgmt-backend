@@ -48,7 +48,13 @@ import (
 	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 )
 
-var propagator propagation.TextMapPropagator
+var (
+	// These variables might be overridden at buildtime.
+	serviceVersion = "dev"
+	// serviceName = "mgmt-backend"
+
+	propagator propagation.TextMapPropagator
+)
 
 func grpcHandlerFunc(grpcServer *grpc.Server, gwHandler http.Handler) http.Handler {
 	return h2c.NewHandler(
@@ -209,7 +215,7 @@ func main() {
 			logger.Info("try to start usage reporter")
 			go func() {
 				for {
-					usg = usage.NewUsage(ctx, service, usageServiceClient, config.Config.Server.Edition, constant.DefaultUserID)
+					usg = usage.NewUsage(ctx, service, usageServiceClient, serviceVersion)
 					if usg != nil {
 						usg.StartReporter(ctx)
 						logger.Info("usage reporter started")
