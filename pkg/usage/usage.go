@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/instill-ai/mgmt-backend/config"
+	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
-	"github.com/instill-ai/x/repo"
 	"go.einride.tech/aip/filtering"
 
 	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
@@ -18,53 +19,43 @@ import (
 
 // Usage interface
 type Usage interface {
-	RetrieveUsageData() interface{}
+	RetrieveUsageData() any
 	StartReporter(ctx context.Context)
 	TriggerSingleReporter(ctx context.Context)
 }
 
 type usage struct {
-	service       service.Service
-	reporter      usageReporter.Reporter
-	edition       string
-	version       string
-	defaultUserID string
+	service        service.Service
+	reporter       usageReporter.Reporter
+	serviceVersion string
 }
 
 // NewUsage initiates a usage instance
-func NewUsage(ctx context.Context, s service.Service, usc usagePB.UsageServiceClient, edition string, defaultUserID string) Usage {
+func NewUsage(ctx context.Context, s service.Service, usc usagePB.UsageServiceClient, serviceVersion string) Usage {
 	logger, _ := logger.GetZapLogger(ctx)
 
-	version, err := repo.ReadReleaseManifest("release-please/manifest.json")
-	if err != nil {
-		logger.Error(err.Error())
-		return nil
-	}
-
 	var defaultOwnerUID string
-	if user, err := s.GetUserAdmin(ctx, defaultUserID); err == nil {
+	if user, err := s.GetUserAdmin(ctx, constant.DefaultUserID); err == nil {
 		defaultOwnerUID = *user.Uid
 	} else {
 		logger.Error(err.Error())
 	}
 
-	reporter, err := usageClient.InitReporter(ctx, usc, usagePB.Session_SERVICE_MGMT, edition, version, defaultOwnerUID)
+	reporter, err := usageClient.InitReporter(ctx, usc, usagePB.Session_SERVICE_MGMT, config.Config.Server.Edition, serviceVersion, defaultOwnerUID)
 	if err != nil {
 		logger.Error(err.Error())
 		return nil
 	}
 
 	return &usage{
-		service:       s,
-		reporter:      reporter,
-		edition:       edition,
-		version:       version,
-		defaultUserID: defaultUserID,
+		service:        s,
+		reporter:       reporter,
+		serviceVersion: serviceVersion,
 	}
 }
 
 // RetrieveUsageData retrieves the server's usage data
-func (u *usage) RetrieveUsageData() interface{} {
+func (u *usage) RetrieveUsageData() any {
 	ctx := context.Background()
 	logger, _ := logger.GetZapLogger(ctx)
 	logger.Debug("[mgmt-backend] retrieve usage data...")
@@ -122,7 +113,7 @@ func (u *usage) StartReporter(ctx context.Context) {
 	logger, _ := logger.GetZapLogger(ctx)
 
 	var defaultOwnerUID string
-	if user, err := u.service.GetUserAdmin(ctx, u.defaultUserID); err == nil {
+	if user, err := u.service.GetUserAdmin(ctx, constant.DefaultUserID); err == nil {
 		defaultOwnerUID = *user.Uid
 	} else {
 		logger.Error(err.Error())
@@ -130,7 +121,7 @@ func (u *usage) StartReporter(ctx context.Context) {
 
 	go func() {
 		time.Sleep(5 * time.Second)
-		err := usageClient.StartReporter(ctx, u.reporter, usagePB.Session_SERVICE_MGMT, u.edition, u.version, defaultOwnerUID, u.RetrieveUsageData)
+		err := usageClient.StartReporter(ctx, u.reporter, usagePB.Session_SERVICE_MGMT, config.Config.Server.Edition, u.serviceVersion, defaultOwnerUID, u.RetrieveUsageData)
 		if err != nil {
 			logger.Error(fmt.Sprintf("unable to start reporter: %v\n", err))
 		}
@@ -145,13 +136,13 @@ func (u *usage) TriggerSingleReporter(ctx context.Context) {
 	logger, _ := logger.GetZapLogger(ctx)
 
 	var defaultOwnerUID string
-	if user, err := u.service.GetUserAdmin(ctx, u.defaultUserID); err == nil {
+	if user, err := u.service.GetUserAdmin(ctx, constant.DefaultUserID); err == nil {
 		defaultOwnerUID = *user.Uid
 	} else {
 		logger.Error(err.Error())
 	}
 
-	err := usageClient.SingleReporter(ctx, u.reporter, usagePB.Session_SERVICE_MGMT, u.edition, u.version, defaultOwnerUID, u.RetrieveUsageData())
+	err := usageClient.SingleReporter(ctx, u.reporter, usagePB.Session_SERVICE_MGMT, config.Config.Server.Edition, u.serviceVersion, defaultOwnerUID, u.RetrieveUsageData())
 	if err != nil {
 		logger.Error(fmt.Sprintf("unable to trigger single reporter: %v\n", err))
 	} else {

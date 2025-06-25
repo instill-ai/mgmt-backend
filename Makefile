@@ -16,7 +16,7 @@ endif
 .PHONY: dev
 dev:							## Run dev container
 	@docker compose ls -q | grep -q "instill-core" && true || \
-		(echo "Error: Run \"make latest PROFILE=mgmt ITMODE_ENABLED=true\" in core repository (https://github.com/instill-ai/core) in your local machine first." && exit 1)
+		(echo "Error: Run \"make latest\" in core repository (https://github.com/instill-ai/core) in your local machine first and run \"docker rm -f ${SERVICE_NAME}\" " && exit 1)
 	@docker inspect --type container ${SERVICE_NAME} >/dev/null 2>&1 && echo "A container named ${SERVICE_NAME} is already running." || \
 		echo "Run dev container ${SERVICE_NAME}. To stop it, run \"make stop\"."
 	@docker run -d --rm \
@@ -27,6 +27,21 @@ dev:							## Run dev container
 		--network instill-network \
 		--name ${SERVICE_NAME} \
 		instill/${SERVICE_NAME}:dev >/dev/null 2>&1
+
+.PHONY: latest
+latest: ## Run latest container
+	@docker compose ls -q | grep -q "instill-core" && true || \
+		(echo "Error: Run \"make latest\" in instill-core repository (https://github.com/instill-ai/instill-core) in your local machine first and run \"docker rm -f ${SERVICE_NAME}\"." && exit 1)
+	@docker inspect --type container ${SERVICE_NAME} >/dev/null 2>&1 && echo "A container named ${SERVICE_NAME} is already running." || \
+		echo "Run latest container ${SERVICE_NAME}. To stop it, run \"make stop\"."
+	@docker run --network=instill-network \
+		--name ${SERVICE_NAME} \
+		-d instill/${SERVICE_NAME}:latest \
+		/bin/sh -c "\
+		./${SERVICE_NAME}-migrate && \
+		./${SERVICE_NAME}-init && \
+		./${SERVICE_NAME} \
+		"
 
 .PHONY: logs
 logs:					## Tail service container logs with -n 10
@@ -44,13 +59,18 @@ rm:								## Remove container
 top:							## Display all running service processes
 	@docker top ${SERVICE_NAME}
 
-.PHONY: build
-build:							## Build dev docker image
+.PHONY: build-dev
+build-dev: ## Build dev docker image
 	@docker build \
 		--build-arg SERVICE_NAME=${SERVICE_NAME} \
-		--build-arg GOLANG_VERSION=${GOLANG_VERSION} \
 		--build-arg K6_VERSION=${K6_VERSION} \
-		-f Dockerfile.dev  -t instill/${SERVICE_NAME}:dev .
+		-f Dockerfile.dev -t instill/${SERVICE_NAME}:dev .
+
+.PHONY: build-latest
+build-latest: ## Build latest docker image
+	@docker build \
+		--build-arg SERVICE_NAME=${SERVICE_NAME} \
+		-t instill/${SERVICE_NAME}:latest .
 
 .PHONY: go-gen
 go-gen:       					## Generate codes

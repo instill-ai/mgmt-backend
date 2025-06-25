@@ -34,6 +34,11 @@ jobs:
           username: drop@instill-ai.com
           password: ${{ secrets.botDockerHubPassword }}
 
+      - name: Set short commit SHA
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "COMMIT_SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
       - name: Build and push (latest)
         if: github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v6
@@ -43,6 +48,7 @@ jobs:
           push: true
           build-args: |
             SERVICE_NAME=${{ env.SERVICE_NAME }}
+            SERVICE_VERSION=${{ env.COMMIT_SHORT_SHA }}
           tags: instill/mgmt-backend:latest
           cache-from: type=registry,ref=instill/mgmt-backend:buildcache
           cache-to: type=registry,ref=instill/mgmt-backend:buildcache,mode=max
@@ -67,6 +73,7 @@ jobs:
           push: true
           build-args: |
             SERVICE_NAME=${{ env.SERVICE_NAME }}
+            SERVICE_VERSION=${{steps.set_version.outputs.no_v_tag}}
           tags: instill/mgmt-backend:${{steps.set_version.outputs.no_v_tag}}
           cache-from: type=registry,ref=instill/mgmt-backend:buildcache
           cache-to: type=registry,ref=instill/mgmt-backend:buildcache,mode=max

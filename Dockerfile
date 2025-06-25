@@ -1,36 +1,50 @@
 ARG GOLANG_VERSION=1.24.2
-FROM --platform=$BUILDPLATFORM golang:${GOLANG_VERSION} AS build
+FROM golang:${GOLANG_VERSION} AS build
 
 ARG SERVICE_NAME
 
 WORKDIR /src
 
+# Copy dependency files first for better caching
 COPY go.mod go.sum ./
 RUN go mod download
+
+# Copy source code
 COPY . .
 
-ARG TARGETOS TARGETARCH
-RUN --mount=target=. --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 go build -o /${SERVICE_NAME} ./cmd/main
-RUN --mount=target=. --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 go build -o /${SERVICE_NAME}-migrate ./cmd/migration
-RUN --mount=target=. --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 go build -o /${SERVICE_NAME}-init ./cmd/init
-RUN --mount=target=. --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 go build -o /${SERVICE_NAME}-worker ./cmd/worker
+ARG SERVICE_NAME SERVICE_VERSION TARGETOS TARGETARCH
 
-FROM gcr.io/distroless/base:nonroot
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 \
+    go build -ldflags "-X main.version=${SERVICE_VERSION} -X main.serviceName=${SERVICE_NAME}" \
+    -o /${SERVICE_NAME} ./cmd/main
 
-USER nonroot:nonroot
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 \
+    go build -ldflags "-X main.version=${SERVICE_VERSION} -X main.serviceName=${SERVICE_NAME}" \
+    -o /${SERVICE_NAME}-migrate ./cmd/migration
 
-ARG SERVICE_NAME
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 \
+    go build -ldflags "-X main.version=${SERVICE_VERSION} -X main.serviceName=${SERVICE_NAME}" \
+    -o /${SERVICE_NAME}-init ./cmd/init
+
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 \
+    go build -ldflags "-X main.version=${SERVICE_VERSION} -X main.serviceName=${SERVICE_NAME}" \
+    -o /${SERVICE_NAME}-worker ./cmd/worker
+
+FROM golang:${GOLANG_VERSION}
+
+USER nobody:nogroup
+
+ARG SERVICE_NAME SERVICE_VERSION
 
 WORKDIR /${SERVICE_NAME}
-
-COPY --from=busybox:stable-musl --chown=nonroot:nonroot /bin/sh /bin/sh
-COPY --from=busybox:stable-musl --chown=nonroot:nonroot /bin/wget /bin/wget
-
-COPY --from=build --chown=nonroot:nonroot /src/config ./config
-COPY --from=build --chown=nonroot:nonroot /src/release-please ./release-please
-COPY --from=build --chown=nonroot:nonroot /src/pkg/db/migration ./pkg/db/migration
 
 COPY --from=build --chown=nonroot:nonroot /${SERVICE_NAME} ./
 COPY --from=build --chown=nonroot:nonroot /${SERVICE_NAME}-migrate ./
 COPY --from=build --chown=nonroot:nonroot /${SERVICE_NAME}-init ./
 COPY --from=build --chown=nonroot:nonroot /${SERVICE_NAME}-worker ./
+
+COPY --from=build --chown=nonroot:nonroot /src/config ./config
+COPY --from=build --chown=nonroot:nonroot /src/pkg/db/migration ./pkg/db/migration
+
+ENV SERVICE_NAME=${SERVICE_NAME}
+ENV SERVICE_VERSION=${SERVICE_VERSION}
