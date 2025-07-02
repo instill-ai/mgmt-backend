@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.1](https://github.com/instill-ai/mgmt-backend/compare/v0.23.0...v0.23.1) (2025-07-02)
+
+
+### Miscellaneous
+
+* release v0.23.1 ([32e66e4](https://github.com/instill-ai/mgmt-backend/commit/32e66e45772c6d20ad97d92d320d3895217dd98a))
+
 ## [0.23.0](https://github.com/instill-ai/mgmt-backend/compare/v0.22.4-beta...v0.23.0) (2025-06-18)
 
 
