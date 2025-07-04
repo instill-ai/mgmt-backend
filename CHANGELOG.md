@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.2](https://github.com/instill-ai/mgmt-backend/compare/v0.23.1...v0.23.2) (2025-07-04)
+
+
+### Miscellaneous
+
+* **dep:** bump up usage-client version ([#273](https://github.com/instill-ai/mgmt-backend/issues/273)) ([57f631e](https://github.com/instill-ai/mgmt-backend/commit/57f631e9971e0c7fd63ce9a5f7ddcbe2f52f86f5))
+
 ## [0.23.1](https://github.com/instill-ai/mgmt-backend/compare/v0.23.0...v0.23.1) (2025-07-02)
 
 
