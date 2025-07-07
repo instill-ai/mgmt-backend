@@ -78,6 +78,7 @@ func ErrorHandler(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.
 
 	fmt.Println("ctx", ctx)
 	fmt.Println("err", err)
+
 	fmt.Println("r.Header", r.Header)
 	fmt.Println("r.Body", r.Body)
 	fmt.Println("r.URL", r.URL)
@@ -86,6 +87,7 @@ func ErrorHandler(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.
 	fmt.Println("r.ProtoMajor", r.ProtoMajor)
 	fmt.Println("r.ProtoMinor", r.ProtoMinor)
 	fmt.Println("r.Host", r.Host)
+	fmt.Println("r.Method", r.Method)
 
 	// return Internal when Marshal failed
 	const fallback = `{"code": 13, "message": "failed to marshal error message"}`
