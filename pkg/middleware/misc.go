@@ -76,6 +76,8 @@ func HTTPResponseModifier(ctx context.Context, w http.ResponseWriter, p proto.Me
 func ErrorHandler(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.Marshaler, w http.ResponseWriter, r *http.Request, err error) {
 	logger, _ := logger.GetZapLogger(ctx)
 
+	fmt.Println("ctx", ctx)
+	fmt.Println("err", err)
 	// return Internal when Marshal failed
 	const fallback = `{"code": 13, "message": "failed to marshal error message"}`
 
