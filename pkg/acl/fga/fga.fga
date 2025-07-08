@@ -1,0 +1,48 @@
+model
+  schema 1.2
+
+type knowledgebase # module: artifact, file: artifact.fga
+  relations
+    define admin: [user] or owner or member from owner
+    define executor: [user, user:*, code] or writer or member from owner
+    define owner: [organization, user]
+    define reader: [user, user:*, code, visitor:*] or executor or member from owner
+    define writer: [user] or admin or member from owner
+
+type code # module: mgmt, file: mgmt.fga
+
+type organization # module: mgmt, file: mgmt.fga
+  relations
+    define admin: [user] or owner
+    define can_create_organization: owner
+    define can_delete_organization: owner
+    define can_get_membership: owner or admin or member
+    define can_remove_membership: owner or admin
+    define can_set_membership: owner or admin
+    define can_update_organization: owner or admin
+    define member: [user] or admin or owner
+    define owner: [user]
+    define pending_admin: [user]
+    define pending_member: [user]
+    define pending_owner: [user]
+
+type user # module: mgmt, file: mgmt.fga
+
+type visitor # module: mgmt, file: mgmt.fga
+
+type model_ # module: model, file: model.fga
+  relations
+    define admin: [user] or owner or member from owner
+    define executor: [user, user:*, code] or writer or member from owner
+    define owner: [organization, user]
+    define reader: [user, user:*, code, visitor:*] or executor or member from owner
+    define writer: [user] or admin or member from owner
+
+type pipeline # module: pipeline, file: pipeline.fga
+  relations
+    define admin: [user] or owner or member from owner
+    define executor: [user, user:*, code] or writer or member from owner
+    define owner: [organization, user]
+    define reader: [user, user:*, code, visitor:*] or executor or member from owner
+    define writer: [user] or admin or member from owner
+

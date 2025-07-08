@@ -21,7 +21,7 @@ require (
 	github.com/instill-ai/x v0.4.0-alpha
 	github.com/knadh/koanf v1.5.0
 	github.com/mennanov/fieldmask-utils v1.1.2
-	github.com/openfga/go-sdk v0.2.3
+	github.com/openfga/go-sdk v0.7.1
 	github.com/redis/go-redis/v9 v9.9.0
 	go.einride.tech/aip v0.70.2
 	go.opentelemetry.io/contrib/propagators/b3 v1.36.0
@@ -90,6 +90,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
+	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/stretchr/testify v1.10.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect

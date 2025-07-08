@@ -37,7 +37,7 @@ const (
 	WriteMode Mode = "write"
 )
 
-func NewACLClient(wc *openfgaClient.OpenFgaClient, rc *openfgaClient.OpenFgaClient, redisClient *redis.Client, a *string) ACLClient {
+func NewACLClient(wc *openfgaClient.OpenFgaClient, rc *openfgaClient.OpenFgaClient, redisClient *redis.Client, a string) ACLClient {
 	if rc == nil {
 		rc = wc
 	}
@@ -46,7 +46,7 @@ func NewACLClient(wc *openfgaClient.OpenFgaClient, rc *openfgaClient.OpenFgaClie
 		writeClient:          wc,
 		readClient:           rc,
 		redisClient:          redisClient,
-		authorizationModelID: a,
+		authorizationModelID: &a,
 	}
 }
 
@@ -79,7 +79,7 @@ func (c *ACLClient) SetOrganizationUserMembership(ctx context.Context, orgUID uu
 	_ = c.DeleteOrganizationUserMembership(ctx, orgUID, userUID)
 
 	body := openfgaClient.ClientWriteRequest{
-		Writes: &[]openfgaClient.ClientTupleKey{
+		Writes: []openfgaClient.ClientTupleKey{
 			{
 				User:     fmt.Sprintf("user:%s", userUID.String()),
 				Relation: role,
@@ -102,7 +102,7 @@ func (c *ACLClient) DeleteOrganizationUserMembership(ctx context.Context, orgUID
 
 	for _, role := range []string{"owner", "admin", "member", "pending_owner", "pending_admin", "pending_member"} {
 		body := openfgaClient.ClientWriteRequest{
-			Deletes: &[]openfgaClient.ClientTupleKey{
+			Deletes: []openfgaClient.ClientTupleKeyWithoutCondition{
 				{
 					User:     fmt.Sprintf("user:%s", userUID.String()),
 					Relation: role,
@@ -145,8 +145,8 @@ func (c *ACLClient) GetOrganizationUserMembership(ctx context.Context, orgUID uu
 		return "", err
 	}
 
-	for _, tuple := range *data.Tuples {
-		return *tuple.Key.Relation, nil
+	for _, tuple := range data.Tuples {
+		return tuple.Key.Relation, nil
 	}
 	return "", ErrMembershipNotFound
 }
@@ -168,16 +168,16 @@ func (c *ACLClient) GetOrganizationUsers(ctx context.Context, orgUID uuid.UUID) 
 			return nil, err
 		}
 
-		for _, tuple := range *data.Tuples {
+		for _, tuple := range data.Tuples {
 			relations = append(relations, &Relation{
-				UID:      uuid.FromStringOrNil(strings.Split(*tuple.Key.User, ":")[1]),
-				Relation: *tuple.Key.Relation,
+				UID:      uuid.FromStringOrNil(strings.Split(tuple.Key.User, ":")[1]),
+				Relation: tuple.Key.Relation,
 			})
 		}
-		if *data.ContinuationToken == "" {
+		if data.ContinuationToken == "" {
 			break
 		}
-		options.ContinuationToken = data.ContinuationToken
+		options.ContinuationToken = &data.ContinuationToken
 	}
 
 	return relations, nil
@@ -200,16 +200,16 @@ func (c *ACLClient) GetUserOrganizations(ctx context.Context, userUID uuid.UUID)
 			return nil, err
 		}
 
-		for _, tuple := range *data.Tuples {
+		for _, tuple := range data.Tuples {
 			relations = append(relations, &Relation{
-				UID:      uuid.FromStringOrNil(strings.Split(*tuple.Key.Object, ":")[1]),
-				Relation: *tuple.Key.Relation,
+				UID:      uuid.FromStringOrNil(strings.Split(tuple.Key.Object, ":")[1]),
+				Relation: tuple.Key.Relation,
 			})
 		}
-		if *data.ContinuationToken == "" {
+		if data.ContinuationToken == "" {
 			break
 		}
-		options.ContinuationToken = data.ContinuationToken
+		options.ContinuationToken = &data.ContinuationToken
 	}
 
 	return relations, nil

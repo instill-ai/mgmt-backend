@@ -3,9 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"time"
 
@@ -18,11 +16,9 @@ import (
 	"gorm.io/gorm"
 
 	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-	openfga "github.com/openfga/go-sdk/client"
 
 	"github.com/instill-ai/mgmt-backend/cmd/init/preset"
 	"github.com/instill-ai/mgmt-backend/config"
-	"github.com/instill-ai/mgmt-backend/pkg/acl"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/logger"
@@ -31,7 +27,7 @@ import (
 
 	database "github.com/instill-ai/mgmt-backend/pkg/db"
 	customotel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
-	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 )
 
 // CreateDefaultUser creates a default user in the database
@@ -59,7 +55,7 @@ func createDefaultUser(ctx context.Context, r repository.Repository) error {
 	defaultUser := datamodel.Owner{
 		Base:                   datamodel.Base{UID: defaultUserUID},
 		ID:                     constant.DefaultUserID,
-		OwnerType:              sql.NullString{String: service.PBUserType2DBUserType[mgmtPB.OwnerType_OWNER_TYPE_USER], Valid: true},
+		OwnerType:              sql.NullString{String: service.PBUserType2DBUserType[mgmtpb.OwnerType_OWNER_TYPE_USER], Valid: true},
 		Email:                  constant.DefaultUserEmail,
 		CustomerID:             constant.DefaultUserCustomerID,
 		DisplayName:            sql.NullString{String: constant.DefaultUserDisplayName, Valid: true},
@@ -147,50 +143,6 @@ func main() {
 	// Create preset organization
 	if err := preset.CreatePresetOrg(ctx, r); err != nil {
 		logger.Fatal(err.Error())
-	}
-
-	fgaClient, err := openfga.NewSdkClient(&openfga.ClientConfiguration{
-		ApiScheme: "http",
-		ApiHost:   fmt.Sprintf("%s:%d", config.Config.OpenFGA.Host, config.Config.OpenFGA.Port),
-	})
-
-	if err != nil {
-		panic(err)
-		// .. Handle error
-	}
-
-	stores, err := fgaClient.ListStores(context.Background()).Execute()
-	if err != nil {
-		panic(err)
-	}
-	storeID := ""
-	if len(*stores.Stores) == 0 {
-		data, err := fgaClient.CreateStore(context.Background()).Body(openfga.ClientCreateStoreRequest{Name: "instill"}).Execute()
-		if err != nil {
-			panic(err)
-		}
-		storeID = *data.Id
-	} else {
-		storeID = *(*stores.Stores)[0].Id
-	}
-
-	fgaClient.SetStoreId(storeID)
-
-	models, err := fgaClient.ReadAuthorizationModels(context.Background()).Execute()
-	if err != nil {
-		panic(err)
-	}
-	// TODO: we should implement a better flow to upgrade the OpenFGA model
-	if len(*models.AuthorizationModels) == 0 {
-		var body openfga.ClientWriteAuthorizationModelRequest
-		if err := json.Unmarshal([]byte(acl.ACLModel), &body); err != nil {
-			panic(err)
-		}
-
-		_, err = fgaClient.WriteAuthorizationModel(context.Background()).Body(body).Execute()
-		if err != nil {
-			panic(err)
-		}
 	}
 
 }

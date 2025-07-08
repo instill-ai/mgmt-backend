@@ -15,7 +15,7 @@ import (
 var db *gorm.DB
 var once sync.Once
 
-const TargetSchemaVersion = 5
+const TargetSchemaVersion = 6
 
 // GetConnection returns a database instance
 func GetConnection(databaseConfig *config.DatabaseConfig) *gorm.DB {
@@ -84,4 +84,26 @@ func Close(db *gorm.DB) {
 
 		sqlDB.Close()
 	}
+}
+
+// FGAMigrationData represents the FGA migration data stored in the database
+type FGAMigrationData struct {
+	StoreID              string `gorm:"column:store_id"`
+	AuthorizationModelID string `gorm:"column:authorization_model_id"`
+	MD5Hash              string `gorm:"column:md5_hash"`
+}
+
+// TableName specifies the table name for FGAMigrationData
+func (FGAMigrationData) TableName() string {
+	return "fga_migrations"
+}
+
+// GetFGAMigrationData reads the FGA store_id and authorization_model_id from the database
+func GetFGAMigrationData(db *gorm.DB) (*FGAMigrationData, error) {
+	var fgaData FGAMigrationData
+	result := db.First(&fgaData)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to read FGA migration data: %w", result.Error)
+	}
+	return &fgaData, nil
 }
