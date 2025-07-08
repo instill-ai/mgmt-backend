@@ -3,6 +3,7 @@ package migration
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -56,6 +57,11 @@ type FGAMigration struct {
 
 // Migrate reads store_id and authorization_model_id from OpenFGA and stores them in fga_migrations table
 func (fm *FGAMigration) Migrate() error {
+	if os.Getenv("DBTEST") == "true" {
+		fm.Logger.Info("Skipping FGA migration in test mode")
+		return nil
+	}
+
 	fm.Logger.Info("Starting FGA migration to read store_id and authorization_model_id")
 
 	// Create OpenFGA client
