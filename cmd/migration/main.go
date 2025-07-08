@@ -163,9 +163,15 @@ func runMigration(
 
 	ctx := context.Background()
 	gormDB := db.GetConnection(&config.Config.Database)
-	err = runFGAMigration(ctx, gormDB)
-	if err != nil {
-		panic(err)
+
+	// Skip FGA migration when running in test mode
+	if os.Getenv("DBTEST") == "true" {
+		fmt.Println("Skipping FGA migration in test mode")
+	} else {
+		err = runFGAMigration(ctx, gormDB)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 }

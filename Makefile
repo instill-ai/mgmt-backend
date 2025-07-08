@@ -80,7 +80,7 @@ go-gen:       					## Generate codes
 
 .PHONY: dbtest-pre
 dbtest-pre:
-	@${GOTEST_FLAGS} go run ./cmd/migration
+	@DBTEST=true ${GOTEST_FLAGS} go run ./cmd/migration
 
 .PHONY: coverage
 coverage:
