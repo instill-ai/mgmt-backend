@@ -11,6 +11,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 
 	"github.com/instill-ai/mgmt-backend/config"
+	"github.com/instill-ai/mgmt-backend/pkg/db"
 )
 
 func checkExist(databaseConfig config.DatabaseConfig) error {
@@ -106,7 +107,7 @@ func main() {
 		panic(err)
 	}
 
-	ExpectedVersion := databaseConfig.Version
+	ExpectedVersion := uint(db.TargetSchemaVersion)
 
 	fmt.Printf("Expected migration version is %d\n", ExpectedVersion)
 	fmt.Printf("The current schema version is %d, and dirty flag is %t\n", curVersion, dirty)
