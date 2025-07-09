@@ -2,36 +2,38 @@ package handler
 
 import (
 	"context"
+	"net/http"
+	"strconv"
 
 	"github.com/gofrs/uuid"
 	"go.einride.tech/aip/filtering"
-	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 
-	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
-	"github.com/instill-ai/x/sterr"
 
-	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 	checkfield "github.com/instill-ai/x/checkfield"
 )
 
 const defaultPageSize = int32(10)
 const maxPageSize = int32(100)
 
+// PrivateHandler is the handler for private endpoints.
 type PrivateHandler struct {
-	mgmtPB.UnimplementedMgmtPrivateServiceServer
+	mgmtpb.UnimplementedMgmtPrivateServiceServer
 	Service service.Service
 }
 
 // NewPrivateHandler initiates an private handler instance
-func NewPrivateHandler(s service.Service) mgmtPB.MgmtPrivateServiceServer {
+func NewPrivateHandler(s service.Service) mgmtpb.MgmtPrivateServiceServer {
 	return &PrivateHandler{
 		Service: s,
 	}
 }
 
 // ListUsersAdmin lists all users
-func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUsersAdminRequest) (*mgmtPB.ListUsersAdminResponse, error) {
+func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtpb.ListUsersAdminRequest) (*mgmtpb.ListUsersAdminResponse, error) {
 
 	pageSize := req.GetPageSize()
 	if pageSize == 0 {
@@ -45,7 +47,7 @@ func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUse
 		return nil, err
 	}
 
-	resp := mgmtPB.ListUsersAdminResponse{
+	resp := mgmtpb.ListUsersAdminResponse{
 		Users:         pbUsers,
 		NextPageToken: nextPageToken,
 		TotalSize:     int32(totalSize),
@@ -54,38 +56,29 @@ func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtPB.ListUse
 }
 
 // GetUserAdmin gets a user
-func (h *PrivateHandler) GetUserAdmin(ctx context.Context, req *mgmtPB.GetUserAdminRequest) (*mgmtPB.GetUserAdminResponse, error) {
+func (h *PrivateHandler) GetUserAdmin(ctx context.Context, req *mgmtpb.GetUserAdminRequest) (*mgmtpb.GetUserAdminResponse, error) {
 
 	pbUser, err := h.Service.GetUserAdmin(ctx, req.UserId)
 	if err != nil {
 		return nil, err
 	}
 
-	resp := mgmtPB.GetUserAdminResponse{
+	resp := mgmtpb.GetUserAdminResponse{
 		User: pbUser,
 	}
 	return &resp, nil
 }
 
 // LookUpUserAdmin gets a user by permalink
-func (h *PrivateHandler) LookUpUserAdmin(ctx context.Context, req *mgmtPB.LookUpUserAdminRequest) (*mgmtPB.LookUpUserAdminResponse, error) {
-	logger, _ := logger.GetZapLogger(ctx)
-
+func (h *PrivateHandler) LookUpUserAdmin(ctx context.Context, req *mgmtpb.LookUpUserAdminRequest) (*mgmtpb.LookUpUserAdminResponse, error) {
 	// Validation: `uid` in request is valid
 	uid, err := uuid.FromString(req.UserUid)
 	if err != nil {
-		st, e := sterr.CreateErrorBadRequest(
-			"look up user invalid uuid error", []*errdetails.BadRequest_FieldViolation{
-				{
-					Field:       "LookUpUserAdminRequest.permalink",
-					Description: err.Error(),
-				},
-			},
-		)
-		if e != nil {
-			logger.Error(e.Error())
+		// Manually set the custom header to have a StatusBadRequest http response for REST endpoint
+		if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", strconv.Itoa(http.StatusBadRequest))); err != nil {
+			return nil, err
 		}
-		return &mgmtPB.LookUpUserAdminResponse{}, st.Err()
+		return &mgmtpb.LookUpUserAdminResponse{}, err
 	}
 
 	pbUser, err := h.Service.GetUserByUIDAdmin(ctx, uid)
@@ -93,14 +86,14 @@ func (h *PrivateHandler) LookUpUserAdmin(ctx context.Context, req *mgmtPB.LookUp
 		return nil, err
 	}
 
-	resp := mgmtPB.LookUpUserAdminResponse{
+	resp := mgmtpb.LookUpUserAdminResponse{
 		User: pbUser,
 	}
 	return &resp, nil
 }
 
 // ListOrganizationsAdmin lists all organizations
-func (h *PrivateHandler) ListOrganizationsAdmin(ctx context.Context, req *mgmtPB.ListOrganizationsAdminRequest) (*mgmtPB.ListOrganizationsAdminResponse, error) {
+func (h *PrivateHandler) ListOrganizationsAdmin(ctx context.Context, req *mgmtpb.ListOrganizationsAdminRequest) (*mgmtpb.ListOrganizationsAdminResponse, error) {
 
 	pageSize := req.GetPageSize()
 	if pageSize == 0 {
@@ -114,7 +107,7 @@ func (h *PrivateHandler) ListOrganizationsAdmin(ctx context.Context, req *mgmtPB
 		return nil, err
 	}
 
-	resp := mgmtPB.ListOrganizationsAdminResponse{
+	resp := mgmtpb.ListOrganizationsAdminResponse{
 		Organizations: pbOrganizations,
 		NextPageToken: nextPageToken,
 		TotalSize:     int32(totalSize),
@@ -123,21 +116,21 @@ func (h *PrivateHandler) ListOrganizationsAdmin(ctx context.Context, req *mgmtPB
 }
 
 // GetOrganizationAdmin gets a organization
-func (h *PrivateHandler) GetOrganizationAdmin(ctx context.Context, req *mgmtPB.GetOrganizationAdminRequest) (*mgmtPB.GetOrganizationAdminResponse, error) {
+func (h *PrivateHandler) GetOrganizationAdmin(ctx context.Context, req *mgmtpb.GetOrganizationAdminRequest) (*mgmtpb.GetOrganizationAdminResponse, error) {
 
 	pbOrganization, err := h.Service.GetOrganizationAdmin(ctx, req.OrganizationId)
 	if err != nil {
 		return nil, err
 	}
 
-	resp := mgmtPB.GetOrganizationAdminResponse{
+	resp := mgmtpb.GetOrganizationAdminResponse{
 		Organization: pbOrganization,
 	}
 	return &resp, nil
 }
 
 // LookUpOrganizationAdmin gets a organization by permalink
-func (h *PrivateHandler) LookUpOrganizationAdmin(ctx context.Context, req *mgmtPB.LookUpOrganizationAdminRequest) (*mgmtPB.LookUpOrganizationAdminResponse, error) {
+func (h *PrivateHandler) LookUpOrganizationAdmin(ctx context.Context, req *mgmtpb.LookUpOrganizationAdminRequest) (*mgmtpb.LookUpOrganizationAdminResponse, error) {
 
 	// Validation: `uid` in request is valid
 	uid, err := uuid.FromString(req.OrganizationUid)
@@ -150,13 +143,14 @@ func (h *PrivateHandler) LookUpOrganizationAdmin(ctx context.Context, req *mgmtP
 		return nil, err
 	}
 
-	resp := mgmtPB.LookUpOrganizationAdminResponse{
+	resp := mgmtpb.LookUpOrganizationAdminResponse{
 		Organization: pbOrganization,
 	}
 	return &resp, nil
 }
 
-func (h *PrivateHandler) CheckNamespaceAdmin(ctx context.Context, req *mgmtPB.CheckNamespaceAdminRequest) (*mgmtPB.CheckNamespaceAdminResponse, error) {
+// CheckNamespaceAdmin checks if the namespace is available.
+func (h *PrivateHandler) CheckNamespaceAdmin(ctx context.Context, req *mgmtpb.CheckNamespaceAdminRequest) (*mgmtpb.CheckNamespaceAdminResponse, error) {
 
 	err := checkfield.CheckResourceID(req.GetId())
 	if err != nil {
@@ -165,54 +159,55 @@ func (h *PrivateHandler) CheckNamespaceAdmin(ctx context.Context, req *mgmtPB.Ch
 
 	user, err := h.Service.GetUserAdmin(ctx, req.GetId())
 	if err == nil {
-		return &mgmtPB.CheckNamespaceAdminResponse{
-			Type: mgmtPB.CheckNamespaceAdminResponse_NAMESPACE_USER,
+		return &mgmtpb.CheckNamespaceAdminResponse{
+			Type: mgmtpb.CheckNamespaceAdminResponse_NAMESPACE_USER,
 			Uid:  *user.Uid,
-			Owner: &mgmtPB.CheckNamespaceAdminResponse_User{
+			Owner: &mgmtpb.CheckNamespaceAdminResponse_User{
 				User: user,
 			},
 		}, nil
 	}
 	org, err := h.Service.GetOrganizationAdmin(ctx, req.GetId())
 	if err == nil {
-		return &mgmtPB.CheckNamespaceAdminResponse{
-			Type: mgmtPB.CheckNamespaceAdminResponse_NAMESPACE_ORGANIZATION,
+		return &mgmtpb.CheckNamespaceAdminResponse{
+			Type: mgmtpb.CheckNamespaceAdminResponse_NAMESPACE_ORGANIZATION,
 			Uid:  org.Uid,
-			Owner: &mgmtPB.CheckNamespaceAdminResponse_Organization{
+			Owner: &mgmtpb.CheckNamespaceAdminResponse_Organization{
 				Organization: org,
 			},
 		}, nil
 	}
 
-	return &mgmtPB.CheckNamespaceAdminResponse{
-		Type: mgmtPB.CheckNamespaceAdminResponse_NAMESPACE_AVAILABLE,
+	return &mgmtpb.CheckNamespaceAdminResponse{
+		Type: mgmtpb.CheckNamespaceAdminResponse_NAMESPACE_AVAILABLE,
 	}, nil
 }
 
-func (h *PrivateHandler) CheckNamespaceByUIDAdmin(ctx context.Context, req *mgmtPB.CheckNamespaceByUIDAdminRequest) (*mgmtPB.CheckNamespaceByUIDAdminResponse, error) {
+// CheckNamespaceByUIDAdmin checks if the namespace is available by UID.
+func (h *PrivateHandler) CheckNamespaceByUIDAdmin(ctx context.Context, req *mgmtpb.CheckNamespaceByUIDAdminRequest) (*mgmtpb.CheckNamespaceByUIDAdminResponse, error) {
 
 	user, err := h.Service.GetUserByUIDAdmin(ctx, uuid.FromStringOrNil(req.GetUid()))
 	if err == nil {
-		return &mgmtPB.CheckNamespaceByUIDAdminResponse{
-			Type: mgmtPB.CheckNamespaceByUIDAdminResponse_NAMESPACE_USER,
+		return &mgmtpb.CheckNamespaceByUIDAdminResponse{
+			Type: mgmtpb.CheckNamespaceByUIDAdminResponse_NAMESPACE_USER,
 			Id:   user.Id,
-			Owner: &mgmtPB.CheckNamespaceByUIDAdminResponse_User{
+			Owner: &mgmtpb.CheckNamespaceByUIDAdminResponse_User{
 				User: user,
 			},
 		}, nil
 	}
 	org, err := h.Service.GetOrganizationByUIDAdmin(ctx, uuid.FromStringOrNil(req.GetUid()))
 	if err == nil {
-		return &mgmtPB.CheckNamespaceByUIDAdminResponse{
-			Type: mgmtPB.CheckNamespaceByUIDAdminResponse_NAMESPACE_ORGANIZATION,
+		return &mgmtpb.CheckNamespaceByUIDAdminResponse{
+			Type: mgmtpb.CheckNamespaceByUIDAdminResponse_NAMESPACE_ORGANIZATION,
 			Id:   org.Id,
-			Owner: &mgmtPB.CheckNamespaceByUIDAdminResponse_Organization{
+			Owner: &mgmtpb.CheckNamespaceByUIDAdminResponse_Organization{
 				Organization: org,
 			},
 		}, nil
 	}
 
-	return &mgmtPB.CheckNamespaceByUIDAdminResponse{
-		Type: mgmtPB.CheckNamespaceByUIDAdminResponse_NAMESPACE_AVAILABLE,
+	return &mgmtpb.CheckNamespaceByUIDAdminResponse{
+		Type: mgmtpb.CheckNamespaceByUIDAdminResponse_NAMESPACE_AVAILABLE,
 	}, nil
 }

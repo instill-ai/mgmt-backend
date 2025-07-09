@@ -20,7 +20,7 @@ import (
 
 	errdomain "github.com/instill-ai/mgmt-backend/pkg/errors"
 	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
-	pipelinepb "github.com/instill-ai/protogen-go/vdp/pipeline/v1beta"
+	pipelinepb "github.com/instill-ai/protogen-go/pipeline/pipeline/v1beta"
 )
 
 // Service interface
@@ -104,11 +104,11 @@ type service struct {
 }
 
 // NewService initiates a service instance
-func NewService(r repository.Repository, rc *redis.Client, i repository.InfluxDB, p pipelinepb.PipelinePublicServiceClient, acl *acl.ACLClient, h string) Service {
+func NewService(p pipelinepb.PipelinePublicServiceClient, r repository.Repository, rc *redis.Client, i repository.InfluxDB, acl *acl.ACLClient, h string) Service {
 	return &service{
+		pipelinePublicServiceClient: p,
 		repository:                  r,
 		influxDB:                    i,
-		pipelinePublicServiceClient: p,
 		redisClient:                 rc,
 		aclClient:                   acl,
 		instillCoreHost:             h,

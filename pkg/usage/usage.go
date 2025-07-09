@@ -7,7 +7,6 @@ import (
 
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
-	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 	"go.einride.tech/aip/filtering"
 
@@ -15,6 +14,7 @@ import (
 	usagepb "github.com/instill-ai/protogen-go/core/usage/v1beta"
 	usageclient "github.com/instill-ai/usage-client/client"
 	usagereporter "github.com/instill-ai/usage-client/reporter"
+	logx "github.com/instill-ai/x/log"
 )
 
 // Usage interface
@@ -32,7 +32,7 @@ type usage struct {
 
 // NewUsage initiates a usage instance
 func NewUsage(ctx context.Context, s service.Service, usc usagepb.UsageServiceClient, serviceVersion string) Usage {
-	logger, _ := logger.GetZapLogger(ctx)
+	logger, _ := logx.GetZapLogger(ctx)
 
 	var defaultOwnerUID string
 	if user, err := s.GetUserAdmin(ctx, constant.DefaultUserID); err == nil {
@@ -57,7 +57,7 @@ func NewUsage(ctx context.Context, s service.Service, usc usagepb.UsageServiceCl
 // RetrieveUsageData retrieves the server's usage data
 func (u *usage) RetrieveUsageData() any {
 	ctx := context.Background()
-	logger, _ := logger.GetZapLogger(ctx)
+	logger, _ := logx.GetZapLogger(ctx)
 	logger.Debug("[mgmt-backend] retrieve usage data...")
 
 	allUsers := []*mgmtpb.AuthenticatedUser{}
@@ -110,7 +110,7 @@ func (u *usage) StartReporter(ctx context.Context) {
 		return
 	}
 
-	logger, _ := logger.GetZapLogger(ctx)
+	logger, _ := logx.GetZapLogger(ctx)
 
 	var defaultOwnerUID string
 	if user, err := u.service.GetUserAdmin(ctx, constant.DefaultUserID); err == nil {
@@ -133,7 +133,7 @@ func (u *usage) TriggerSingleReporter(ctx context.Context) {
 		return
 	}
 
-	logger, _ := logger.GetZapLogger(ctx)
+	logger, _ := logx.GetZapLogger(ctx)
 
 	var defaultOwnerUID string
 	if user, err := u.service.GetUserAdmin(ctx, constant.DefaultUserID); err == nil {

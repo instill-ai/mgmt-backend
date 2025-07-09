@@ -24,22 +24,22 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
-	"github.com/instill-ai/mgmt-backend/pkg/logger"
 
-	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	logx "github.com/instill-ai/x/log"
 )
 
 // maps for user owner type
 var (
-	PBUserType2DBUserType = map[mgmtPB.OwnerType]string{
-		mgmtPB.OwnerType_OWNER_TYPE_UNSPECIFIED:  "unspecified",
-		mgmtPB.OwnerType_OWNER_TYPE_USER:         "user",
-		mgmtPB.OwnerType_OWNER_TYPE_ORGANIZATION: "organization",
+	PBUserType2DBUserType = map[mgmtpb.OwnerType]string{
+		mgmtpb.OwnerType_OWNER_TYPE_UNSPECIFIED:  "unspecified",
+		mgmtpb.OwnerType_OWNER_TYPE_USER:         "user",
+		mgmtpb.OwnerType_OWNER_TYPE_ORGANIZATION: "organization",
 	}
-	DBUserType2PBUserType = map[string]mgmtPB.OwnerType{
-		"unspecified":  mgmtPB.OwnerType_OWNER_TYPE_UNSPECIFIED,
-		"user":         mgmtPB.OwnerType_OWNER_TYPE_USER,
-		"organization": mgmtPB.OwnerType_OWNER_TYPE_ORGANIZATION,
+	DBUserType2PBUserType = map[string]mgmtpb.OwnerType{
+		"unspecified":  mgmtpb.OwnerType_OWNER_TYPE_UNSPECIFIED,
+		"user":         mgmtpb.OwnerType_OWNER_TYPE_USER,
+		"organization": mgmtpb.OwnerType_OWNER_TYPE_ORGANIZATION,
 	}
 )
 
@@ -102,7 +102,7 @@ func (s *service) compressAvatar(profileAvatar string) (string, error) {
 }
 
 // DBUser2PBUser converts a database user instance to proto user
-func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*mgmtPB.User, error) {
+func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*mgmtpb.User, error) {
 	if dbUser == nil {
 		return nil, status.Error(codes.Internal, "can't convert a nil user")
 	}
@@ -117,13 +117,13 @@ func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*
 	}
 
 	avatar := fmt.Sprintf("%s/v1beta/users/%s/avatar", s.instillCoreHost, dbUser.ID)
-	return &mgmtPB.User{
+	return &mgmtpb.User{
 		Name:       fmt.Sprintf("users/%s", id),
 		Uid:        &uid,
 		Id:         id,
 		CreateTime: timestamppb.New(dbUser.CreateTime),
 		UpdateTime: timestamppb.New(dbUser.UpdateTime),
-		Profile: &mgmtPB.UserProfile{
+		Profile: &mgmtpb.UserProfile{
 			DisplayName:        &dbUser.DisplayName.String,
 			CompanyName:        &dbUser.CompanyName.String,
 			PublicEmail:        &dbUser.PublicEmail.String,
@@ -135,7 +135,7 @@ func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*
 }
 
 // DBUser2PBAuthenticatedUser converts a database user instance to proto authenticated user
-func (s *service) DBUser2PBAuthenticatedUser(ctx context.Context, dbUser *datamodel.Owner) (*mgmtPB.AuthenticatedUser, error) {
+func (s *service) DBUser2PBAuthenticatedUser(ctx context.Context, dbUser *datamodel.Owner) (*mgmtpb.AuthenticatedUser, error) {
 	if dbUser == nil {
 		return nil, status.Error(codes.Internal, "can't convert a nil user")
 	}
@@ -149,7 +149,7 @@ func (s *service) DBUser2PBAuthenticatedUser(ctx context.Context, dbUser *datamo
 	}
 
 	avatar := fmt.Sprintf("%s/v1beta/users/%s/avatar", s.instillCoreHost, dbUser.ID)
-	return &mgmtPB.AuthenticatedUser{
+	return &mgmtpb.AuthenticatedUser{
 		Name:                   fmt.Sprintf("users/%s", id),
 		Uid:                    &uid,
 		Id:                     id,
@@ -160,7 +160,7 @@ func (s *service) DBUser2PBAuthenticatedUser(ctx context.Context, dbUser *datamo
 		Role:                   &dbUser.Role.String,
 		CookieToken:            &dbUser.CookieToken.String,
 		NewsletterSubscription: dbUser.NewsletterSubscription,
-		Profile: &mgmtPB.UserProfile{
+		Profile: &mgmtpb.UserProfile{
 			DisplayName:        &dbUser.DisplayName.String,
 			CompanyName:        &dbUser.CompanyName.String,
 			PublicEmail:        &dbUser.PublicEmail.String,
@@ -168,12 +168,12 @@ func (s *service) DBUser2PBAuthenticatedUser(ctx context.Context, dbUser *datamo
 			Bio:                &dbUser.Bio.String,
 			SocialProfileLinks: socialProfileLinks,
 		},
-		OnboardingStatus: mgmtPB.OnboardingStatus(dbUser.OnboardingStatus),
+		OnboardingStatus: mgmtpb.OnboardingStatus(dbUser.OnboardingStatus),
 	}, nil
 }
 
 // PBAuthenticatedUser2DBUser converts a proto user instance to database user
-func (s *service) PBAuthenticatedUser2DBUser(ctx context.Context, pbUser *mgmtPB.AuthenticatedUser) (*datamodel.Owner, error) {
+func (s *service) PBAuthenticatedUser2DBUser(ctx context.Context, pbUser *mgmtpb.AuthenticatedUser) (*datamodel.Owner, error) {
 	if pbUser == nil {
 		return nil, status.Error(codes.Internal, "can't convert a nil user")
 	}
@@ -245,9 +245,9 @@ func (s *service) PBAuthenticatedUser2DBUser(ctx context.Context, pbUser *mgmtPB
 	}, nil
 }
 
-func (s *service) DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtPB.User, error) {
+func (s *service) DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtpb.User, error) {
 	var err error
-	pbUsers := make([]*mgmtPB.User, len(dbUsers))
+	pbUsers := make([]*mgmtpb.User, len(dbUsers))
 	for idx := range dbUsers {
 		pbUsers[idx], err = s.DBUser2PBUser(
 			ctx,
@@ -261,9 +261,9 @@ func (s *service) DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.Owne
 	return pbUsers, nil
 }
 
-func (s *service) DBUsers2PBAuthenticatedUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtPB.AuthenticatedUser, error) {
+func (s *service) DBUsers2PBAuthenticatedUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtpb.AuthenticatedUser, error) {
 	var err error
-	pbUsers := make([]*mgmtPB.AuthenticatedUser, len(dbUsers))
+	pbUsers := make([]*mgmtpb.AuthenticatedUser, len(dbUsers))
 	for idx := range dbUsers {
 		pbUsers[idx], err = s.DBUser2PBAuthenticatedUser(
 			ctx,
@@ -278,7 +278,7 @@ func (s *service) DBUsers2PBAuthenticatedUsers(ctx context.Context, dbUsers []*d
 }
 
 // DBUser2PBUser converts a database user instance to proto user
-func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgmtPB.Organization, error) {
+func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgmtpb.Organization, error) {
 	if dbOrg == nil {
 		return nil, status.Error(codes.Internal, "can't convert a nil organization")
 	}
@@ -291,7 +291,7 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 		return nil, err
 	}
 
-	var owner *mgmtPB.User
+	var owner *mgmtpb.User
 	for _, relation := range relations {
 		if relation.Relation == "owner" {
 			owner, err = s.GetUserByUIDAdmin(ctx, relation.UID)
@@ -318,13 +318,13 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 		}
 	}
 
-	return &mgmtPB.Organization{
+	return &mgmtpb.Organization{
 		Name:       fmt.Sprintf("organizations/%s", id),
 		Uid:        uid,
 		Id:         id,
 		CreateTime: timestamppb.New(dbOrg.CreateTime),
 		UpdateTime: timestamppb.New(dbOrg.UpdateTime),
-		Profile: &mgmtPB.OrganizationProfile{
+		Profile: &mgmtpb.OrganizationProfile{
 			DisplayName:        &dbOrg.DisplayName.String,
 			PublicEmail:        &dbOrg.PublicEmail.String,
 			Avatar:             &avatar,
@@ -332,14 +332,14 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 			SocialProfileLinks: socialProfileLinks,
 		},
 		Owner: owner,
-		Permission: &mgmtPB.Permission{
+		Permission: &mgmtpb.Permission{
 			CanEdit: canUpdateOrganization,
 		},
 	}, nil
 }
 
 // PBOrg2DBOrg converts a proto user instance to database user
-func (s *service) PBOrg2DBOrg(ctx context.Context, pbOrg *mgmtPB.Organization) (*datamodel.Owner, error) {
+func (s *service) PBOrg2DBOrg(ctx context.Context, pbOrg *mgmtpb.Organization) (*datamodel.Owner, error) {
 	if pbOrg == nil {
 		return nil, status.Error(codes.Internal, "can't convert a nil organization")
 	}
@@ -394,9 +394,9 @@ func (s *service) PBOrg2DBOrg(ctx context.Context, pbOrg *mgmtPB.Organization) (
 	}, nil
 }
 
-func (s *service) DBOrgs2PBOrgs(ctx context.Context, dbOrgs []*datamodel.Owner) ([]*mgmtPB.Organization, error) {
+func (s *service) DBOrgs2PBOrgs(ctx context.Context, dbOrgs []*datamodel.Owner) ([]*mgmtpb.Organization, error) {
 	var err error
-	pbOrgs := make([]*mgmtPB.Organization, len(dbOrgs))
+	pbOrgs := make([]*mgmtpb.Organization, len(dbOrgs))
 	for idx := range dbOrgs {
 		pbOrgs[idx], err = s.DBOrg2PBOrg(
 			ctx,
@@ -411,21 +411,21 @@ func (s *service) DBOrgs2PBOrgs(ctx context.Context, dbOrgs []*datamodel.Owner) 
 }
 
 // DBToken2PBToken converts a database user instance to proto user
-func (s *service) DBToken2PBToken(ctx context.Context, dbToken *datamodel.Token) (*mgmtPB.ApiToken, error) {
+func (s *service) DBToken2PBToken(ctx context.Context, dbToken *datamodel.Token) (*mgmtpb.ApiToken, error) {
 	id := dbToken.ID
-	state := mgmtPB.ApiToken_State(dbToken.State)
+	state := mgmtpb.ApiToken_State(dbToken.State)
 	if dbToken.ExpireTime.Before(time.Now()) {
-		state = mgmtPB.ApiToken_State(mgmtPB.ApiToken_STATE_EXPIRED)
+		state = mgmtpb.ApiToken_State(mgmtpb.ApiToken_STATE_EXPIRED)
 	}
 
-	return &mgmtPB.ApiToken{
+	return &mgmtpb.ApiToken{
 		Name:        fmt.Sprintf("tokens/%s", id),
 		Uid:         dbToken.UID.String(),
 		Id:          id,
 		State:       state,
 		AccessToken: dbToken.AccessToken,
 		TokenType:   dbToken.TokenType,
-		Expiration:  &mgmtPB.ApiToken_ExpireTime{ExpireTime: timestamppb.New(dbToken.ExpireTime)},
+		Expiration:  &mgmtpb.ApiToken_ExpireTime{ExpireTime: timestamppb.New(dbToken.ExpireTime)},
 		CreateTime:  timestamppb.New(dbToken.CreateTime),
 		UpdateTime:  timestamppb.New(dbToken.UpdateTime),
 		LastUseTime: func() *timestamppb.Timestamp {
@@ -438,9 +438,9 @@ func (s *service) DBToken2PBToken(ctx context.Context, dbToken *datamodel.Token)
 }
 
 // PBToken2DBToken converts a proto user instance to database user
-func (s *service) PBToken2DBToken(ctx context.Context, pbToken *mgmtPB.ApiToken) (*datamodel.Token, error) {
+func (s *service) PBToken2DBToken(ctx context.Context, pbToken *mgmtpb.ApiToken) (*datamodel.Token, error) {
 
-	logger, _ := logger.GetZapLogger(ctx)
+	logger, _ := logx.GetZapLogger(ctx)
 
 	r := &datamodel.Token{
 		Base: datamodel.Base{
@@ -479,9 +479,9 @@ func (s *service) PBToken2DBToken(ctx context.Context, pbToken *mgmtPB.ApiToken)
 
 }
 
-func (s *service) DBTokens2PBTokens(ctx context.Context, dbTokens []*datamodel.Token) ([]*mgmtPB.ApiToken, error) {
+func (s *service) DBTokens2PBTokens(ctx context.Context, dbTokens []*datamodel.Token) ([]*mgmtpb.ApiToken, error) {
 	var err error
-	pbUsers := make([]*mgmtPB.ApiToken, len(dbTokens))
+	pbUsers := make([]*mgmtpb.ApiToken, len(dbTokens))
 	for idx := range dbTokens {
 		pbUsers[idx], err = s.DBToken2PBToken(
 			ctx,

@@ -18,7 +18,7 @@ import (
 
 	errdomain "github.com/instill-ai/mgmt-backend/pkg/errors"
 	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
-	pipelinepb "github.com/instill-ai/protogen-go/vdp/pipeline/v1beta"
+	pipelinepb "github.com/instill-ai/protogen-go/pipeline/pipeline/v1beta"
 )
 
 var ErrNoPermission = errors.New("no permission")

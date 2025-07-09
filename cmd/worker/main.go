@@ -11,20 +11,88 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/contrib/opentelemetry"
+	"go.temporal.io/sdk/interceptor"
 	"go.temporal.io/sdk/worker"
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/durationpb"
 
-	"github.com/instill-ai/mgmt-backend/config"
-	"github.com/instill-ai/mgmt-backend/pkg/logger"
-	"github.com/instill-ai/x/temporal"
-	"github.com/instill-ai/x/zapadapter"
+	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 
-	customotel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
+	"github.com/instill-ai/mgmt-backend/config"
+	"github.com/instill-ai/x/temporal"
+
 	mgmtworker "github.com/instill-ai/mgmt-backend/pkg/worker"
+	logx "github.com/instill-ai/x/log"
 )
 
-func initTemporalNamespace(ctx context.Context, client client.Client) {
-	logger, _ := logger.GetZapLogger(ctx)
+var (
+	// These variables might be overridden at buildtime.
+	serviceName = "mgmt-backend"
+	// serviceVersion = "dev"
+)
+
+func main() {
+
+	if err := config.Init(config.ParseConfigFlag()); err != nil {
+		log.Fatal(err.Error())
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	logx.Debug = config.Config.Server.Debug
+	logger, _ := logx.GetZapLogger(ctx)
+	defer func() {
+		// can't handle the error due to https://github.com/uber-go/zap/issues/880
+		_ = logger.Sync()
+	}()
+
+	// Set gRPC logging based on debug mode
+	if config.Config.Server.Debug {
+		grpczap.ReplaceGrpcLoggerV2WithVerbosity(logger, 0) // All logs
+	} else {
+		grpczap.ReplaceGrpcLoggerV2WithVerbosity(logger, 3) // verbosity 3 will avoid [transport] from emitting
+	}
+
+	var err error
+
+	temporalTracingInterceptor, err := opentelemetry.NewTracingInterceptor(opentelemetry.TracerOptions{
+		Tracer:            otel.Tracer(serviceName + "-temporal"),
+		TextMapPropagator: otel.GetTextMapPropagator(),
+	})
+	if err != nil {
+		logger.Fatal("Unable to create temporal tracing interceptor", zap.Error(err))
+	}
+
+	temporalClientOptions, err := temporal.ClientOptions(config.Config.Temporal, logger)
+	if err != nil {
+		logger.Fatal("Unable to build Temporal client options", zap.Error(err))
+	}
+
+	temporalClientOptions.Interceptors = []interceptor.ClientInterceptor{temporalTracingInterceptor}
+	temporalClient, err := client.Dial(temporalClientOptions)
+	if err != nil {
+		logger.Fatal(fmt.Sprintf("Unable to create client: %s", err))
+	}
+	defer temporalClient.Close()
+
+	// for only local temporal cluster
+	if config.Config.Temporal.ServerRootCA == "" && config.Config.Temporal.ClientCert == "" && config.Config.Temporal.ClientKey == "" {
+		initTemporalNamespace(ctx, temporalClient, logger)
+	}
+
+	w := worker.New(temporalClient, mgmtworker.TaskQueue, worker.Options{
+		MaxConcurrentActivityExecutionSize: 2,
+	})
+
+	err = w.Run(worker.InterruptCh())
+	if err != nil {
+		logger.Fatal(fmt.Sprintf("Unable to start worker: %s", err))
+	}
+}
+
+func initTemporalNamespace(ctx context.Context, client client.Client, logger *zap.Logger) {
 
 	resp, err := client.WorkflowService().ListNamespaces(ctx, &workflowservice.ListNamespacesRequest{})
 	if err != nil {
@@ -62,80 +130,5 @@ func initTemporalNamespace(ctx context.Context, client client.Client) {
 		); err != nil {
 			logger.Fatal(fmt.Sprintf("Unable to register namespace: %s", err))
 		}
-	}
-}
-
-func main() {
-
-	if err := config.Init(config.ParseConfigFlag()); err != nil {
-		log.Fatal(err.Error())
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	// setup tracing and metrics
-	if tp, err := customotel.SetupTracing(ctx, "mgmt-backend-worker"); err != nil {
-		panic(err)
-	} else {
-		defer func() {
-			err = tp.Shutdown(ctx)
-		}()
-	}
-
-	ctx, span := otel.Tracer("worker-tracer").Start(ctx,
-		"main",
-	)
-	defer cancel()
-
-	logger, _ := logger.GetZapLogger(ctx)
-	defer func() {
-		// can't handle the error due to https://github.com/uber-go/zap/issues/880
-		_ = logger.Sync()
-	}()
-
-	var err error
-
-	var temporalClientOptions client.Options
-	if config.Config.Temporal.Ca != "" && config.Config.Temporal.Cert != "" && config.Config.Temporal.Key != "" {
-		if temporalClientOptions, err = temporal.GetTLSClientOption(
-			config.Config.Temporal.HostPort,
-			config.Config.Temporal.Namespace,
-			zapadapter.NewZapAdapter(logger),
-			config.Config.Temporal.Ca,
-			config.Config.Temporal.Cert,
-			config.Config.Temporal.Key,
-			config.Config.Temporal.ServerName,
-			true,
-		); err != nil {
-			logger.Fatal(fmt.Sprintf("Unable to get Temporal client options: %s", err))
-		}
-	} else {
-		if temporalClientOptions, err = temporal.GetClientOption(
-			config.Config.Temporal.HostPort,
-			config.Config.Temporal.Namespace,
-			zapadapter.NewZapAdapter(logger)); err != nil {
-			logger.Fatal(fmt.Sprintf("Unable to get Temporal client options: %s", err))
-		}
-	}
-
-	temporalClient, err := client.Dial(temporalClientOptions)
-	if err != nil {
-		logger.Fatal(fmt.Sprintf("Unable to create client: %s", err))
-	}
-	defer temporalClient.Close()
-
-	// for only local temporal cluster
-	if config.Config.Temporal.Ca == "" && config.Config.Temporal.Cert == "" && config.Config.Temporal.Key == "" {
-		initTemporalNamespace(ctx, temporalClient)
-	}
-
-	w := worker.New(temporalClient, mgmtworker.TaskQueue, worker.Options{
-		MaxConcurrentActivityExecutionSize: 2,
-	})
-
-	span.End()
-	err = w.Run(worker.InterruptCh())
-	if err != nil {
-		logger.Fatal(fmt.Sprintf("Unable to start worker: %s", err))
 	}
 }

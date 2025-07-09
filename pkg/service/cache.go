@@ -8,7 +8,7 @@ import (
 	"github.com/gofrs/uuid"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 )
 
 const CacheTargetUser = "user"
@@ -22,12 +22,12 @@ func (s *service) getFromCacheByID(ctx context.Context, target string, id string
 		b, err := getCmd.Bytes()
 		if err == nil {
 			if target == CacheTargetUser {
-				pbUser := &mgmtPB.User{}
+				pbUser := &mgmtpb.User{}
 				if err := protojson.Unmarshal(b, pbUser); err == nil {
 					return pbUser
 				}
 			} else {
-				pbOrg := &mgmtPB.Organization{}
+				pbOrg := &mgmtpb.Organization{}
 				if err := protojson.Unmarshal(b, pbOrg); err == nil {
 					return pbOrg
 				}
@@ -39,34 +39,34 @@ func (s *service) getFromCacheByID(ctx context.Context, target string, id string
 func (s *service) getFromCacheByUID(ctx context.Context, target string, uid uuid.UUID) interface{} {
 	return s.getFromCacheByID(ctx, target, uid.String())
 }
-func (s *service) getUserFromCacheByID(ctx context.Context, id string) *mgmtPB.User {
+func (s *service) getUserFromCacheByID(ctx context.Context, id string) *mgmtpb.User {
 	i := s.getFromCacheByID(ctx, CacheTargetUser, id)
 	if i != nil {
-		return i.(*mgmtPB.User)
+		return i.(*mgmtpb.User)
 	} else {
 		return nil
 	}
 }
-func (s *service) getOrganizationFromCacheByID(ctx context.Context, id string) *mgmtPB.Organization {
+func (s *service) getOrganizationFromCacheByID(ctx context.Context, id string) *mgmtpb.Organization {
 	i := s.getFromCacheByID(ctx, CacheTargetOrganization, id)
 	if i != nil {
-		return i.(*mgmtPB.Organization)
+		return i.(*mgmtpb.Organization)
 	} else {
 		return nil
 	}
 }
-func (s *service) getUserFromCacheByUID(ctx context.Context, uid uuid.UUID) *mgmtPB.User {
+func (s *service) getUserFromCacheByUID(ctx context.Context, uid uuid.UUID) *mgmtpb.User {
 	i := s.getFromCacheByUID(ctx, CacheTargetUser, uid)
 	if i != nil {
-		return i.(*mgmtPB.User)
+		return i.(*mgmtpb.User)
 	} else {
 		return nil
 	}
 }
-func (s *service) getOrganizationFromCacheByUID(ctx context.Context, uid uuid.UUID) *mgmtPB.Organization {
+func (s *service) getOrganizationFromCacheByUID(ctx context.Context, uid uuid.UUID) *mgmtpb.Organization {
 	i := s.getFromCacheByUID(ctx, CacheTargetOrganization, uid)
 	if i != nil {
-		return i.(*mgmtPB.Organization)
+		return i.(*mgmtpb.Organization)
 	} else {
 		return nil
 	}
@@ -79,14 +79,14 @@ func (s *service) setToCache(ctx context.Context, target string, src interface{}
 	var err error
 
 	switch src := src.(type) {
-	case *mgmtPB.User:
+	case *mgmtpb.User:
 		b, err = protojson.Marshal(src)
 		if err != nil {
 			return err
 		}
 		id = src.Id
 		uid = *src.Uid
-	case *mgmtPB.Organization:
+	case *mgmtpb.Organization:
 		b, err = protojson.Marshal(src)
 		if err != nil {
 			return err
@@ -105,10 +105,10 @@ func (s *service) setToCache(ctx context.Context, target string, src interface{}
 	}
 	return nil
 }
-func (s *service) setUserToCache(ctx context.Context, user *mgmtPB.User) error {
+func (s *service) setUserToCache(ctx context.Context, user *mgmtpb.User) error {
 	return s.setToCache(ctx, CacheTargetUser, user)
 }
-func (s *service) setOrganizationToCache(ctx context.Context, org *mgmtPB.Organization) error {
+func (s *service) setOrganizationToCache(ctx context.Context, org *mgmtpb.Organization) error {
 	return s.setToCache(ctx, CacheTargetOrganization, org)
 }
 
@@ -118,14 +118,14 @@ func (s *service) deleteFromCacheByID(ctx context.Context, target string, id str
 	if target == CacheTargetUser {
 		user := s.getFromCacheByID(ctx, target, id)
 		if user != nil {
-			uid = *user.(*mgmtPB.User).Uid
+			uid = *user.(*mgmtpb.User).Uid
 		}
 
 	} else {
 
 		org := s.getFromCacheByID(ctx, target, id)
 		if org != nil {
-			uid = org.(*mgmtPB.Organization).Uid
+			uid = org.(*mgmtpb.Organization).Uid
 		}
 	}
 

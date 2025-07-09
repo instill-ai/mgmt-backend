@@ -15,10 +15,10 @@ import (
 
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
-	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/x/paginate"
 
-	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	logx "github.com/instill-ai/x/log"
 )
 
 const (
@@ -188,7 +188,7 @@ func (r *repository) DeleteOrganization(ctx context.Context, id string) error {
 
 func (r *repository) GetAllUsers(ctx context.Context) ([]*datamodel.Owner, error) {
 	db := r.CheckPinnedUser(ctx, r.db)
-	logger, _ := logger.GetZapLogger(ctx)
+	logger, _ := logx.GetZapLogger(ctx)
 	var users []*datamodel.Owner
 	if result := db.Find(users).Where("owner_type = 'user'"); result.Error != nil {
 		logger.Error(result.Error.Error())
@@ -201,7 +201,7 @@ func (r *repository) listOwners(ctx context.Context, ownerType string, pageSize 
 
 	db := r.CheckPinnedUser(ctx, r.db)
 
-	logger, _ := logger.GetZapLogger(ctx)
+	logger, _ := logx.GetZapLogger(ctx)
 	totalSize := int64(0)
 	if result := db.Model(&datamodel.Owner{}).Where("owner_type = ?", ownerType).Count(&totalSize); result.Error != nil {
 		logger.Error(result.Error.Error())
@@ -277,7 +277,7 @@ func (r *repository) createOwner(ctx context.Context, ownerType string, owner *d
 		return ErrOwnerTypeNotMatch
 	}
 
-	logger, _ := logger.GetZapLogger(ctx)
+	logger, _ := logx.GetZapLogger(ctx)
 	if result := db.Model(&datamodel.Owner{}).Create(owner); result.Error != nil {
 		logger.Error(result.Error.Error())
 		return result.Error
@@ -315,7 +315,7 @@ func (r *repository) updateOwner(ctx context.Context, ownerType string, id strin
 	r.PinUser(ctx)
 	db := r.CheckPinnedUser(ctx, r.db)
 
-	logger, _ := logger.GetZapLogger(ctx)
+	logger, _ := logx.GetZapLogger(ctx)
 	if result := db.Select("*").Omit("UID").Omit("password_hash").Model(&datamodel.Owner{}).Where("owner_type = ?", ownerType).Where("id = ?", id).Updates(owner); result.Error != nil {
 		logger.Error(result.Error.Error())
 		return result.Error
@@ -328,7 +328,7 @@ func (r *repository) deleteOwner(ctx context.Context, ownerType string, id strin
 	r.PinUser(ctx)
 	db := r.CheckPinnedUser(ctx, r.db)
 
-	logger, _ := logger.GetZapLogger(ctx)
+	logger, _ := logx.GetZapLogger(ctx)
 	result := db.Model(&datamodel.Owner{}).
 		Where("owner_type = ?", ownerType).
 		Where("id = ?", id).
@@ -365,7 +365,7 @@ func (r *repository) UpdateUserPasswordHash(ctx context.Context, uid uuid.UUID, 
 	r.PinUser(ctx)
 	db := r.CheckPinnedUser(ctx, r.db)
 
-	logger, _ := logger.GetZapLogger(ctx)
+	logger, _ := logx.GetZapLogger(ctx)
 	if result := db.Select("*").Omit("UID").Model(&datamodel.Password{}).Where("uid = ?", uid.String()).Updates(datamodel.Password{
 		PasswordHash:       sql.NullString{String: newPassword, Valid: true},
 		PasswordUpdateTime: updateTime,
@@ -381,7 +381,7 @@ func (r *repository) ListAllValidTokens(ctx context.Context) (tokens []datamodel
 
 	db := r.CheckPinnedUser(ctx, r.db)
 
-	queryBuilder := db.Model(&datamodel.Token{}).Where("state = ?", datamodel.TokenState(mgmtPB.ApiToken_STATE_ACTIVE))
+	queryBuilder := db.Model(&datamodel.Token{}).Where("state = ?", datamodel.TokenState(mgmtpb.ApiToken_STATE_ACTIVE))
 	queryBuilder.Where("expire_time >= ?", time.Now())
 	rows, err := queryBuilder.Rows()
 	if err != nil {
@@ -465,7 +465,7 @@ func (r *repository) CreateToken(ctx context.Context, token *datamodel.Token) er
 	r.PinUser(ctx)
 	db := r.CheckPinnedUser(ctx, r.db)
 
-	logger, _ := logger.GetZapLogger(ctx)
+	logger, _ := logx.GetZapLogger(ctx)
 	if result := db.Model(&datamodel.Token{}).Create(token); result.Error != nil {
 		logger.Error(result.Error.Error())
 		return result.Error

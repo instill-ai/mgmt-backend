@@ -1,5 +1,5 @@
 
-ARG GOLANG_VERSION=1.24.2
+ARG GOLANG_VERSION=1.24.4
 FROM golang:${GOLANG_VERSION}
 
 ARG SERVICE_NAME
@@ -23,8 +23,8 @@ RUN go mod download
 COPY . .
 
 RUN chown -R nobody:nogroup /go
-ENV GOCACHE /go/.cache/go-build
-ENV GOENV /go/.config/go/env
+ENV GOCACHE=/go/.cache/go-build
+ENV GOENV=/go/.config/go/env
 
 USER nobody:nogroup
 

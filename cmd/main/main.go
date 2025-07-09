@@ -2,23 +2,18 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"regexp"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/redis/go-redis/v9"
-	"go.opentelemetry.io/contrib/propagators/b3"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagation"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -26,7 +21,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
-	"google.golang.org/protobuf/encoding/protojson"
+	"gorm.io/gorm"
 
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
@@ -35,44 +30,25 @@ import (
 
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/acl"
-	"github.com/instill-ai/mgmt-backend/pkg/constant"
-	"github.com/instill-ai/mgmt-backend/pkg/external"
 	"github.com/instill-ai/mgmt-backend/pkg/handler"
-	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/middleware"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 	"github.com/instill-ai/mgmt-backend/pkg/usage"
+	"github.com/instill-ai/x/client"
 
 	database "github.com/instill-ai/mgmt-backend/pkg/db"
-	customotel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
 	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	pipelinepb "github.com/instill-ai/protogen-go/pipeline/pipeline/v1beta"
+	grpcclientx "github.com/instill-ai/x/client/grpc"
+	logx "github.com/instill-ai/x/log"
 )
 
 var (
 	// These variables might be overridden at buildtime.
+	// serviceName    = "mgmt-backend"
 	serviceVersion = "dev"
-	// serviceName = "mgmt-backend"
-
-	propagator propagation.TextMapPropagator
 )
-
-func grpcHandlerFunc(grpcServer *grpc.Server, gwHandler http.Handler) http.Handler {
-	return h2c.NewHandler(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-			propagator = b3.New(b3.WithInjectEncoding(b3.B3MultipleHeader))
-			ctx := propagator.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
-			r = r.WithContext(ctx)
-
-			if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
-				grpcServer.ServeHTTP(w, r)
-			} else {
-				gwHandler.ServeHTTP(w, r)
-			}
-		}),
-		&http2.Server{})
-}
 
 func main() {
 	if err := config.Init(config.ParseConfigFlag()); err != nil {
@@ -80,73 +56,37 @@ func main() {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-
-	if tp, err := customotel.SetupTracing(ctx, "mgmt-backend"); err != nil {
-		panic(err)
-	} else {
-		defer func() {
-			err = tp.Shutdown(ctx)
-		}()
-	}
-
-	ctx, span := otel.Tracer("main-tracer").Start(ctx,
-		"main",
-	)
 	defer cancel()
 
-	logger, _ := logger.GetZapLogger(ctx)
+	logx.Debug = config.Config.Server.Debug
+	logger, _ := logx.GetZapLogger(ctx)
 	defer func() {
 		// can't handle the error due to https://github.com/uber-go/zap/issues/880
 		_ = logger.Sync()
 	}()
 
-	// verbosity 3 will avoid [transport] from emitting
-	grpczap.ReplaceGrpcLoggerV2WithVerbosity(logger, 3)
-
-	db := database.GetConnection(&config.Config.Database)
-	defer database.Close(db)
-
-	// Shared options for the logger, with a custom gRPC code to log level functions.
-	opts := []grpczap.Option{
-		grpczap.WithDecider(func(fullMethodName string, err error) bool {
-			// will not log gRPC calls if it was a call to liveness or readiness and no error was raised
-			if err == nil {
-				// stop logging successful private function calls
-				if match, _ := regexp.MatchString("core.mgmt.v1beta.MgmtPrivateService/.*(?:Admin|ness)$", fullMethodName); match {
-					return false
-				}
-				if match, _ := regexp.MatchString("core.mgmt.v1beta.MgmtPublicService/.*ness$", fullMethodName); match {
-					return false
-				}
-			}
-			// by default everything will be logged
-			return true
-		}),
+	// Set gRPC logging based on debug mode
+	if config.Config.Server.Debug {
+		grpczap.ReplaceGrpcLoggerV2WithVerbosity(logger, 0) // All logs
+	} else {
+		grpczap.ReplaceGrpcLoggerV2WithVerbosity(logger, 3) // verbosity 3 will avoid [transport] from emitting
 	}
 
-	grpcServerOpts := []grpc.ServerOption{
-		grpc.StreamInterceptor(grpcmiddleware.ChainStreamServer(
-			middleware.StreamAppendMetadataInterceptor,
-			grpczap.StreamServerInterceptor(logger, opts...),
-			grpcrecovery.StreamServerInterceptor(middleware.RecoveryInterceptorOpt()),
-		)),
-		grpc.UnaryInterceptor(grpcmiddleware.ChainUnaryServer(
-			middleware.UnaryAppendMetadataInterceptor,
-			grpczap.UnaryServerInterceptor(logger, opts...),
-			grpcrecovery.UnaryServerInterceptor(middleware.RecoveryInterceptorOpt()),
-		)),
-	}
+	grpcServerOpts, creds := newGrpcOptionAndCreds(logger)
 
-	// Create tls based credential
-	var creds credentials.TransportCredentials
-	var tlsConfig *tls.Config
-	var err error
+	privateGrpcS := grpc.NewServer(grpcServerOpts...)
+	reflection.Register(privateGrpcS)
 
-	redisClient := redis.NewClient(&config.Config.Cache.Redis.RedisOptions)
-	defer redisClient.Close()
+	publicGrpcS := grpc.NewServer(grpcServerOpts...)
+	reflection.Register(publicGrpcS)
 
+	pipelinePublicServiceClient, redisClient, db, influxDB, closeClients := newClients(ctx, logger)
+	defer closeClients()
+
+	// TODO: move openfga setup to x
 	fgaClient, err := openfgaclient.NewSdkClient(&openfgaclient.ClientConfiguration{
-		ApiUrl: fmt.Sprintf("http://%s:%d", config.Config.OpenFGA.Host, config.Config.OpenFGA.Port),
+		ApiScheme: "http",
+		ApiHost:   fmt.Sprintf("%s:%d", config.Config.OpenFGA.Host, config.Config.OpenFGA.Port),
 	})
 
 	if err != nil {
@@ -195,34 +135,20 @@ func main() {
 	}
 	aclClient = acl.NewACLClient(fgaClient, fgaReplicaClient, redisClient)
 
-	if config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "" {
-		tlsConfig = &tls.Config{
-			ClientAuth: tls.RequireAndVerifyClientCert,
-		}
-		creds, err = credentials.NewServerTLSFromFile(config.Config.Server.HTTPS.Cert, config.Config.Server.HTTPS.Key)
-		if err != nil {
-			logger.Fatal(fmt.Sprintf("failed to create credentials: %v", err))
-		}
-		grpcServerOpts = append(grpcServerOpts, grpc.Creds(creds))
-	}
-	grpcServerOpts = append(grpcServerOpts, grpc.MaxRecvMsgSize(constant.MaxPayloadSize))
-	grpcServerOpts = append(grpcServerOpts, grpc.MaxSendMsgSize(constant.MaxPayloadSize))
-
-	pipelinePublicServiceClient, pipelinePublicServiceClientConn := external.InitPipelinePublicServiceClient(ctx, &config.Config)
-	if pipelinePublicServiceClientConn != nil {
-		defer pipelinePublicServiceClientConn.Close()
-	}
-
-	influxDB := repository.MustNewInfluxDB(ctx, config.Config)
-	defer influxDB.Close()
-
 	repository := repository.NewRepository(db, redisClient)
-	service := service.NewService(repository, redisClient, influxDB, pipelinePublicServiceClient, &aclClient, config.Config.Server.InstillCoreHost)
+	service := service.NewService(
+		pipelinePublicServiceClient,
+		repository,
+		redisClient,
+		influxDB,
+		&aclClient,
+		config.Config.Server.InstillCoreHost,
+	)
 
 	// Start usage reporter
 	var usg usage.Usage
 	if config.Config.Server.Usage.Enabled {
-		usageServiceClient, usageServiceClientConn := external.InitUsageServiceClient(ctx, &config.Config.Server)
+		usageServiceClient, usageServiceClientConn := usage.InitUsageServiceClient(ctx, &config.Config.Server)
 		if usageServiceClientConn != nil {
 			defer usageServiceClientConn.Close()
 			logger.Info("try to start usage reporter")
@@ -241,12 +167,6 @@ func main() {
 		}
 	}
 
-	privateGrpcS := grpc.NewServer(grpcServerOpts...)
-	reflection.Register(privateGrpcS)
-
-	publicGrpcS := grpc.NewServer(grpcServerOpts...)
-	reflection.Register(publicGrpcS)
-
 	mgmtpb.RegisterMgmtPrivateServiceServer(
 		privateGrpcS,
 		handler.NewPrivateHandler(service),
@@ -260,15 +180,6 @@ func main() {
 		runtime.WithIncomingHeaderMatcher(middleware.CustomMatcher),
 		runtime.WithForwardResponseOption(middleware.HTTPResponseModifier),
 		runtime.WithErrorHandler(middleware.ErrorHandler),
-		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
-			MarshalOptions: protojson.MarshalOptions{
-				EmitUnpopulated: true,
-				UseEnumNumbers:  false,
-			},
-			UnmarshalOptions: protojson.UnmarshalOptions{
-				DiscardUnknown: true,
-			},
-		}),
 	)
 	if err := publicServeMux.HandlePath("GET", "/v1beta/{name=users/*}/avatar", middleware.AppendCustomHeaderMiddleware(publicServeMux, repository, middleware.HandleAvatar)); err != nil {
 		logger.Fatal(err.Error())
@@ -277,12 +188,11 @@ func main() {
 		logger.Fatal(err.Error())
 	}
 
-	// Start gRPC server
 	var dialOpts []grpc.DialOption
 	if config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "" {
-		dialOpts = []grpc.DialOption{grpc.WithTransportCredentials(creds), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(constant.MaxPayloadSize), grpc.MaxCallSendMsgSize(constant.MaxPayloadSize))}
+		dialOpts = []grpc.DialOption{grpc.WithTransportCredentials(creds), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(client.MaxPayloadSize), grpc.MaxCallSendMsgSize(client.MaxPayloadSize))}
 	} else {
-		dialOpts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(constant.MaxPayloadSize), grpc.MaxCallSendMsgSize(constant.MaxPayloadSize))}
+		dialOpts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(client.MaxPayloadSize), grpc.MaxCallSendMsgSize(client.MaxPayloadSize))}
 	}
 
 	if err := mgmtpb.RegisterMgmtPublicServiceHandlerFromEndpoint(ctx, publicServeMux, fmt.Sprintf(":%v", config.Config.Server.PublicPort), dialOpts); err != nil {
@@ -290,12 +200,10 @@ func main() {
 	}
 
 	publicHTTPServer := &http.Server{
-		Addr:      fmt.Sprintf(":%v", config.Config.Server.PublicPort),
-		Handler:   grpcHandlerFunc(publicGrpcS, publicServeMux),
-		TLSConfig: tlsConfig,
+		Addr:    fmt.Sprintf(":%v", config.Config.Server.PublicPort),
+		Handler: grpcHandlerFunc(publicGrpcS, publicServeMux),
 	}
 
-	// Wait for interrupt signal to gracefully shutdown the server with a timeout of 5 seconds.
 	quitSig := make(chan os.Signal, 1)
 	errSig := make(chan error)
 
@@ -323,7 +231,6 @@ func main() {
 		}
 	}()
 
-	span.End()
 	logger.Info("gRPC servers are running.")
 
 	// kill (no param) default send syscall.SIGTERM
@@ -343,4 +250,81 @@ func main() {
 		privateGrpcS.GracefulStop()
 		publicGrpcS.GracefulStop()
 	}
+}
+
+func grpcHandlerFunc(grpcServer *grpc.Server, gwHandler http.Handler) http.Handler {
+	return h2c.NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
+				grpcServer.ServeHTTP(w, r)
+			} else {
+				gwHandler.ServeHTTP(w, r)
+			}
+		}),
+		&http2.Server{},
+	)
+}
+
+func newClients(ctx context.Context, logger *zap.Logger) (pipelinepb.PipelinePublicServiceClient, *redis.Client, *gorm.DB, repository.InfluxDB, func()) {
+	closeFuncs := map[string]func() error{}
+
+	// Initialize mgmt private service client
+	pipelinePublicServiceClient, pipelinePublicClose, err := grpcclientx.NewPipelinePublicClient(config.Config.PipelineBackend)
+	if err != nil {
+		logger.Fatal("failed to create pipeline public service client", zap.Error(err))
+	}
+	closeFuncs["pipelinePublic"] = pipelinePublicClose
+
+	db := database.GetConnection(&config.Config.Database)
+	closeFuncs["database"] = func() error {
+		database.Close(db)
+		return nil
+	}
+
+	redisClient := redis.NewClient(&config.Config.Cache.Redis.RedisOptions)
+	closeFuncs["redis"] = redisClient.Close
+
+	influxDB := repository.MustNewInfluxDB(ctx, config.Config)
+	closeFuncs["influxDB"] = func() error {
+		influxDB.Close()
+		return nil
+	}
+
+	closer := func() {
+		for conn, fn := range closeFuncs {
+			if err := fn(); err != nil {
+				logger.Error("Failed to close conn", zap.Error(err), zap.String("conn", conn))
+			}
+		}
+	}
+
+	return pipelinePublicServiceClient, redisClient, db, influxDB, closer
+}
+
+func newGrpcOptionAndCreds(logger *zap.Logger) ([]grpc.ServerOption, credentials.TransportCredentials) {
+	grpcServerOpts := []grpc.ServerOption{
+		grpc.StreamInterceptor(grpcmiddleware.ChainStreamServer(
+			middleware.StreamAppendMetadataInterceptor,
+			grpczap.StreamServerInterceptor(logger),
+			grpcrecovery.StreamServerInterceptor(middleware.RecoveryInterceptorOpt()),
+		)),
+		grpc.UnaryInterceptor(grpcmiddleware.ChainUnaryServer(
+			middleware.UnaryAppendMetadataInterceptor,
+			grpczap.UnaryServerInterceptor(logger),
+			grpcrecovery.UnaryServerInterceptor(middleware.RecoveryInterceptorOpt()),
+		)),
+	}
+
+	var creds credentials.TransportCredentials
+	var err error
+	if config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "" {
+		creds, err = credentials.NewServerTLSFromFile(config.Config.Server.HTTPS.Cert, config.Config.Server.HTTPS.Key)
+		if err != nil {
+			logger.Fatal(fmt.Sprintf("failed to create credentials: %v", err))
+		}
+		grpcServerOpts = append(grpcServerOpts, grpc.Creds(creds))
+	}
+	grpcServerOpts = append(grpcServerOpts, grpc.MaxRecvMsgSize(client.MaxPayloadSize))
+	grpcServerOpts = append(grpcServerOpts, grpc.MaxSendMsgSize(client.MaxPayloadSize))
+	return grpcServerOpts, creds
 }
