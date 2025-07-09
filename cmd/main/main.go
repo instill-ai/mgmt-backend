@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
+	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
@@ -27,10 +28,10 @@ import (
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
-	openfgaClient "github.com/openfga/go-sdk/client"
+	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	openfgaclient "github.com/openfga/go-sdk/client"
 
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/acl"
@@ -44,8 +45,8 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/usage"
 
 	database "github.com/instill-ai/mgmt-backend/pkg/db"
-	custom_otel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
-	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	customotel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
+	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 )
 
 var (
@@ -80,7 +81,7 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	if tp, err := custom_otel.SetupTracing(ctx, "mgmt-backend"); err != nil {
+	if tp, err := customotel.SetupTracing(ctx, "mgmt-backend"); err != nil {
 		panic(err)
 	} else {
 		defer func() {
@@ -100,14 +101,14 @@ func main() {
 	}()
 
 	// verbosity 3 will avoid [transport] from emitting
-	grpc_zap.ReplaceGrpcLoggerV2WithVerbosity(logger, 3)
+	grpczap.ReplaceGrpcLoggerV2WithVerbosity(logger, 3)
 
 	db := database.GetConnection(&config.Config.Database)
 	defer database.Close(db)
 
 	// Shared options for the logger, with a custom gRPC code to log level functions.
-	opts := []grpc_zap.Option{
-		grpc_zap.WithDecider(func(fullMethodName string, err error) bool {
+	opts := []grpczap.Option{
+		grpczap.WithDecider(func(fullMethodName string, err error) bool {
 			// will not log gRPC calls if it was a call to liveness or readiness and no error was raised
 			if err == nil {
 				// stop logging successful private function calls
@@ -124,15 +125,15 @@ func main() {
 	}
 
 	grpcServerOpts := []grpc.ServerOption{
-		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+		grpc.StreamInterceptor(grpcmiddleware.ChainStreamServer(
 			middleware.StreamAppendMetadataInterceptor,
-			grpc_zap.StreamServerInterceptor(logger, opts...),
-			grpc_recovery.StreamServerInterceptor(middleware.RecoveryInterceptorOpt()),
+			grpczap.StreamServerInterceptor(logger, opts...),
+			grpcrecovery.StreamServerInterceptor(middleware.RecoveryInterceptorOpt()),
 		)),
-		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+		grpc.UnaryInterceptor(grpcmiddleware.ChainUnaryServer(
 			middleware.UnaryAppendMetadataInterceptor,
-			grpc_zap.UnaryServerInterceptor(logger, opts...),
-			grpc_recovery.UnaryServerInterceptor(middleware.RecoveryInterceptorOpt()),
+			grpczap.UnaryServerInterceptor(logger, opts...),
+			grpcrecovery.UnaryServerInterceptor(middleware.RecoveryInterceptorOpt()),
 		)),
 	}
 
@@ -144,21 +145,19 @@ func main() {
 	redisClient := redis.NewClient(&config.Config.Cache.Redis.RedisOptions)
 	defer redisClient.Close()
 
-	fgaClient, err := openfgaClient.NewSdkClient(&openfgaClient.ClientConfiguration{
-		ApiScheme: "http",
-		ApiHost:   fmt.Sprintf("%s:%d", config.Config.OpenFGA.Host, config.Config.OpenFGA.Port),
+	fgaClient, err := openfgaclient.NewSdkClient(&openfgaclient.ClientConfiguration{
+		ApiUrl: fmt.Sprintf("http://%s:%d", config.Config.OpenFGA.Host, config.Config.OpenFGA.Port),
 	})
 
 	if err != nil {
 		panic(err)
 	}
 
-	var fgaReplicaClient *openfgaClient.OpenFgaClient
+	var fgaReplicaClient *openfgaclient.OpenFgaClient
 	if config.Config.OpenFGA.Replica.Host != "" {
 
-		fgaReplicaClient, err = openfgaClient.NewSdkClient(&openfgaClient.ClientConfiguration{
-			ApiScheme: "http",
-			ApiHost:   fmt.Sprintf("%s:%d", config.Config.OpenFGA.Replica.Host, config.Config.OpenFGA.Replica.Port),
+		fgaReplicaClient, err = openfgaclient.NewSdkClient(&openfgaclient.ClientConfiguration{
+			ApiUrl: fmt.Sprintf("http://%s:%d", config.Config.OpenFGA.Replica.Host, config.Config.OpenFGA.Replica.Port),
 		})
 		if err != nil {
 			panic(err)
@@ -166,21 +165,35 @@ func main() {
 	}
 
 	var aclClient acl.ACLClient
-	if stores, err := fgaClient.ListStores(context.Background()).Execute(); err == nil {
-		fgaClient.SetStoreId(*(*stores.Stores)[0].Id)
-		if fgaReplicaClient != nil {
-			fgaReplicaClient.SetStoreId(*(*stores.Stores)[0].Id)
-		}
-		if models, err := fgaClient.ReadAuthorizationModels(context.Background()).Execute(); err == nil {
-			aclClient = acl.NewACLClient(fgaClient, fgaReplicaClient, redisClient, (*models.AuthorizationModels)[0].Id)
-		}
+
+	fgaData, err := database.GetFGAMigrationData(db)
+	if err != nil {
+		panic(err)
+	}
+
+	logger.Info("Using stored FGA data",
+		zap.String("store_id", fgaData.StoreID),
+		zap.String("authorization_model_id", fgaData.AuthorizationModelID))
+
+	err = fgaClient.SetStoreId(fgaData.StoreID)
+	if err != nil {
+		panic(err)
+	}
+	err = fgaClient.SetAuthorizationModelId(fgaData.AuthorizationModelID)
+	if err != nil {
+		panic(err)
+	}
+	if fgaReplicaClient != nil {
+		err = fgaReplicaClient.SetStoreId(fgaData.StoreID)
 		if err != nil {
 			panic(err)
 		}
-
-	} else {
-		panic(err)
+		err = fgaReplicaClient.SetAuthorizationModelId(fgaData.AuthorizationModelID)
+		if err != nil {
+			panic(err)
+		}
 	}
+	aclClient = acl.NewACLClient(fgaClient, fgaReplicaClient, redisClient)
 
 	if config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "" {
 		tlsConfig = &tls.Config{
@@ -234,11 +247,11 @@ func main() {
 	publicGrpcS := grpc.NewServer(grpcServerOpts...)
 	reflection.Register(publicGrpcS)
 
-	mgmtPB.RegisterMgmtPrivateServiceServer(
+	mgmtpb.RegisterMgmtPrivateServiceServer(
 		privateGrpcS,
 		handler.NewPrivateHandler(service),
 	)
-	mgmtPB.RegisterMgmtPublicServiceServer(
+	mgmtpb.RegisterMgmtPublicServiceServer(
 		publicGrpcS,
 		handler.NewPublicHandler(service, usg, config.Config.Server.Usage.Enabled),
 	)
@@ -272,7 +285,7 @@ func main() {
 		dialOpts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(constant.MaxPayloadSize), grpc.MaxCallSendMsgSize(constant.MaxPayloadSize))}
 	}
 
-	if err := mgmtPB.RegisterMgmtPublicServiceHandlerFromEndpoint(ctx, publicServeMux, fmt.Sprintf(":%v", config.Config.Server.PublicPort), dialOpts); err != nil {
+	if err := mgmtpb.RegisterMgmtPublicServiceHandlerFromEndpoint(ctx, publicServeMux, fmt.Sprintf(":%v", config.Config.Server.PublicPort), dialOpts); err != nil {
 		logger.Fatal(err.Error())
 	}
 

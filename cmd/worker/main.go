@@ -23,12 +23,6 @@ import (
 	mgmtworker "github.com/instill-ai/mgmt-backend/pkg/worker"
 )
 
-var (
-	// These variables might be overridden at buildtime.
-	// version     = "dev"
-	// serviceName = "mgmt-backend"
-)
-
 func initTemporalNamespace(ctx context.Context, client client.Client) {
 	logger, _ := logger.GetZapLogger(ctx)
 

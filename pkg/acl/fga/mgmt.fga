@@ -1,0 +1,20 @@
+module mgmt
+
+type user
+type visitor
+type code
+
+type organization
+  relations
+    define owner: [user]
+    define admin: [user] or owner
+    define member: [user] or admin or owner
+    define pending_owner: [user]
+    define pending_admin: [user]
+    define pending_member: [user]
+    define can_create_organization: owner
+    define can_delete_organization: owner
+    define can_get_membership: owner or admin or member
+    define can_remove_membership: owner or admin
+    define can_set_membership: owner or admin
+    define can_update_organization: owner or admin

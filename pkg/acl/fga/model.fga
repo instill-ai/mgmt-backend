@@ -1,0 +1,10 @@
+module model
+
+# model is a preserved word, so we use model_ to avoid conflict
+type model_
+  relations
+    define owner: [organization, user]
+    define admin: [user] or owner or member from owner
+    define writer: [user] or admin or member from owner
+    define executor: [user, user:*, code] or writer or member from owner
+    define reader: [user, user:*, code, visitor:*] or executor or member from owner

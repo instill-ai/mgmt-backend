@@ -116,3 +116,13 @@ func (o *OnboardingStatus) Scan(value interface{}) error {
 func (o OnboardingStatus) Value() (driver.Value, error) {
 	return mgmtPB.OnboardingStatus(o).String(), nil
 }
+
+type FGAMigration struct {
+	StoreID              string `gorm:"column:store_id"`
+	AuthorizationModelID string `gorm:"column:authorization_model_id"`
+	MD5Hash              string `gorm:"column:md5_hash"`
+}
+
+func (FGAMigration) TableName() string {
+	return "fga_migrations"
+}
