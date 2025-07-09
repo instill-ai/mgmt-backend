@@ -203,8 +203,7 @@ func runFGAMigration(ctx context.Context, db *gorm.DB) error {
 	var err error
 
 	fgaClient, err = openfgaclient.NewSdkClient(&openfgaclient.ClientConfiguration{
-		ApiScheme: "http",
-		ApiHost:   fmt.Sprintf("%s:%d", config.Config.OpenFGA.Host, config.Config.OpenFGA.Port),
+		ApiUrl: fmt.Sprintf("http://%s:%d", config.Config.OpenFGA.Host, config.Config.OpenFGA.Port),
 	})
 	if err != nil {
 		return fmt.Errorf("creating FGA client: %w", err)

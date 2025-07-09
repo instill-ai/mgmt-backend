@@ -146,8 +146,7 @@ func main() {
 	defer redisClient.Close()
 
 	fgaClient, err := openfgaclient.NewSdkClient(&openfgaclient.ClientConfiguration{
-		ApiScheme: "http",
-		ApiHost:   fmt.Sprintf("%s:%d", config.Config.OpenFGA.Host, config.Config.OpenFGA.Port),
+		ApiUrl: fmt.Sprintf("http://%s:%d", config.Config.OpenFGA.Host, config.Config.OpenFGA.Port),
 	})
 
 	if err != nil {
@@ -158,8 +157,7 @@ func main() {
 	if config.Config.OpenFGA.Replica.Host != "" {
 
 		fgaReplicaClient, err = openfgaclient.NewSdkClient(&openfgaclient.ClientConfiguration{
-			ApiScheme: "http",
-			ApiHost:   fmt.Sprintf("%s:%d", config.Config.OpenFGA.Replica.Host, config.Config.OpenFGA.Replica.Port),
+			ApiUrl: fmt.Sprintf("http://%s:%d", config.Config.OpenFGA.Replica.Host, config.Config.OpenFGA.Replica.Port),
 		})
 		if err != nil {
 			panic(err)
@@ -181,13 +179,21 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	err = fgaClient.SetAuthorizationModelId(fgaData.AuthorizationModelID)
+	if err != nil {
+		panic(err)
+	}
 	if fgaReplicaClient != nil {
 		err = fgaReplicaClient.SetStoreId(fgaData.StoreID)
 		if err != nil {
 			panic(err)
 		}
+		err = fgaReplicaClient.SetAuthorizationModelId(fgaData.AuthorizationModelID)
+		if err != nil {
+			panic(err)
+		}
 	}
-	aclClient = acl.NewACLClient(fgaClient, fgaReplicaClient, redisClient, fgaData.AuthorizationModelID)
+	aclClient = acl.NewACLClient(fgaClient, fgaReplicaClient, redisClient)
 
 	if config.Config.Server.HTTPS.Cert != "" && config.Config.Server.HTTPS.Key != "" {
 		tlsConfig = &tls.Config{

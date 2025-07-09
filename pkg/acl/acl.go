@@ -19,10 +19,9 @@ import (
 )
 
 type ACLClient struct {
-	writeClient          *openfgaClient.OpenFgaClient
-	readClient           *openfgaClient.OpenFgaClient
-	redisClient          *redis.Client
-	authorizationModelID *string
+	writeClient *openfgaClient.OpenFgaClient
+	readClient  *openfgaClient.OpenFgaClient
+	redisClient *redis.Client
 }
 
 type Relation struct {
@@ -37,16 +36,15 @@ const (
 	WriteMode Mode = "write"
 )
 
-func NewACLClient(wc *openfgaClient.OpenFgaClient, rc *openfgaClient.OpenFgaClient, redisClient *redis.Client, a string) ACLClient {
+func NewACLClient(wc *openfgaClient.OpenFgaClient, rc *openfgaClient.OpenFgaClient, redisClient *redis.Client) ACLClient {
 	if rc == nil {
 		rc = wc
 	}
 
 	return ACLClient{
-		writeClient:          wc,
-		readClient:           rc,
-		redisClient:          redisClient,
-		authorizationModelID: &a,
+		writeClient: wc,
+		readClient:  rc,
+		redisClient: redisClient,
 	}
 }
 
@@ -72,9 +70,6 @@ func (c *ACLClient) getClient(ctx context.Context, mode Mode) *openfgaClient.Ope
 
 func (c *ACLClient) SetOrganizationUserMembership(ctx context.Context, orgUID uuid.UUID, userUID uuid.UUID, role string) error {
 	var err error
-	options := openfgaClient.ClientWriteOptions{
-		AuthorizationModelId: c.authorizationModelID,
-	}
 
 	_ = c.DeleteOrganizationUserMembership(ctx, orgUID, userUID)
 
@@ -87,7 +82,7 @@ func (c *ACLClient) SetOrganizationUserMembership(ctx context.Context, orgUID uu
 			}},
 	}
 
-	_, err = c.getClient(ctx, WriteMode).Write(ctx).Body(body).Options(options).Execute()
+	_, err = c.getClient(ctx, WriteMode).Write(ctx).Body(body).Execute()
 	if err != nil {
 		return err
 	}
@@ -95,10 +90,6 @@ func (c *ACLClient) SetOrganizationUserMembership(ctx context.Context, orgUID uu
 }
 
 func (c *ACLClient) DeleteOrganizationUserMembership(ctx context.Context, orgUID uuid.UUID, userUID uuid.UUID) error {
-	// var err error
-	options := openfgaClient.ClientWriteOptions{
-		AuthorizationModelId: c.authorizationModelID,
-	}
 
 	for _, role := range []string{"owner", "admin", "member", "pending_owner", "pending_admin", "pending_member"} {
 		body := openfgaClient.ClientWriteRequest{
@@ -108,7 +99,7 @@ func (c *ACLClient) DeleteOrganizationUserMembership(ctx context.Context, orgUID
 					Relation: role,
 					Object:   fmt.Sprintf("organization:%s", orgUID.String()),
 				}}}
-		_, _ = c.getClient(ctx, WriteMode).Write(ctx).Body(body).Options(options).Execute()
+		_, _ = c.getClient(ctx, WriteMode).Write(ctx).Body(body).Execute()
 
 	}
 
@@ -116,15 +107,12 @@ func (c *ACLClient) DeleteOrganizationUserMembership(ctx context.Context, orgUID
 }
 
 func (c *ACLClient) CheckOrganizationUserMembership(ctx context.Context, orgUID uuid.UUID, userUID uuid.UUID, role string) (bool, error) {
-	options := openfgaClient.ClientCheckOptions{
-		AuthorizationModelId: c.authorizationModelID,
-	}
 	body := openfgaClient.ClientCheckRequest{
 		User:     fmt.Sprintf("user:%s", userUID.String()),
 		Relation: role,
 		Object:   fmt.Sprintf("organization:%s", orgUID.String()),
 	}
-	data, err := c.getClient(ctx, ReadMode).Check(ctx).Body(body).Options(options).Execute()
+	data, err := c.getClient(ctx, ReadMode).Check(ctx).Body(body).Execute()
 	if err != nil {
 		return false, err
 	}
@@ -217,15 +205,12 @@ func (c *ACLClient) GetUserOrganizations(ctx context.Context, userUID uuid.UUID)
 
 func (c *ACLClient) CheckPermission(ctx context.Context, objectType string, objectUID uuid.UUID, userType string, userUID uuid.UUID, code string, role string) (bool, error) {
 
-	options := openfgaClient.ClientCheckOptions{
-		AuthorizationModelId: c.authorizationModelID,
-	}
 	body := openfgaClient.ClientCheckRequest{
 		User:     fmt.Sprintf("%s:%s", userType, userUID.String()),
 		Relation: role,
 		Object:   fmt.Sprintf("%s:%s", objectType, objectUID.String()),
 	}
-	data, err := c.getClient(ctx, ReadMode).Check(ctx).Body(body).Options(options).Execute()
+	data, err := c.getClient(ctx, ReadMode).Check(ctx).Body(body).Execute()
 	if err != nil {
 		return false, err
 	}
@@ -241,7 +226,7 @@ func (c *ACLClient) CheckPermission(ctx context.Context, objectType string, obje
 		Relation: role,
 		Object:   fmt.Sprintf("%s:%s", objectType, objectUID.String()),
 	}
-	data, err = c.getClient(ctx, ReadMode).Check(ctx).Body(body).Options(options).Execute()
+	data, err = c.getClient(ctx, ReadMode).Check(ctx).Body(body).Execute()
 
 	if err != nil {
 		return false, err

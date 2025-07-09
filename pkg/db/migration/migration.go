@@ -66,8 +66,7 @@ func (fm *FGAMigration) Migrate() error {
 
 	// Create OpenFGA client
 	fgaClient, err := openfgaClient.NewSdkClient(&openfgaClient.ClientConfiguration{
-		ApiScheme: "http",
-		ApiHost:   fmt.Sprintf("%s:%d", fm.Config.OpenFGA.Host, fm.Config.OpenFGA.Port),
+		ApiUrl: fmt.Sprintf("http://%s:%d", fm.Config.OpenFGA.Host, fm.Config.OpenFGA.Port),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create OpenFGA client: %w", err)
