@@ -20,11 +20,11 @@ import (
 
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
-	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/x/paginate"
 
 	errdomain "github.com/instill-ai/mgmt-backend/pkg/errors"
 	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	logx "github.com/instill-ai/x/log"
 )
 
 // Default aggregate window
@@ -55,7 +55,7 @@ type influxDB struct {
 
 // MustNewInfluxDB returns an initialized InfluxDB repository.
 func MustNewInfluxDB(ctx context.Context, cfg config.AppConfig) InfluxDB {
-	logger, _ := logger.GetZapLogger(ctx)
+	logger, _ := logx.GetZapLogger(ctx)
 
 	opts := client.DefaultOptions()
 	if cfg.Server.Debug {
@@ -118,7 +118,7 @@ func (i *influxDB) Bucket() string {
 
 func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerTableRecord, totalSize int64, nextPageToken string, err error) {
 
-	logger, _ := logger.GetZapLogger(ctx)
+	logger, _ := logx.GetZapLogger(ctx)
 
 	if pageSize == 0 {
 		pageSize = DefaultPageSize
@@ -308,7 +308,7 @@ func (i *influxDB) QueryPipelineTriggerTableRecords(ctx context.Context, owner s
 
 func (i *influxDB) QueryPipelineTriggerChartRecordsV0(ctx context.Context, owner string, ownerQueryString string, aggregationWindow int64, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerChartRecordV0, err error) {
 
-	logger, _ := logger.GetZapLogger(ctx)
+	logger, _ := logx.GetZapLogger(ctx)
 
 	start := time.Time{}.Format(time.RFC3339Nano)
 	stop := time.Now().Format(time.RFC3339Nano)
@@ -475,7 +475,7 @@ func (i *influxDB) getTriggerCount(
 	p GetTriggerCountParams,
 	measurement string,
 ) ([]*mgmtpb.TriggerCount, error) {
-	l, _ := logger.GetZapLogger(ctx)
+	l, _ := logx.GetZapLogger(ctx)
 	l = l.With(
 		zap.Reflect("triggerCountParams", p),
 		zap.String("measurement", measurement),
@@ -600,7 +600,7 @@ func (i *influxDB) ListPipelineTriggerChartRecords(
 	ctx context.Context,
 	p ListTriggerChartRecordsParams,
 ) (*mgmtpb.ListPipelineTriggerChartRecordsResponse, error) {
-	l, _ := logger.GetZapLogger(ctx)
+	l, _ := logx.GetZapLogger(ctx)
 	l = l.With(
 		zap.Reflect("triggerChartParams", p),
 		zap.String("measurement", pipelineTriggerMeasurement),
@@ -653,7 +653,7 @@ func (i *influxDB) ListModelTriggerChartRecords(
 	ctx context.Context,
 	p ListTriggerChartRecordsParams,
 ) (*mgmtpb.ListModelTriggerChartRecordsResponse, error) {
-	l, _ := logger.GetZapLogger(ctx)
+	l, _ := logx.GetZapLogger(ctx)
 	l = l.With(
 		zap.Reflect("triggerChartParams", p),
 		zap.String("measurement", modelTriggerMeasurement),
@@ -794,7 +794,7 @@ func (i *influxDB) constructRecordQuery(
 }
 
 func (i *influxDB) QueryPipelineTriggerRecords(ctx context.Context, owner string, ownerQueryString string, pageSize int64, pageToken string, filter filtering.Filter) (records []*mgmtpb.PipelineTriggerRecord, totalSize int64, nextPageToken string, err error) {
-	logger, _ := logger.GetZapLogger(ctx)
+	logger, _ := logx.GetZapLogger(ctx)
 	query, total, err := i.constructRecordQuery(ctx, ownerQueryString, pageSize, pageToken, filter, constant.PipelineTriggerMeasurement, constant.TriggerTime)
 	if err != nil {
 		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Invalid query: %s", err.Error())

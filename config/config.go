@@ -13,6 +13,9 @@ import (
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/redis/go-redis/v9"
+
+	"github.com/instill-ai/x/client"
+	"github.com/instill-ai/x/temporal"
 )
 
 // Config - Global variable to export
@@ -25,9 +28,9 @@ type AppConfig struct {
 	Cache           CacheConfig           `koanf:"cache"`
 	Log             LogConfig             `koanf:"log"`
 	InfluxDB        InfluxDBConfig        `koanf:"influxdb"`
-	PipelineBackend PipelineBackendConfig `koanf:"pipelinebackend"`
+	PipelineBackend client.ServiceConfig  `koanf:"pipelinebackend"`
 	OpenFGA         OpenFGAConfig         `koanf:"openfga"`
-	Temporal        TemporalConfig        `koanf:"temporal"`
+	Temporal        temporal.ClientConfig `koanf:"temporal"`
 }
 
 // ServerConfig defines HTTP server configurations
@@ -50,18 +53,7 @@ type ServerConfig struct {
 	InstillCoreHost string `koanf:"instillcorehost"`
 }
 
-// TemporalConfig related to Temporal
-type TemporalConfig struct {
-	HostPort   string `koanf:"hostport"`
-	Namespace  string `koanf:"namespace"`
-	Retention  string `koanf:"retention"`
-	Ca         string `koanf:"ca"`
-	Cert       string `koanf:"cert"`
-	Key        string `koanf:"key"`
-	ServerName string `koanf:"servername"`
-}
-
-// OpenFGA config
+// OpenFGAConfig related to OpenFGA
 type OpenFGAConfig struct {
 	Host    string `koanf:"host"`
 	Port    int    `koanf:"port"`
@@ -76,16 +68,6 @@ type OpenFGAConfig struct {
 type CacheConfig struct {
 	Redis struct {
 		RedisOptions redis.Options `koanf:"redisoptions"`
-	}
-}
-
-// PipelineBackendConfig related to pipeline-backend
-type PipelineBackendConfig struct {
-	Host       string `koanf:"host"`
-	PublicPort int    `koanf:"publicport"`
-	HTTPS      struct {
-		Cert string `koanf:"cert"`
-		Key  string `koanf:"key"`
 	}
 }
 

@@ -12,21 +12,11 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/instill-ai/mgmt-backend/pkg/logger"
+	logx "github.com/instill-ai/x/log"
 )
-
-// GetRequestSingleHeader get a request header, the header has to be single-value HTTP header
-func GetRequestSingleHeader(ctx context.Context, header string) string {
-	metaHeader := metadata.ValueFromIncomingContext(ctx, strings.ToLower(header))
-	if len(metaHeader) != 1 {
-		return ""
-	}
-	return metaHeader[0]
-}
 
 // CustomMatcher is a callback function for gRPC-Gateway runtime.WithIncomingHeaderMatcher
 func CustomMatcher(key string) (string, bool) {
@@ -74,7 +64,7 @@ func HTTPResponseModifier(ctx context.Context, w http.ResponseWriter, p proto.Me
 
 // ErrorHandler is a callback function for gRPC-Gateway runtime.WithErrorHandler
 func ErrorHandler(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.Marshaler, w http.ResponseWriter, r *http.Request, err error) {
-	logger, _ := logger.GetZapLogger(ctx)
+	logger, _ := logx.GetZapLogger(ctx)
 
 	// return Internal when Marshal failed
 	const fallback = `{"code": 13, "message": "failed to marshal error message"}`

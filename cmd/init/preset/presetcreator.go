@@ -15,7 +15,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 
-	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 )
 
 func CreatePresetOrg(ctx context.Context, r repository.Repository) error {
@@ -25,7 +25,7 @@ func CreatePresetOrg(ctx context.Context, r repository.Repository) error {
 	presetOrg := &datamodel.Owner{
 		Base:        datamodel.Base{UID: uuid.FromStringOrNil(constant.PresetOrgUID)},
 		ID:          constant.PresetOrgID,
-		OwnerType:   sql.NullString{String: service.PBUserType2DBUserType[mgmtPB.OwnerType_OWNER_TYPE_ORGANIZATION], Valid: true},
+		OwnerType:   sql.NullString{String: service.PBUserType2DBUserType[mgmtpb.OwnerType_OWNER_TYPE_ORGANIZATION], Valid: true},
 		DisplayName: sql.NullString{String: constant.PresetOrgDisplayName, Valid: true},
 	}
 

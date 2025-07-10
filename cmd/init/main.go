@@ -9,7 +9,6 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/redis/go-redis/v9"
-	"go.opentelemetry.io/otel"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -21,14 +20,54 @@ import (
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
-	"github.com/instill-ai/mgmt-backend/pkg/logger"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 
 	database "github.com/instill-ai/mgmt-backend/pkg/db"
-	customotel "github.com/instill-ai/mgmt-backend/pkg/logger/otel"
 	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	logx "github.com/instill-ai/x/log"
 )
+
+func main() {
+	if err := config.Init(config.ParseConfigFlag()); err != nil {
+		log.Fatal(err.Error())
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	logx.Debug = config.Config.Server.Debug
+	logger, _ := logx.GetZapLogger(ctx)
+	defer func() {
+		// can't handle the error due to https://github.com/uber-go/zap/issues/880
+		_ = logger.Sync()
+	}()
+
+	// Set gRPC logging based on debug mode
+	if config.Config.Server.Debug {
+		grpczap.ReplaceGrpcLoggerV2WithVerbosity(logger, 0) // All logs
+	} else {
+		grpczap.ReplaceGrpcLoggerV2WithVerbosity(logger, 3) // verbosity 3 will avoid [transport] from emitting
+	}
+
+	db := database.GetConnection(&config.Config.Database)
+	defer database.Close(db)
+
+	redisClient := redis.NewClient(&config.Config.Cache.Redis.RedisOptions)
+	defer redisClient.Close()
+	r := repository.NewRepository(db, redisClient)
+
+	// Create a default user
+	if err := createDefaultUser(ctx, r); err != nil {
+		logger.Fatal(err.Error())
+	}
+
+	// Create preset organization
+	if err := preset.CreatePresetOrg(ctx, r); err != nil {
+		logger.Fatal(err.Error())
+	}
+
+}
 
 // CreateDefaultUser creates a default user in the database
 // Return error types
@@ -97,52 +136,4 @@ func createDefaultUser(ctx context.Context, r repository.Repository) error {
 		return err
 	}
 	return nil
-}
-
-func main() {
-	if err := config.Init(config.ParseConfigFlag()); err != nil {
-		log.Fatal(err.Error())
-	}
-
-	// setup tracing and metrics
-	ctx, cancel := context.WithCancel(context.Background())
-
-	if tp, err := customotel.SetupTracing(ctx, "mgmt-backend-init"); err != nil {
-		panic(err)
-	} else {
-		defer func() {
-			err = tp.Shutdown(ctx)
-		}()
-	}
-
-	ctx, span := otel.Tracer("init-tracer").Start(ctx,
-		"main",
-	)
-	defer span.End()
-	defer cancel()
-
-	logger, _ := logger.GetZapLogger(ctx)
-	defer func() {
-		// can't handle the error due to https://github.com/uber-go/zap/issues/880
-		_ = logger.Sync()
-	}()
-	grpczap.ReplaceGrpcLoggerV2(logger)
-
-	db := database.GetConnection(&config.Config.Database)
-	defer database.Close(db)
-
-	redisClient := redis.NewClient(&config.Config.Cache.Redis.RedisOptions)
-	defer redisClient.Close()
-	r := repository.NewRepository(db, redisClient)
-
-	// Create a default user
-	if err := createDefaultUser(ctx, r); err != nil {
-		logger.Fatal(err.Error())
-	}
-
-	// Create preset organization
-	if err := preset.CreatePresetOrg(ctx, r); err != nil {
-		logger.Fatal(err.Error())
-	}
-
 }

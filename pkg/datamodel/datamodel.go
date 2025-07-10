@@ -9,7 +9,7 @@ import (
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
-	mgmtPB "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 )
 
 type TokenState int32
@@ -29,7 +29,7 @@ const (
 	// STATE_EXPIRED TokenState = 3
 )
 
-type OnboardingStatus mgmtPB.OnboardingStatus
+type OnboardingStatus mgmtpb.OnboardingStatus
 
 const (
 	OnboardingStatusUnspecified OnboardingStatus = 0
@@ -97,24 +97,24 @@ func (token *Token) BeforeCreate(db *gorm.DB) error {
 
 // Scan function for custom GORM type PipelineMode
 func (s *TokenState) Scan(value interface{}) error {
-	*s = TokenState(mgmtPB.ApiToken_State_value[value.(string)])
+	*s = TokenState(mgmtpb.ApiToken_State_value[value.(string)])
 	return nil
 }
 
 // Value function for custom GORM type PipelineMode
 func (s TokenState) Value() (driver.Value, error) {
-	return mgmtPB.ApiToken_State(s).String(), nil
+	return mgmtpb.ApiToken_State(s).String(), nil
 }
 
 // Scan function for custom GORM type OnboardingStatus
 func (o *OnboardingStatus) Scan(value interface{}) error {
-	*o = OnboardingStatus(mgmtPB.OnboardingStatus_value[value.(string)])
+	*o = OnboardingStatus(mgmtpb.OnboardingStatus_value[value.(string)])
 	return nil
 }
 
 // Value function for custom GORM type OnboardingStatus
 func (o OnboardingStatus) Value() (driver.Value, error) {
-	return mgmtPB.OnboardingStatus(o).String(), nil
+	return mgmtpb.OnboardingStatus(o).String(), nil
 }
 
 type FGAMigration struct {
