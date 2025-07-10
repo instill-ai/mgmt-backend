@@ -79,7 +79,8 @@ func (fm *FGAMigration) Migrate() error {
 	}
 
 	if len(stores.Stores) == 0 {
-		return fmt.Errorf("no OpenFGA stores found")
+		fm.Logger.Info("No OpenFGA stores found, skipping FGA migration")
+		return nil
 	}
 
 	storeID := stores.Stores[0].Id
