@@ -55,7 +55,7 @@ temporal:
   hostport: temporal:7233
   namespace: mgmt-backend
   retention: 1d
-  ca:
-  cert:
-  key:
+  serverrootca:
+  clientcert:
+  clientkey:
   servername:
