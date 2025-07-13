@@ -43,11 +43,10 @@ influxdb:
   https:
     cert:
     key:
-log:
-  external: false
-  otelcollector:
-    host: otel-collector
-    port: 8095
+otelcollector:
+  enable: false
+  host: otel-collector
+  port: 4317
 openfga:
   host: openfga
   port: 8080
@@ -55,7 +54,9 @@ temporal:
   hostport: temporal:7233
   namespace: mgmt-backend
   retention: 1d
+  metricsport: 8096
+  servername:
   serverrootca:
   clientcert:
   clientkey:
-  servername:
+  insecureskipverify:

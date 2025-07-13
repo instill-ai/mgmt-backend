@@ -24,6 +24,7 @@ import (
 
 	healthcheckpb "github.com/instill-ai/protogen-go/common/healthcheck/v1beta"
 	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	errorsx "github.com/instill-ai/x/errors"
 )
 
 // TODO: Validate mask based on the field behavior. Currently, the fields are hard-coded.
@@ -253,13 +254,13 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtpb.
 	// Handle immutable fields from the update mask
 	err = checkfield.CheckUpdateImmutableFields(reqUser, pbUserToUpdate, immutableFields)
 	if err != nil {
-		return nil, ErrCheckUpdateImmutableFields
+		return nil, errorsx.ErrCheckUpdateImmutableFields
 	}
 
 	// Only the fields mentioned in the field mask will be copied to `pbUserToUpdate`, other fields are left intact
 	err = fieldmask_utils.StructToStruct(mask, reqUser, pbUserToUpdate)
 	if err != nil {
-		return nil, ErrFieldMask
+		return nil, errorsx.ErrFieldMask
 	}
 
 	pbUserUpdated, err := h.Service.UpdateAuthenticatedUser(ctx, ctxUserUID, pbUserToUpdate)
@@ -284,7 +285,7 @@ func (h *PublicHandler) CheckNamespace(ctx context.Context, req *mgmtpb.CheckNam
 
 	err := checkfield.CheckResourceID(req.GetId())
 	if err != nil {
-		return nil, ErrResourceID
+		return nil, errorsx.ErrResourceID
 	}
 
 	_, err = h.Service.GetUserAdmin(ctx, req.GetId())
@@ -310,17 +311,17 @@ func (h *PublicHandler) CreateOrganization(ctx context.Context, req *mgmtpb.Crea
 
 	// Set all OUTPUT_ONLY fields to zero value on the requested payload organization resource
 	if err := checkfield.CheckCreateOutputOnlyFields(req.Organization, outputOnlyFieldsForOrganization); err != nil {
-		return nil, ErrCheckOutputOnlyFields
+		return nil, errorsx.ErrCheckOutputOnlyFields
 	}
 
 	// Return error if REQUIRED fields are not provided in the requested payload organization resource
 	if err := checkfield.CheckRequiredFields(req.Organization, createRequiredFieldsForOrganization); err != nil {
-		return nil, ErrCheckRequiredFields
+		return nil, errorsx.ErrCheckRequiredFields
 	}
 
 	// Return error if resource ID does not follow RFC-1034
 	if err := checkfield.CheckResourceID(req.Organization.GetId()); err != nil {
-		return nil, ErrResourceID
+		return nil, errorsx.ErrResourceID
 	}
 
 	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
@@ -399,7 +400,7 @@ func (h *PublicHandler) UpdateOrganization(ctx context.Context, req *mgmtpb.Upda
 
 	// Validate the field mask
 	if !pbUpdateMask.IsValid(pbOrgReq) {
-		return nil, ErrUpdateMask
+		return nil, errorsx.ErrUpdateMask
 	}
 
 	getResp, err := h.GetOrganization(ctx, &mgmtpb.GetOrganizationRequest{OrganizationId: req.OrganizationId})
@@ -409,7 +410,7 @@ func (h *PublicHandler) UpdateOrganization(ctx context.Context, req *mgmtpb.Upda
 
 	mask, err := fieldmask_utils.MaskFromProtoFieldMask(pbUpdateMask, strcase.ToCamel)
 	if err != nil {
-		return nil, ErrFieldMask
+		return nil, errorsx.ErrFieldMask
 	}
 
 	if mask.IsEmpty() {
@@ -422,13 +423,13 @@ func (h *PublicHandler) UpdateOrganization(ctx context.Context, req *mgmtpb.Upda
 
 	// Return error if IMMUTABLE fields are intentionally changed
 	if err := checkfield.CheckUpdateImmutableFields(pbOrgReq, pbOrgToUpdate, immutableFields); err != nil {
-		return nil, ErrCheckUpdateImmutableFields
+		return nil, errorsx.ErrCheckUpdateImmutableFields
 	}
 
 	// Only the fields mentioned in the field mask will be copied to `pbPipelineToUpdate`, other fields are left intact
 	err = fieldmask_utils.StructToStruct(mask, pbOrgReq, pbOrgToUpdate)
 	if err != nil {
-		return nil, ErrFieldMask
+		return nil, errorsx.ErrFieldMask
 	}
 
 	pbOrg, err := h.Service.UpdateOrganization(ctx, ctxUserUID, req.OrganizationId, pbOrgToUpdate)
@@ -479,22 +480,22 @@ func (h *PublicHandler) CreateToken(ctx context.Context, req *mgmtpb.CreateToken
 
 	// Set all OUTPUT_ONLY fields to zero value on the requested payload token resource
 	if err := checkfield.CheckCreateOutputOnlyFields(req.Token, outputOnlyFieldsForToken); err != nil {
-		return &mgmtpb.CreateTokenResponse{}, ErrCheckOutputOnlyFields
+		return &mgmtpb.CreateTokenResponse{}, errorsx.ErrCheckOutputOnlyFields
 	}
 
 	// Return error if REQUIRED fields are not provided in the requested payload token resource
 	if err := checkfield.CheckRequiredFields(req.Token, createRequiredFieldsForToken); err != nil {
-		return &mgmtpb.CreateTokenResponse{}, ErrCheckRequiredFields
+		return &mgmtpb.CreateTokenResponse{}, errorsx.ErrCheckRequiredFields
 	}
 
 	// Return error if resource ID does not follow RFC-1034
 	if err := checkfield.CheckResourceID(req.Token.GetId()); err != nil {
-		return &mgmtpb.CreateTokenResponse{}, ErrResourceID
+		return &mgmtpb.CreateTokenResponse{}, errorsx.ErrResourceID
 	}
 
 	// Return error if expiration is not provided
 	if req.Token.GetExpiration() == nil {
-		return &mgmtpb.CreateTokenResponse{}, ErrCheckRequiredFields
+		return &mgmtpb.CreateTokenResponse{}, errorsx.ErrCheckRequiredFields
 	}
 
 	err = h.Service.CreateToken(ctx, ctxUserUID, req.Token)
@@ -861,11 +862,11 @@ func (h *PublicHandler) UpdateUserMembership(ctx context.Context, req *mgmtpb.Up
 	}
 
 	if err := checkfield.CheckRequiredFields(req.Membership, requiredFieldsForUserMembership); err != nil {
-		return nil, ErrCheckRequiredFields
+		return nil, errorsx.ErrCheckRequiredFields
 	}
 
 	if err := checkfield.CheckCreateOutputOnlyFields(req.Membership, outputOnlyFieldsForUserMembership); err != nil {
-		return nil, ErrCheckOutputOnlyFields
+		return nil, errorsx.ErrCheckOutputOnlyFields
 	}
 
 	pbMembership, err := h.Service.UpdateUserMembership(ctx, ctxUserUID, req.UserId, req.OrganizationId, req.Membership)
@@ -947,11 +948,11 @@ func (h *PublicHandler) UpdateOrganizationMembership(ctx context.Context, req *m
 	}
 
 	if err := checkfield.CheckRequiredFields(req.Membership, requiredFieldsForOrganizationMembership); err != nil {
-		return nil, ErrCheckRequiredFields
+		return nil, errorsx.ErrCheckRequiredFields
 	}
 
 	if err := checkfield.CheckCreateOutputOnlyFields(req.Membership, outputOnlyFieldsForOrganizationMembership); err != nil {
-		return nil, ErrCheckOutputOnlyFields
+		return nil, errorsx.ErrCheckOutputOnlyFields
 	}
 
 	pbMembership, err := h.Service.UpdateOrganizationMembership(ctx, ctxUserUID, req.OrganizationId, req.UserId, req.Membership)

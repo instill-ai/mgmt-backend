@@ -65,7 +65,7 @@ func main() {
 	codeMigrator, cleanup := initCodeMigrator(ctx, logger)
 	defer cleanup()
 
-	runMigration(dsn, uint(db.TargetSchemaVersion), codeMigrator.Migrate, logger)
+	runMigration(dsn, uint(migration.TargetSchemaVersion), codeMigrator.Migrate, logger)
 
 }
 

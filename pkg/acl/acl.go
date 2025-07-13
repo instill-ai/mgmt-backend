@@ -16,6 +16,8 @@ import (
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/internal/resource"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
+
+	errorsx "github.com/instill-ai/x/errors"
 )
 
 type ACLClient struct {
@@ -36,6 +38,7 @@ const (
 	WriteMode Mode = "write"
 )
 
+// NewACLClient creates a new ACL client.
 func NewACLClient(wc *openfgaClient.OpenFgaClient, rc *openfgaClient.OpenFgaClient, redisClient *redis.Client) ACLClient {
 	if rc == nil {
 		rc = wc
@@ -68,6 +71,7 @@ func (c *ACLClient) getClient(ctx context.Context, mode Mode) *openfgaClient.Ope
 	return c.writeClient
 }
 
+// SetOrganizationUserMembership sets the membership of a user in an organization.
 func (c *ACLClient) SetOrganizationUserMembership(ctx context.Context, orgUID uuid.UUID, userUID uuid.UUID, role string) error {
 	var err error
 
@@ -89,6 +93,7 @@ func (c *ACLClient) SetOrganizationUserMembership(ctx context.Context, orgUID uu
 	return nil
 }
 
+// DeleteOrganizationUserMembership deletes the membership of a user in an organization.
 func (c *ACLClient) DeleteOrganizationUserMembership(ctx context.Context, orgUID uuid.UUID, userUID uuid.UUID) error {
 
 	for _, role := range []string{"owner", "admin", "member", "pending_owner", "pending_admin", "pending_member"} {
@@ -106,6 +111,7 @@ func (c *ACLClient) DeleteOrganizationUserMembership(ctx context.Context, orgUID
 	return nil
 }
 
+// CheckOrganizationUserMembership checks if a user has a specific role in an organization.
 func (c *ACLClient) CheckOrganizationUserMembership(ctx context.Context, orgUID uuid.UUID, userUID uuid.UUID, role string) (bool, error) {
 	body := openfgaClient.ClientCheckRequest{
 		User:     fmt.Sprintf("user:%s", userUID.String()),
@@ -120,6 +126,7 @@ func (c *ACLClient) CheckOrganizationUserMembership(ctx context.Context, orgUID 
 
 }
 
+// GetOrganizationUserMembership gets the membership of a user in an organization.
 func (c *ACLClient) GetOrganizationUserMembership(ctx context.Context, orgUID uuid.UUID, userUID uuid.UUID) (string, error) {
 	options := openfgaClient.ClientReadOptions{
 		PageSize: openfga.PtrInt32(1),
@@ -136,9 +143,10 @@ func (c *ACLClient) GetOrganizationUserMembership(ctx context.Context, orgUID uu
 	for _, tuple := range data.Tuples {
 		return tuple.Key.Relation, nil
 	}
-	return "", ErrMembershipNotFound
+	return "", errorsx.ErrMembershipNotFound
 }
 
+// GetOrganizationUsers gets the users of an organization.
 func (c *ACLClient) GetOrganizationUsers(ctx context.Context, orgUID uuid.UUID) ([]*Relation, error) {
 	options := openfgaClient.ClientReadOptions{
 		PageSize: openfga.PtrInt32(1),
@@ -171,6 +179,7 @@ func (c *ACLClient) GetOrganizationUsers(ctx context.Context, orgUID uuid.UUID) 
 	return relations, nil
 }
 
+// GetUserOrganizations gets the organizations of a user.
 func (c *ACLClient) GetUserOrganizations(ctx context.Context, userUID uuid.UUID) ([]*Relation, error) {
 	options := openfgaClient.ClientReadOptions{
 		PageSize: openfga.PtrInt32(1),
@@ -203,6 +212,7 @@ func (c *ACLClient) GetUserOrganizations(ctx context.Context, userUID uuid.UUID)
 	return relations, nil
 }
 
+// CheckPermission checks if a user has a specific permission on an object.
 func (c *ACLClient) CheckPermission(ctx context.Context, objectType string, objectUID uuid.UUID, userType string, userUID uuid.UUID, code string, role string) (bool, error) {
 
 	body := openfgaClient.ClientCheckRequest{

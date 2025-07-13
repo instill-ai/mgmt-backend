@@ -10,7 +10,6 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.einride.tech/aip/filtering"
 	"golang.org/x/crypto/bcrypt"
-	"google.golang.org/grpc/metadata"
 
 	"github.com/instill-ai/mgmt-backend/internal/resource"
 	"github.com/instill-ai/mgmt-backend/pkg/acl"
@@ -18,9 +17,10 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 
-	errdomain "github.com/instill-ai/mgmt-backend/pkg/errors"
 	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 	pipelinepb "github.com/instill-ai/protogen-go/pipeline/pipeline/v1beta"
+	errorsx "github.com/instill-ai/x/errors"
+	gatewayx "github.com/instill-ai/x/server/grpc/gateway"
 )
 
 // Service interface
@@ -134,7 +134,7 @@ func (s *service) convertUserIDAlias(ctx context.Context, ctxUserUID uuid.UUID, 
 	if id == "me" {
 		user, err := s.GetUserByUIDAdmin(ctx, ctxUserUID)
 		if err != nil {
-			return "", ErrUnauthenticated
+			return "", errorsx.ErrUnauthenticated
 		}
 		return user.Id, nil
 	}
@@ -148,16 +148,16 @@ func (s *service) ExtractCtxUser(ctx context.Context, allowVisitor bool) (userUI
 	if authType == "user" {
 		headerCtxUserUID := resource.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)
 		if headerCtxUserUID == "" {
-			return uuid.Nil, ErrUnauthenticated
+			return uuid.Nil, errorsx.ErrUnauthenticated
 		}
 		return uuid.FromStringOrNil(headerCtxUserUID), nil
 	} else {
 		if !allowVisitor {
-			return uuid.Nil, ErrUnauthenticated
+			return uuid.Nil, errorsx.ErrUnauthenticated
 		}
 		headerCtxVisitorUID := resource.GetRequestSingleHeader(ctx, constant.HeaderVisitorUIDKey)
 		if headerCtxVisitorUID == "" {
-			return uuid.Nil, ErrUnauthenticated
+			return uuid.Nil, errorsx.ErrUnauthenticated
 		}
 
 		return uuid.FromStringOrNil(headerCtxVisitorUID), nil
@@ -401,7 +401,7 @@ func (s *service) UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 		return nil, err
 	}
 	if !canUpdateOrganization {
-		return nil, errdomain.ErrUnauthorized
+		return nil, errorsx.ErrUnauthorized
 	}
 
 	// Update the user
@@ -436,7 +436,7 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 		return err
 	}
 	if !canDeleteOrganization {
-		return errdomain.ErrUnauthorized
+		return errorsx.ErrUnauthorized
 	}
 
 	err = s.deleteOrganizationFromCacheByID(ctx, id)
@@ -448,9 +448,10 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 	pageToken := ""
 	pipelineIDList := []string{}
 	for {
+		userUIDStr := ctxUserUID.String()
 		// TODO: optimize this cascade delete
 		//nolint:staticcheck
-		resp, err := s.pipelinePublicServiceClient.ListOrganizationPipelines(InjectOwnerToContext(ctx, ctxUserUID.String()),
+		resp, err := s.pipelinePublicServiceClient.ListOrganizationPipelines(gatewayx.InjectOwnerToContext(ctx, &mgmtpb.User{Uid: &userUIDStr}),
 			&pipelinepb.ListOrganizationPipelinesRequest{
 				Parent:    fmt.Sprintf("organizations/%s", id),
 				PageToken: &pageToken})
@@ -467,8 +468,9 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 	}
 
 	for _, pipelineID := range pipelineIDList {
+		userUIDStr := ctxUserUID.String()
 		//nolint:staticcheck
-		_, _ = s.pipelinePublicServiceClient.DeleteOrganizationPipeline(InjectOwnerToContext(ctx, ctxUserUID.String()),
+		_, _ = s.pipelinePublicServiceClient.DeleteOrganizationPipeline(gatewayx.InjectOwnerToContext(ctx, &mgmtpb.User{Uid: &userUIDStr}),
 			&pipelinepb.DeleteOrganizationPipelineRequest{
 				Name: fmt.Sprintf("organizations/%s/pipelines/%s", id, pipelineID),
 			})
@@ -556,7 +558,7 @@ func (s *service) CheckUserPassword(ctx context.Context, uid uuid.UUID, password
 
 	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
 	if err != nil {
-		return ErrPasswordNotMatch
+		return errorsx.ErrPasswordNotMatch
 	}
 	return nil
 }
@@ -596,7 +598,7 @@ func (s *service) CreateToken(ctx context.Context, ctxUserUID uuid.UUID, token *
 		} else if token.GetTtl() == -1 {
 			dbToken.ExpireTime = time.Date(2099, 12, 31, 0, 0, 0, 0, time.Now().UTC().Location())
 		} else {
-			return ErrInvalidTokenTTL
+			return errorsx.ErrInvalidTokenTTL
 		}
 	case *mgmtpb.ApiToken_ExpireTime:
 		dbToken.ExpireTime = token.GetExpireTime().AsTime()
@@ -669,14 +671,14 @@ func (s *service) ValidateToken(ctx context.Context, accessToken string) (string
 	if uid == uuid.Nil {
 		dbToken, err := s.repository.LookupToken(ctx, accessToken)
 		if err != nil {
-			return "", ErrUnauthenticated
+			return "", errorsx.ErrUnauthenticated
 		}
 		uid = uuid.FromStringOrNil(strings.Split(dbToken.Owner, "/")[1])
 		_ = s.setAPITokenToCache(ctx, dbToken.AccessToken, uid, dbToken.ExpireTime)
 
 	}
 	if uid == uuid.Nil {
-		return "", ErrUnauthenticated
+		return "", errorsx.ErrUnauthenticated
 	}
 	return uid.String(), nil
 }
@@ -695,7 +697,7 @@ func (s *service) ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID,
 		return nil, fmt.Errorf("users/%s: %w", userID, err)
 	}
 	if ctxUserUID != user.UID {
-		return nil, errdomain.ErrUnauthorized
+		return nil, errorsx.ErrUnauthorized
 	}
 
 	orgRelations, err := s.aclClient.GetUserOrganizations(ctx, user.UID)
@@ -749,7 +751,7 @@ func (s *service) GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, u
 		return nil, fmt.Errorf("users/%s: %w", userID, err)
 	}
 	if ctxUserUID != user.UID {
-		return nil, errdomain.ErrUnauthorized
+		return nil, errorsx.ErrUnauthorized
 	}
 	org, err := s.repository.GetOrganization(ctx, orgID, false)
 	if err != nil {
@@ -798,7 +800,7 @@ func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 		return nil, fmt.Errorf("users/%s: %w", userID, err)
 	}
 	if ctxUserUID != user.UID {
-		return nil, errdomain.ErrUnauthorized
+		return nil, errorsx.ErrUnauthorized
 	}
 	org, err := s.repository.GetOrganization(ctx, orgID, false)
 	if err != nil {
@@ -839,7 +841,7 @@ func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 		return updatedMembership, nil
 	}
 
-	return nil, ErrStateCanOnlyBeActive
+	return nil, errorsx.ErrStateCanOnlyBeActive
 }
 
 func (s *service) DeleteUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) error {
@@ -856,7 +858,7 @@ func (s *service) DeleteUserMembership(ctx context.Context, ctxUserUID uuid.UUID
 		return fmt.Errorf("users/%s: %w", userID, err)
 	}
 	if ctxUserUID != user.UID {
-		return errdomain.ErrUnauthorized
+		return errorsx.ErrUnauthorized
 	}
 	org, err := s.repository.GetOrganization(ctx, orgID, false)
 	if err != nil {
@@ -883,7 +885,7 @@ func (s *service) ListOrganizationMemberships(ctx context.Context, ctxUserUID uu
 		return nil, err
 	}
 	if !canGetMembership {
-		return nil, errdomain.ErrUnauthorized
+		return nil, errorsx.ErrUnauthorized
 	}
 
 	canSetMembership, err := s.aclClient.CheckOrganizationUserMembership(ctx, org.UID, ctxUserUID, "can_set_membership")
@@ -953,7 +955,7 @@ func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid
 		return nil, err
 	}
 	if !canGetMembership {
-		return nil, errdomain.ErrUnauthorized
+		return nil, errorsx.ErrUnauthorized
 	}
 	canSetMembership, err := s.aclClient.CheckOrganizationUserMembership(ctx, org.UID, ctxUserUID, "can_set_membership")
 	if err != nil {
@@ -982,7 +984,7 @@ func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid
 
 	if state == mgmtpb.MembershipState_MEMBERSHIP_STATE_PENDING && ctxUserUID != uuid.FromStringOrNil(*pbUser.Uid) {
 		if !canSetMembership {
-			return nil, errdomain.ErrUnauthorized
+			return nil, errorsx.ErrUnauthorized
 		}
 	}
 	membership := &mgmtpb.OrganizationMembership{
@@ -1018,11 +1020,11 @@ func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID u
 		return nil, err
 	}
 	if !canSetMembership {
-		return nil, errdomain.ErrUnauthorized
+		return nil, errorsx.ErrUnauthorized
 	}
 
 	if membership.Role == "owner" {
-		return nil, ErrCanNotSetAnotherOwner
+		return nil, errorsx.ErrCanNotSetAnotherOwner
 	}
 
 	pbUser, err := s.DBUser2PBUser(ctx, user)
@@ -1091,20 +1093,14 @@ func (s *service) DeleteOrganizationMembership(ctx context.Context, ctxUserUID u
 		return err
 	}
 	if !canRemoveMembership {
-		return errdomain.ErrUnauthorized
+		return errorsx.ErrUnauthorized
 	}
 	if canRemoveMembership && ctxUserUID == user.UID {
-		return ErrCanNotRemoveOwnerFromOrganization
+		return errorsx.ErrCanNotRemoveOwnerFromOrganization
 	}
 	err = s.aclClient.DeleteOrganizationUserMembership(ctx, org.UID, user.UID)
 	if err != nil {
 		return err
 	}
 	return nil
-}
-
-func InjectOwnerToContext(ctx context.Context, uid string) context.Context {
-	ctx = metadata.AppendToOutgoingContext(ctx, "instill-auth-type", "user")
-	ctx = metadata.AppendToOutgoingContext(ctx, "instill-user-uid", uid)
-	return ctx
 }

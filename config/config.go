@@ -26,7 +26,7 @@ type AppConfig struct {
 	Server          ServerConfig          `koanf:"server"`
 	Database        DatabaseConfig        `koanf:"database"`
 	Cache           CacheConfig           `koanf:"cache"`
-	Log             LogConfig             `koanf:"log"`
+	OTELCollector   OTELCollectorConfig   `koanf:"otelcollector"`
 	InfluxDB        InfluxDBConfig        `koanf:"influxdb"`
 	PipelineBackend client.ServiceConfig  `koanf:"pipelinebackend"`
 	OpenFGA         OpenFGAConfig         `koanf:"openfga"`
@@ -106,13 +106,11 @@ type InfluxDBConfig struct {
 	}
 }
 
-// LogConfig related to logging
-type LogConfig struct {
-	External      bool `koanf:"external"`
-	OtelCollector struct {
-		Host string `koanf:"host"`
-		Port string `koanf:"port"`
-	}
+// OTELCollectorConfig related to logging
+type OTELCollectorConfig struct {
+	Enable bool   `koanf:"enable"`
+	Host   string `koanf:"host"`
+	Port   int    `koanf:"port"`
 }
 
 // Init - Assign global config to decoded config struct

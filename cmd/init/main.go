@@ -105,7 +105,7 @@ func createDefaultUser(ctx context.Context, r repository.Repository) error {
 		OnboardingStatus:       datamodel.OnboardingStatusInProgress,
 	}
 
-	user, err := r.GetUser(context.Background(), constant.DefaultUserID, false)
+	user, err := r.GetUser(ctx, constant.DefaultUserID, false)
 	// Default user already exists
 	if err == nil {
 		passwordHash, _, err := r.GetUserPasswordHash(ctx, user.UID)

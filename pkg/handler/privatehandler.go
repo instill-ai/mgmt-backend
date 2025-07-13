@@ -14,6 +14,7 @@ import (
 
 	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 	checkfield "github.com/instill-ai/x/checkfield"
+	errorsx "github.com/instill-ai/x/errors"
 )
 
 const defaultPageSize = int32(10)
@@ -154,7 +155,7 @@ func (h *PrivateHandler) CheckNamespaceAdmin(ctx context.Context, req *mgmtpb.Ch
 
 	err := checkfield.CheckResourceID(req.GetId())
 	if err != nil {
-		return nil, ErrResourceID
+		return nil, errorsx.ErrResourceID
 	}
 
 	user, err := h.Service.GetUserAdmin(ctx, req.GetId())
