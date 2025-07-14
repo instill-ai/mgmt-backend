@@ -12,13 +12,13 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/instill-ai/mgmt-backend/internal/resource"
-	"github.com/instill-ai/mgmt-backend/pkg/acl"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 
-	errdomain "github.com/instill-ai/mgmt-backend/pkg/errors"
 	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 	pipelinepb "github.com/instill-ai/protogen-go/pipeline/pipeline/v1beta"
+	errorsx "github.com/instill-ai/x/errors"
+	gatewayx "github.com/instill-ai/x/server/grpc/gateway"
 )
 
 var ErrNoPermission = errors.New("no permission")
@@ -61,7 +61,7 @@ func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.F
 				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.PipelineOwnerUID, org.Uid, false)
 				ownerUID = &org.Uid
 			} else {
-				return nil, "", "", "", filter, ErrInvalidOwnerNamespace
+				return nil, "", "", "", filter, errorsx.ErrInvalidOwnerNamespace
 			}
 		} else {
 			ownerQueryString = fmt.Sprintf("|> filter(fn: (r) => r[\"owner_uid\"] == \"%v\")", *owner.Uid)
@@ -74,7 +74,7 @@ func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.F
 
 func (s *service) pipelineUIDLookup(ctx context.Context, ownerID string, ownerType string, filter filtering.Filter, owner *mgmtpb.User) (filtering.Filter, error) {
 
-	ctx = InjectOwnerToContext(ctx, *owner.Uid)
+	ctx = gatewayx.InjectOwnerToContext(ctx, &mgmtpb.User{Uid: owner.Uid})
 
 	// lookup pipeline uid
 	if len(filter.CheckedExpr.GetExpr().GetCallExpr().GetArgs()) > 0 {
@@ -168,7 +168,7 @@ func (s *service) ListPipelineTriggerChartRecords(
 	if req.GetAggregationWindow() != "" {
 		window, err := time.ParseDuration(req.GetAggregationWindow())
 		if err != nil {
-			return nil, fmt.Errorf("%w: extracting duration from aggregation window: %w", errdomain.ErrInvalidArgument, err)
+			return nil, fmt.Errorf("%w: extracting duration from aggregation window: %w", errorsx.ErrInvalidArgument, err)
 		}
 
 		p.AggregationWindow = window
@@ -285,7 +285,7 @@ func (s *service) ListModelTriggerChartRecords(
 	if req.GetAggregationWindow() != "" {
 		window, err := time.ParseDuration(req.GetAggregationWindow())
 		if err != nil {
-			return nil, fmt.Errorf("%w: extracting duration from aggregation window: %w", errdomain.ErrInvalidArgument, err)
+			return nil, fmt.Errorf("%w: extracting duration from aggregation window: %w", errorsx.ErrInvalidArgument, err)
 		}
 
 		p.AggregationWindow = window
@@ -308,7 +308,7 @@ func (s *service) GrantedNamespaceUID(ctx context.Context, namespaceID string, a
 	owner, err := s.repository.GetOwner(ctx, namespaceID, false)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			err = errdomain.ErrUnauthorized
+			err = errorsx.ErrUnauthorized
 		}
 
 		return uuid.Nil, fmt.Errorf("fetching namespace UID: %w", err)
@@ -324,15 +324,15 @@ func (s *service) GrantedNamespaceUID(ctx context.Context, namespaceID string, a
 	// organizations that the user is a member of are allowed.
 	role, err := s.GetACLClient().GetOrganizationUserMembership(ctx, nsUID, authenticatedUserUID)
 	if err != nil {
-		if errors.Is(err, acl.ErrMembershipNotFound) {
-			err = errdomain.ErrUnauthorized
+		if errors.Is(err, errorsx.ErrMembershipNotFound) {
+			err = errorsx.ErrUnauthorized
 		}
 
 		return uuid.Nil, fmt.Errorf("fetching organization membership: %w", err)
 	}
 
 	if strings.HasPrefix(role, "pending") {
-		return uuid.Nil, fmt.Errorf("invalid permission role: %w", errdomain.ErrUnauthorized)
+		return uuid.Nil, fmt.Errorf("invalid permission role: %w", errorsx.ErrUnauthorized)
 	}
 
 	return nsUID, nil

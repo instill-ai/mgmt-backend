@@ -8,9 +8,13 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
-	"github.com/instill-ai/mgmt-backend/config"
 	openfgaClient "github.com/openfga/go-sdk/client"
+
+	"github.com/instill-ai/mgmt-backend/config"
 )
+
+// TargetSchemaVersion determines the database schema version.
+const TargetSchemaVersion = 6
 
 type migration interface {
 	Migrate() error

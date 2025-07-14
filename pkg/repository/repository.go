@@ -18,6 +18,7 @@ import (
 	"github.com/instill-ai/x/paginate"
 
 	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	errorsx "github.com/instill-ai/x/errors"
 	logx "github.com/instill-ai/x/log"
 )
 
@@ -219,7 +220,7 @@ func (r *repository) listOwners(ctx context.Context, ownerType string, pageSize 
 		// TODO: check pageToken in handler
 		createTime, uid, err := paginate.DecodeToken(pageToken)
 		if err != nil {
-			return nil, totalSize, "", ErrPageTokenDecode
+			return nil, totalSize, "", errorsx.NewPageTokenErr(err)
 		}
 		queryBuilder = queryBuilder.Where("(create_time,uid) < (?::timestamp, ?)", createTime, uid)
 	}
@@ -274,7 +275,7 @@ func (r *repository) createOwner(ctx context.Context, ownerType string, owner *d
 	db := r.CheckPinnedUser(ctx, r.db)
 
 	if ownerType != owner.OwnerType.String {
-		return ErrOwnerTypeNotMatch
+		return errorsx.ErrOwnerTypeNotMatch
 	}
 
 	logger, _ := logx.GetZapLogger(ctx)
@@ -340,7 +341,7 @@ func (r *repository) deleteOwner(ctx context.Context, ownerType string, id strin
 	}
 
 	if result.RowsAffected == 0 {
-		return ErrNoDataDeleted
+		return errorsx.ErrNoDataDeleted
 	}
 
 	return nil
@@ -511,7 +512,7 @@ func (r *repository) DeleteToken(ctx context.Context, owner string, id string) e
 	}
 
 	if result.RowsAffected == 0 {
-		return ErrNoDataDeleted
+		return errorsx.ErrNoDataDeleted
 	}
 
 	return nil
@@ -530,7 +531,7 @@ func (r *repository) UpdateTokenLastUseTime(ctx context.Context, accessToken str
 	}
 
 	if result.RowsAffected == 0 {
-		return ErrNoDataUpdated
+		return errorsx.ErrNoDataUpdated
 	}
 
 	return nil

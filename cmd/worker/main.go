@@ -24,12 +24,13 @@ import (
 
 	mgmtworker "github.com/instill-ai/mgmt-backend/pkg/worker"
 	logx "github.com/instill-ai/x/log"
+	otelx "github.com/instill-ai/x/otel"
 )
 
 var (
 	// These variables might be overridden at buildtime.
-	serviceName = "mgmt-backend"
-	// serviceVersion = "dev"
+	serviceName    = "mgmt-backend"
+	serviceVersion = "dev"
 )
 
 func main() {
@@ -40,6 +41,16 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// Setup all OpenTelemetry components
+	cleanup := otelx.SetupWithCleanup(ctx,
+		otelx.WithServiceName(serviceName),
+		otelx.WithServiceVersion(serviceVersion),
+		otelx.WithHost(config.Config.OTELCollector.Host),
+		otelx.WithPort(config.Config.OTELCollector.Port),
+		otelx.WithCollectorEnable(config.Config.OTELCollector.Enable),
+	)
+	defer cleanup()
 
 	logx.Debug = config.Config.Server.Debug
 	logger, _ := logx.GetZapLogger(ctx)

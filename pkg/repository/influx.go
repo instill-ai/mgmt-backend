@@ -22,8 +22,8 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/x/paginate"
 
-	errdomain "github.com/instill-ai/mgmt-backend/pkg/errors"
 	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	errorsx "github.com/instill-ai/x/errors"
 	logx "github.com/instill-ai/x/log"
 )
 
@@ -491,7 +491,7 @@ func (i *influxDB) getTriggerCount(
 	)
 	result, err := i.QueryAPI().Query(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("%w: querying data from InfluxDB: %w", errdomain.ErrInvalidArgument, err)
+		return nil, fmt.Errorf("%w: querying data from InfluxDB: %w", errorsx.ErrInvalidArgument, err)
 	}
 
 	defer result.Close()
@@ -577,7 +577,7 @@ func (i *influxDB) listTriggerChartRecords(
 	)
 	result, err := i.QueryAPI().Query(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("%w: querying data from InfluxDB: %w", errdomain.ErrInvalidArgument, err)
+		return nil, fmt.Errorf("%w: querying data from InfluxDB: %w", errorsx.ErrInvalidArgument, err)
 	}
 
 	return result, nil
