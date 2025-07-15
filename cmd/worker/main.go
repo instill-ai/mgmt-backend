@@ -29,7 +29,7 @@ import (
 
 var (
 	// These variables might be overridden at buildtime.
-	serviceName    = "mgmt-backend"
+	serviceName    = "mgmt-backend-worker"
 	serviceVersion = "dev"
 )
 
@@ -68,20 +68,23 @@ func main() {
 
 	var err error
 
-	temporalTracingInterceptor, err := opentelemetry.NewTracingInterceptor(opentelemetry.TracerOptions{
-		Tracer:            otel.Tracer(serviceName + "-temporal"),
-		TextMapPropagator: otel.GetTextMapPropagator(),
-	})
-	if err != nil {
-		logger.Fatal("Unable to create temporal tracing interceptor", zap.Error(err))
-	}
-
 	temporalClientOptions, err := temporal.ClientOptions(config.Config.Temporal, logger)
 	if err != nil {
 		logger.Fatal("Unable to build Temporal client options", zap.Error(err))
 	}
 
-	temporalClientOptions.Interceptors = []interceptor.ClientInterceptor{temporalTracingInterceptor}
+	// Only add interceptor if tracing is enabled
+	if config.Config.OTELCollector.Enable {
+		temporalTracingInterceptor, err := opentelemetry.NewTracingInterceptor(opentelemetry.TracerOptions{
+			Tracer:            otel.Tracer(serviceName),
+			TextMapPropagator: otel.GetTextMapPropagator(),
+		})
+		if err != nil {
+			logger.Fatal("Unable to create temporal tracing interceptor", zap.Error(err))
+		}
+		temporalClientOptions.Interceptors = []interceptor.ClientInterceptor{temporalTracingInterceptor}
+	}
+
 	temporalClient, err := client.Dial(temporalClientOptions)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Unable to create client: %s", err))
@@ -95,6 +98,19 @@ func main() {
 
 	w := worker.New(temporalClient, mgmtworker.TaskQueue, worker.Options{
 		MaxConcurrentActivityExecutionSize: 2,
+		Interceptors: func() []interceptor.WorkerInterceptor {
+			if !config.Config.OTELCollector.Enable {
+				return nil
+			}
+			workerInterceptor, err := opentelemetry.NewTracingInterceptor(opentelemetry.TracerOptions{
+				Tracer:            otel.Tracer(serviceName),
+				TextMapPropagator: otel.GetTextMapPropagator(),
+			})
+			if err != nil {
+				logger.Fatal("Unable to create worker tracing interceptor", zap.Error(err))
+			}
+			return []interceptor.WorkerInterceptor{workerInterceptor}
+		}(),
 	})
 
 	err = w.Run(worker.InterruptCh())
