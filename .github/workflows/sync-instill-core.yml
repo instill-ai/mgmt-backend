@@ -11,3 +11,5 @@ jobs:
     uses: instill-ai/instill-core/.github/workflows/update-service-version.yml@huitang/ins-8272
     with:
       service: mgmt
+    secrets:
+      botGitHubToken: ${{ secrets.botGitHubToken }}
