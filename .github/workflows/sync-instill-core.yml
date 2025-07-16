@@ -8,10 +8,6 @@ on:
 
 jobs:
   update-version:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Update MGMT_BACKEND_VERSION
-        uses: instill-ai/instill-core/.github/workflows/update-service-version.yml@huitang/ins-8272
-        with:
-          service: mgmt
+    uses: instill-ai/instill-core/.github/workflows/update-service-version.yml@huitang/ins-8272
+    with:
+      service: mgmt
