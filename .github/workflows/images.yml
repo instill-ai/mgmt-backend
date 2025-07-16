@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - huitang/ins-8272 # TODO: remove this branch
     paths-ignore:
       - "README.md"
     tags:
@@ -45,12 +46,12 @@ jobs:
           password: ${{ secrets.botDockerHubPassword }}
 
       - name: Set short commit SHA
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/huitang/ins-8272' # TODO: remove this branch
         run: |
-          echo "COMMIT_SHORT_SHA=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
+          echo "COMMIT_SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
-      - name: Build and push amd64 (latest)
-        if: github.ref == 'refs/heads/main'
+      - name: Build and push amd64 (commit hash)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/huitang/ins-8272' # TODO: remove this branch
         uses: docker/build-push-action@v6
         with:
           platforms: linux/amd64
@@ -59,7 +60,7 @@ jobs:
           build-args: |
             SERVICE_NAME=${{ env.SERVICE_NAME }}
             SERVICE_VERSION=${{ env.COMMIT_SHORT_SHA }}
-          tags: instill/${{ env.SERVICE_NAME }}:latest-amd64
+          tags: instill/${{ env.SERVICE_NAME }}:${{ env.COMMIT_SHORT_SHA }}-amd64
           cache-from: type=registry,ref=instill/${{ env.SERVICE_NAME }}:buildcache
           cache-to: type=registry,ref=instill/${{ env.SERVICE_NAME }}:buildcache,mode=max
 
@@ -120,12 +121,12 @@ jobs:
           password: ${{ secrets.botDockerHubPassword }}
 
       - name: Set short commit SHA
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/huitang/ins-8272' # TODO: remove this branch
         run: |
-          echo "COMMIT_SHORT_SHA=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
+          echo "COMMIT_SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
       - name: Build and push arm64 (latest)
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/huitang/ins-8272' # TODO: remove this branch
         uses: docker/build-push-action@v6
         with:
           platforms: linux/arm64
@@ -134,7 +135,7 @@ jobs:
           build-args: |
             SERVICE_NAME=${{ env.SERVICE_NAME }}
             SERVICE_VERSION=${{ env.COMMIT_SHORT_SHA }}
-          tags: instill/${{ env.SERVICE_NAME }}:latest-arm64
+          tags: instill/${{ env.SERVICE_NAME }}:${{ env.COMMIT_SHORT_SHA }}-arm64
           cache-from: type=registry,ref=instill/${{ env.SERVICE_NAME }}:buildcache
           cache-to: type=registry,ref=instill/${{ env.SERVICE_NAME }}:buildcache,mode=max
 
@@ -182,12 +183,17 @@ jobs:
           username: drop@instill-ai.com
           password: ${{ secrets.botDockerHubPassword }}
 
-      - name: Create and push multi-arch manifest (latest)
-        if: github.ref == 'refs/heads/main'
+      - name: Set short commit SHA
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/huitang/ins-8272' # TODO: remove this branch
         run: |
-          docker buildx imagetools create -t instill/${{ env.SERVICE_NAME }}:latest \
-            instill/${{ env.SERVICE_NAME }}:latest-amd64 \
-            instill/${{ env.SERVICE_NAME }}:latest-arm64
+          echo "COMMIT_SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Create and push multi-arch manifest (commit hash)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/huitang/ins-8272' # TODO: remove this branch
+        run: |
+          docker buildx imagetools create -t instill/${{ env.SERVICE_NAME }}:${{ env.COMMIT_SHORT_SHA }} \
+            instill/${{ env.SERVICE_NAME }}:${{ env.COMMIT_SHORT_SHA }}-amd64 \
+            instill/${{ env.SERVICE_NAME }}:${{ env.COMMIT_SHORT_SHA }}-arm64
 
       - name: Set Versions
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'

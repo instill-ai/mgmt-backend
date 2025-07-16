@@ -74,7 +74,7 @@ jobs:
       - name: Set short commit SHA
         if: github.ref == 'refs/heads/main'
         run: |
-          echo "COMMIT_SHORT_SHA=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
+          echo "COMMIT_SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
       - name: Set PR head commit SHA
         if: github.event_name == 'pull_request'
@@ -89,13 +89,13 @@ jobs:
           build-args: |
             SERVICE_NAME=mgmt-backend
             SERVICE_VERSION=${{ env.COMMIT_SHORT_SHA }}
-          tags: instill/mgmt-backend:latest
+          tags: instill/mgmt-backend:${{ env.COMMIT_SHORT_SHA }}
           cache-from: |
             type=registry,ref=instill/mgmt-backend:buildcache
           cache-to: |
             type=registry,ref=instill/mgmt-backend:buildcache,mode=max
 
-      - name: Launch Instill Core CE (latest)
+      - name: Launch Instill Core CE (commit hash)
         working-directory: instill-core
         run: |
           make latest EDITION=docker-ce:test ENV_SECRETS_COMPONENT=.env.secrets.component.test
