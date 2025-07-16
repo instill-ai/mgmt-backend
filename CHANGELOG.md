@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.24.0](https://github.com/instill-ai/mgmt-backend/compare/v0.23.1...v0.24.0) (2025-07-15)
+
+
+### Features
+
+* **fga:** implement FGA model migration ([#276](https://github.com/instill-ai/mgmt-backend/issues/276)) ([9302ba6](https://github.com/instill-ai/mgmt-backend/commit/9302ba69adbd905875b8e7a26ad73157645bd766))
+* **otel:** integrate OTEL using gRPC interceptor ([#280](https://github.com/instill-ai/mgmt-backend/issues/280)) ([ba1c2b2](https://github.com/instill-ai/mgmt-backend/commit/ba1c2b2d79c85b1c1541de76b5d7abed1070b16e))
+
+
+### Bug Fixes
+
+* **config:** update outdated config ([#279](https://github.com/instill-ai/mgmt-backend/issues/279)) ([dff91f5](https://github.com/instill-ai/mgmt-backend/commit/dff91f5dc0ad0bcda736391a1484becdaeb2f83e))
+* **errors:** capture repository errors in server interceptor ([#281](https://github.com/instill-ai/mgmt-backend/issues/281)) ([1eee364](https://github.com/instill-ai/mgmt-backend/commit/1eee364f89825db8d477b5b0427dfbdcf4bb9d16))
+* **migrate:** skips OpenFGA migration if no OpenFGA stores found ([#278](https://github.com/instill-ai/mgmt-backend/issues/278)) ([0e55a7c](https://github.com/instill-ai/mgmt-backend/commit/0e55a7c10e0410e08e22683d9b497669a6f9a493))
+
+
+### Miscellaneous
+
+* **dep:** bump up usage-client version ([#273](https://github.com/instill-ai/mgmt-backend/issues/273)) ([57f631e](https://github.com/instill-ai/mgmt-backend/commit/57f631e9971e0c7fd63ce9a5f7ddcbe2f52f86f5))
+* release v0.24.0 ([3400ea8](https://github.com/instill-ai/mgmt-backend/commit/3400ea8c35a4881c8b0094039ad527e6f8252f99))
+
+
+### Refactor
+
+* **config:** remove db version from config file ([#275](https://github.com/instill-ai/mgmt-backend/issues/275)) ([5eeaf64](https://github.com/instill-ai/mgmt-backend/commit/5eeaf64b85e5438c8df1cb0e736061799d0a4754))
+* **main:** align backend codebase ([#277](https://github.com/instill-ai/mgmt-backend/issues/277)) ([fbc3b2e](https://github.com/instill-ai/mgmt-backend/commit/fbc3b2e4d1cfd66553980c7c16ac25a8ac53924d))
+
 ## [0.23.1](https://github.com/instill-ai/mgmt-backend/compare/v0.23.0...v0.23.1) (2025-07-02)
 
 
