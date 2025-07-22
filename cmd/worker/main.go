@@ -4,18 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strconv"
-	"strings"
-	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/contrib/opentelemetry"
 	"go.temporal.io/sdk/interceptor"
 	"go.temporal.io/sdk/worker"
 	"go.uber.org/zap"
-	"google.golang.org/protobuf/types/known/durationpb"
 
 	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 
@@ -91,11 +86,6 @@ func main() {
 	}
 	defer temporalClient.Close()
 
-	// for only local temporal cluster
-	if config.Config.Temporal.ServerRootCA == "" && config.Config.Temporal.ClientCert == "" && config.Config.Temporal.ClientKey == "" {
-		initTemporalNamespace(ctx, temporalClient, logger)
-	}
-
 	w := worker.New(temporalClient, mgmtworker.TaskQueue, worker.Options{
 		MaxConcurrentActivityExecutionSize: 2,
 		Interceptors: func() []interceptor.WorkerInterceptor {
@@ -116,46 +106,5 @@ func main() {
 	err = w.Run(worker.InterruptCh())
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Unable to start worker: %s", err))
-	}
-}
-
-func initTemporalNamespace(ctx context.Context, client client.Client, logger *zap.Logger) {
-
-	resp, err := client.WorkflowService().ListNamespaces(ctx, &workflowservice.ListNamespacesRequest{})
-	if err != nil {
-		logger.Fatal(fmt.Sprintf("Unable to list namespaces: %s", err))
-	}
-
-	found := false
-	for _, n := range resp.GetNamespaces() {
-		if n.NamespaceInfo.Name == config.Config.Temporal.Namespace {
-			found = true
-		}
-	}
-
-	if !found {
-		if _, err := client.WorkflowService().RegisterNamespace(ctx,
-			&workflowservice.RegisterNamespaceRequest{
-				Namespace: config.Config.Temporal.Namespace,
-				WorkflowExecutionRetentionPeriod: func() *durationpb.Duration {
-					// Check if the string ends with "d" for day.
-					s := config.Config.Temporal.Retention
-					if strings.HasSuffix(s, "d") {
-						// Parse the number of days.
-						days, err := strconv.Atoi(s[:len(s)-1])
-						if err != nil {
-							logger.Fatal(fmt.Sprintf("Unable to parse retention period in day: %s", err))
-						}
-						// Convert days to hours and then to a duration.
-						t := time.Hour * 24 * time.Duration(days)
-						return durationpb.New(t)
-					}
-					logger.Fatal(fmt.Sprintf("Unable to parse retention period in day: %s", err))
-					return nil
-				}(),
-			},
-		); err != nil {
-			logger.Fatal(fmt.Sprintf("Unable to register namespace: %s", err))
-		}
 	}
 }
