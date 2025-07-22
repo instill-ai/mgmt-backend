@@ -317,6 +317,10 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 			return nil, err
 		}
 	}
+	users, err := s.aclClient.GetOrganizationUsers(ctx, dbOrg.UID)
+	if err != nil {
+		return nil, err
+	}
 
 	return &mgmtpb.Organization{
 		Name:       fmt.Sprintf("organizations/%s", id),
@@ -334,6 +338,9 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 		Owner: owner,
 		Permission: &mgmtpb.Permission{
 			CanEdit: canUpdateOrganization,
+		},
+		Stats: &mgmtpb.Organization_Stats{
+			UserCount: int32(len(users)),
 		},
 	}, nil
 }
