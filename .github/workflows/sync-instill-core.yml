@@ -1,6 +1,9 @@
 name: Sync Instill Core Version
 
 on:
+  push:
+    branches:
+      - huitang/ins-8272-4
   workflow_dispatch:
   workflow_run:
     workflows: ["Build and Push Images"]
@@ -12,7 +15,7 @@ on:
 jobs:
   update-version:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    uses: instill-ai/instill-core/.github/workflows/update-service-version.yml@main
+    uses: instill-ai/instill-core/.github/workflows/update-service-version.yml@huitang/ins-8272-4
     with:
       service: mgmt
     secrets:
