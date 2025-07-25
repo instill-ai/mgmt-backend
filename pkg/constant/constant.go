@@ -43,6 +43,7 @@ const (
 	PipelineReleaseUID string = "pipeline_release_uid"
 	TriggerMode        string = "trigger_mode"
 	Status             string = "status"
+	Email              string = "email"
 )
 
 // Metric data enum

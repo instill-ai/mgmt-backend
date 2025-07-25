@@ -156,7 +156,19 @@ func (h *PublicHandler) ListUsers(ctx context.Context, req *mgmtpb.ListUsersRequ
 		return nil, err
 	}
 
-	pbUsers, totalSize, nextPageToken, err := h.Service.ListUsers(ctx, ctxUserUID, int(req.GetPageSize()), req.GetPageToken(), filtering.Filter{})
+	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
+		filtering.DeclareStandardFunctions(),
+		filtering.DeclareIdent(constant.Email, filtering.TypeString),
+	}...)
+	if err != nil {
+		return nil, err
+	}
+	filter, err := filtering.ParseFilter(req, declarations)
+	if err != nil {
+		return nil, err
+	}
+
+	pbUsers, totalSize, nextPageToken, err := h.Service.ListUsers(ctx, ctxUserUID, int(req.GetPageSize()), req.GetPageToken(), filter)
 	if err != nil {
 		return nil, err
 	}

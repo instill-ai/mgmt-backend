@@ -704,7 +704,7 @@ func (i *influxDB) ListModelTriggerChartRecords(
 
 // TranspileFilter transpiles a parsed AIP filter expression to Flux query expression
 func (i *influxDB) transpileFilter(filter filtering.Filter) (string, error) {
-	return (&Transpiler{
+	return (&InfluxTranspiler{
 		filter: filter,
 	}).Transpile()
 }
