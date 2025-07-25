@@ -2,7 +2,7 @@ package repository
 
 import (
 	"fmt"
-	// "time"
+	"time"
 
 	"github.com/iancoleman/strcase"
 	"go.einride.tech/aip/filtering"
@@ -16,58 +16,62 @@ import (
 
 // Transpiler data
 type Transpiler struct {
-	filter filtering.Filter
+	filter    filtering.Filter
+	tableName string
+}
+
+func NewTranspiler(filter filtering.Filter) Transpiler {
+	return Transpiler{
+		filter: filter,
+	}
 }
 
 // Transpile executes the transpilation on the filter
-func (t *Transpiler) Transpile() (string, error) {
+func (t *Transpiler) Transpile() (*clause.Expr, error) {
 	if t.filter.CheckedExpr == nil {
-		return "", nil
+		return nil, nil
 	}
-	expr, _, err := t.transpileExpr(t.filter.CheckedExpr.Expr)
+	exp, err := t.transpileExpr(t.filter.CheckedExpr.Expr)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return expr, nil
+	return exp, nil
 }
 
-func (t *Transpiler) transpileExpr(e *expr.Expr) (string, string, error) {
+func (t *Transpiler) transpileExpr(e *expr.Expr) (*clause.Expr, error) {
 	switch e.ExprKind.(type) {
 	case *expr.Expr_CallExpr:
-		ex, err := t.transpileCallExpr(e)
-		return ex, "", err
+		return t.transpileCallExpr(e)
 	case *expr.Expr_IdentExpr:
 		return t.transpileIdentExpr(e)
 	case *expr.Expr_ConstExpr:
-		ex, err := t.transpileConstExpr(e)
-		return ex, "", err
+		return t.transpileConstExpr(e)
 	case *expr.Expr_SelectExpr:
-		ex, err := t.transpileSelectExpr(e)
-		return ex, "", err
+		return t.transpileSelectExpr(e)
 	default:
-		return "", "", fmt.Errorf("unsupported expr: %v", e)
+		return nil, fmt.Errorf("unsupported expr: %v", e)
 	}
 }
 
-func (t *Transpiler) transpileConstExpr(e *expr.Expr) (string, error) {
+func (t *Transpiler) transpileConstExpr(e *expr.Expr) (*clause.Expr, error) {
 	switch kind := e.GetConstExpr().ConstantKind.(type) {
 	case *expr.Constant_BoolValue:
-		return fmt.Sprintf("%v", kind.BoolValue), nil
+		return &clause.Expr{Vars: []any{kind.BoolValue}}, nil
 	case *expr.Constant_DoubleValue:
-		return fmt.Sprintf("%v", kind.DoubleValue), nil
+		return &clause.Expr{Vars: []any{kind.DoubleValue}}, nil
 	case *expr.Constant_Int64Value:
-		return fmt.Sprintf("%v", kind.Int64Value), nil
+		return &clause.Expr{Vars: []any{kind.Int64Value}}, nil
 	case *expr.Constant_StringValue:
-		return kind.StringValue, nil
+		return &clause.Expr{Vars: []any{kind.StringValue}}, nil
 	case *expr.Constant_Uint64Value:
-		return fmt.Sprintf("%v", kind.Uint64Value), nil
+		return &clause.Expr{Vars: []any{kind.Uint64Value}}, nil
 
 	default:
-		return "", fmt.Errorf("unsupported const expr: %v", kind)
+		return nil, fmt.Errorf("unsupported const expr: %v", kind)
 	}
 }
 
-func (t *Transpiler) transpileCallExpr(e *expr.Expr) (string, error) {
+func (t *Transpiler) transpileCallExpr(e *expr.Expr) (*clause.Expr, error) {
 	switch e.GetCallExpr().Function {
 	case filtering.FunctionHas:
 		return t.transpileHasCallExpr(e)
@@ -92,131 +96,169 @@ func (t *Transpiler) transpileCallExpr(e *expr.Expr) (string, error) {
 	case filtering.FunctionTimestamp:
 		return t.transpileTimestampCallExpr(e)
 	default:
-		return "", fmt.Errorf("unsupported function call: %s", e.GetCallExpr().Function)
+		return nil, fmt.Errorf("unsupported function call: %s", e.GetCallExpr().Function)
 	}
 }
 
-func (t *Transpiler) transpileIdentExpr(e *expr.Expr) (string, string, error) {
+func (t *Transpiler) transpileIdentExpr(e *expr.Expr) (*clause.Expr, error) {
 
 	identExpr := e.GetIdentExpr()
-	identExprName := strcase.ToSnake(identExpr.Name)
 	identType, ok := t.filter.CheckedExpr.TypeMap[e.Id]
 	if !ok {
-		return "", "", fmt.Errorf("unknown type of ident expr %d", e.Id)
+		return nil, fmt.Errorf("unknown type of ident expr %d", e.Id)
 	}
 	if messageType := identType.GetMessageType(); messageType != "" {
 		if enumType, err := protoregistry.GlobalTypes.FindEnumByName(protoreflect.FullName(messageType)); err == nil {
-			if enumValue := enumType.Descriptor().Values().ByName(protoreflect.Name(identExprName)); enumValue != nil {
+			if enumValue := enumType.Descriptor().Values().ByName(protoreflect.Name(identExpr.Name)); enumValue != nil {
 				// TODO: Configurable support for string literals.
-				return string(enumValue.Name()), messageType, nil
+				return &clause.Expr{
+					Vars:               []any{enumValue.Name()},
+					WithoutParentheses: true,
+				}, nil
 			}
 		}
 	}
-	if wellKnown := identType.GetWellKnown(); wellKnown == expr.Type_TIMESTAMP {
-		return string(identExpr.Name), expr.Type_TIMESTAMP.String(), nil
+	return &clause.Expr{
+		SQL:                strcase.ToSnake(identExpr.Name),
+		Vars:               nil,
+		WithoutParentheses: true,
+	}, nil
+}
+
+func (t *Transpiler) transpileSelectExpr(e *expr.Expr) (*clause.Expr, error) {
+	selectExpr := e.GetSelectExpr()
+	operand, err := t.transpileExpr(selectExpr.Operand)
+	if err != nil {
+		return nil, err
 	}
-
-	return string(identExpr.Name), identType.GetMessageType(), nil
+	return &clause.Expr{
+		SQL:                fmt.Sprintf("%s ->> '%s'", operand.SQL, selectExpr.Field),
+		Vars:               nil,
+		WithoutParentheses: true,
+	}, nil
 }
 
-func (t *Transpiler) transpileSelectExpr(e *expr.Expr) (string, error) {
-	return "", fmt.Errorf("does not support SELECT expression for now")
-}
-
-func (t *Transpiler) transpileNotCallExpr(e *expr.Expr) (string, error) {
+func (t *Transpiler) transpileNotCallExpr(e *expr.Expr) (*clause.Expr, error) {
 	callExpr := e.GetCallExpr()
 	if len(callExpr.Args) != 1 {
-		return "", fmt.Errorf(
+		return nil, fmt.Errorf(
 			"unexpected number of arguments to `%s` expression: %d",
 			filtering.FunctionNot,
 			len(callExpr.Args),
 		)
 	}
-
-	return "", fmt.Errorf("does not support NOT expression for now")
+	rhsExpr, err := t.transpileExpr(callExpr.Args[0])
+	if err != nil {
+		return nil, err
+	}
+	return &clause.Expr{
+		SQL:                fmt.Sprintf("NOT %s", rhsExpr.SQL),
+		WithoutParentheses: true,
+	}, nil
 }
 
-func (t *Transpiler) transpileComparisonCallExpr(e *expr.Expr, op interface{}) (string, error) {
+func (t *Transpiler) transpileComparisonCallExpr(e *expr.Expr, op any) (*clause.Expr, error) {
 	callExpr := e.GetCallExpr()
 	if len(callExpr.Args) != 2 {
-		return "", fmt.Errorf(
+		return nil, fmt.Errorf(
 			"unexpected number of arguments to `%s`: %d",
 			callExpr.GetFunction(),
 			len(callExpr.Args),
 		)
 	}
 
-	ident, idenType, err := t.transpileExpr(callExpr.Args[0])
+	ident, err := t.transpileExpr(callExpr.Args[0])
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	ident = strcase.ToSnake(ident)
 
-	con, _, err := t.transpileExpr(callExpr.Args[1])
+	con, err := t.transpileExpr(callExpr.Args[1])
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	if idenType == expr.Type_TIMESTAMP.String() {
-		return fmt.Sprintf("%v@%v", ident, con), nil
+	var sql string
+	var vars []any
+	// TODO: we should remove the hardcode table prefix here.
+	// Add "pipeline." prefix to prevent ambiguous since tag table also has the two columns.
+	if ident.SQL == "create_time" || ident.SQL == "update_time" {
+		ident.SQL = t.tableName + "." + ident.SQL
 	}
-
-	var s string
 	switch op.(type) {
 	case clause.Eq:
-		s = fmt.Sprintf("|> filter(fn: (r) => r[\"%s\"] == \"%s\")", ident, con)
+		switch ident.SQL {
+		case "email":
+			sql = "(LOWER(email) LIKE LOWER(CONCAT('%', ?, '%')))"
+			vars = append(vars, con.Vars[0])
+		default:
+			sql = fmt.Sprintf("%s = ?", ident.SQL)
+			vars = append(vars, con.Vars...)
+		}
 	case clause.Neq:
-		s = fmt.Sprintf("|> filter(fn: (r) => r[\"%s\"] != \"%s\")", ident, con)
+		sql = fmt.Sprintf("%s <> ?", ident.SQL)
+		vars = append(vars, con.Vars...)
 	case clause.Lt:
-		s = fmt.Sprintf("|> filter(fn: (r) => r[\"%s\"] < \"%s\")", ident, con)
+		sql = fmt.Sprintf("%s < ?", ident.SQL)
+		vars = append(vars, con.Vars...)
 	case clause.Lte:
-		s = fmt.Sprintf("|> filter(fn: (r) => r[\"%s\"] <= \"%s\")", ident, con)
+		sql = fmt.Sprintf("%s <= ?", ident.SQL)
+		vars = append(vars, con.Vars...)
 	case clause.Gt:
-		s = fmt.Sprintf("|> filter(fn: (r) => r[\"%s\"] > \"%s\")", ident, con)
+		sql = fmt.Sprintf("%s > ?", ident.SQL)
+		vars = append(vars, con.Vars...)
 	case clause.Gte:
-		s = fmt.Sprintf("|> filter(fn: (r) => r[\"%s\"] >= \"%s\")", ident, con)
+		sql = fmt.Sprintf("%s >= ?", ident.SQL)
+		vars = append(vars, con.Vars...)
 	}
 
-	return s, nil
+	return &clause.Expr{
+		SQL:                sql,
+		Vars:               vars,
+		WithoutParentheses: true,
+	}, nil
 }
 
-func (t *Transpiler) transpileBinaryLogicalCallExpr(e *expr.Expr, op clause.Expression) (string, error) {
+func (t *Transpiler) transpileBinaryLogicalCallExpr(e *expr.Expr, op clause.Expression) (*clause.Expr, error) {
 	callExpr := e.GetCallExpr()
 	if len(callExpr.Args) != 2 {
-		return "", fmt.Errorf(
+		return nil, fmt.Errorf(
 			"unexpected number of arguments to `%s`: %d",
 			callExpr.GetFunction(),
 			len(callExpr.Args),
 		)
 	}
-	lhsExpr, _, err := t.transpileExpr(callExpr.Args[0])
+	lhsExpr, err := t.transpileExpr(callExpr.Args[0])
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	rhsExpr, _, err := t.transpileExpr(callExpr.Args[1])
+	rhsExpr, err := t.transpileExpr(callExpr.Args[1])
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	var s string
+	var sql string
 	switch op.(type) {
 	case clause.AndConditions:
-		s = fmt.Sprintf("%s&&%s", lhsExpr, rhsExpr)
+		sql = fmt.Sprintf("%s AND %s", lhsExpr.SQL, rhsExpr.SQL)
 	case clause.OrConditions:
-		return "", fmt.Errorf("does not support OR logical op at the moment")
+		sql = fmt.Sprintf("%s OR %s", lhsExpr.SQL, rhsExpr.SQL)
 	}
 
-	return s, nil
+	return &clause.Expr{
+		SQL:                sql,
+		Vars:               append(lhsExpr.Vars, rhsExpr.Vars...),
+		WithoutParentheses: true,
+	}, nil
 }
 
-func (t *Transpiler) transpileHasCallExpr(e *expr.Expr) (string, error) {
+func (t *Transpiler) transpileHasCallExpr(e *expr.Expr) (*clause.Expr, error) {
 	callExpr := e.GetCallExpr()
 	if len(callExpr.Args) != 2 {
-		return "", fmt.Errorf("unexpected number of arguments to `in` expression: %d", len(callExpr.Args))
+		return nil, fmt.Errorf("unexpected number of arguments to `in` expression: %d", len(callExpr.Args))
 	}
 
 	if callExpr.Args[1].GetConstExpr() == nil {
-		return "", fmt.Errorf("TODO: add support for transpiling `:` where RHS is other than Const")
+		return nil, fmt.Errorf("TODO: add support for transpiling `:` where RHS is other than Const")
 	}
 
 	switch callExpr.Args[0].ExprKind.(type) {
@@ -225,109 +267,100 @@ func (t *Transpiler) transpileHasCallExpr(e *expr.Expr) (string, error) {
 		constExpr := callExpr.Args[1]
 		identType, ok := t.filter.CheckedExpr.TypeMap[callExpr.Args[0].Id]
 		if !ok {
-			return "", fmt.Errorf("unknown type of ident expr %d", e.Id)
+			return nil, fmt.Errorf("unknown type of ident expr %d", e.Id)
 		}
 		switch {
 		// Repeated primitives:
 		// > Repeated fields query to see if the repeated structure contains a matching element.
 		case identType.GetListType().GetElemType().GetPrimitive() != expr.Type_PRIMITIVE_TYPE_UNSPECIFIED:
-			iden, _, err := t.transpileIdentExpr(identExpr)
+			iden, err := t.transpileIdentExpr(identExpr)
 			if err != nil {
-				return "", err
+				return nil, err
 			}
 			con, err := t.transpileConstExpr(constExpr)
 			if err != nil {
-				return "", err
+				return nil, err
 			}
-			return fmt.Sprintf("|> filter(fn: (r) => contains(value: \"%v\", set: \"%v\"))", iden, con), nil
+			return &clause.Expr{
+				SQL:                fmt.Sprintf("? = ANY(%s)", iden.SQL),
+				Vars:               con.Vars,
+				WithoutParentheses: false,
+			}, nil
 		default:
-			return "", fmt.Errorf("TODO: add support for transpiling `:` on other types than repeated primitives")
+			return nil, fmt.Errorf("TODO: add support for transpiling `:` on other types than repeated primitives")
 		}
 	case *expr.Expr_SelectExpr:
 		operand := callExpr.Args[0].GetSelectExpr().Operand
+		field := callExpr.Args[0].GetSelectExpr().Field
+		constExpr := callExpr.Args[1]
 
 		switch operand.ExprKind.(type) {
 		case *expr.Expr_IdentExpr:
+			iden, err := t.transpileIdentExpr(operand)
+			if err != nil {
+				return nil, err
+			}
+			con, err := t.transpileConstExpr(constExpr)
+			if err != nil {
+				return nil, err
+			}
+			con.Vars[0] = "%\"" + con.Vars[0].(string) + "\"%"
+
+			return &clause.Expr{
+				SQL:                fmt.Sprintf("%s ->> '%s' LIKE ?", iden.SQL, field),
+				Vars:               con.Vars,
+				WithoutParentheses: false,
+			}, nil
 		case *expr.Expr_SelectExpr:
+
+			selectExpr := operand.GetSelectExpr()
+			operand, err := t.transpileExpr(selectExpr.Operand)
+			if err != nil {
+				return nil, err
+			}
+			con, err := t.transpileConstExpr(constExpr)
+			if err != nil {
+				return nil, err
+			}
+			con.Vars[0] = "%\"" + field + "\": \"" + con.Vars[0].(string) + "\"%"
+
+			return &clause.Expr{
+				SQL:                fmt.Sprintf("%s ->> '%s' LIKE ?", operand.SQL, selectExpr.Field),
+				Vars:               con.Vars,
+				WithoutParentheses: false,
+			}, nil
 		default:
-			return "", fmt.Errorf("TODO: add support for more complicated transpiling")
+			return nil, fmt.Errorf("TODO: add support for more complicated transpiling")
 		}
 
 	default:
-		return "", fmt.Errorf("TODO: add support for transpiling `:` where LHS is other than Ident and Select")
+		return nil, fmt.Errorf("TODO: add support for transpiling `:` where LHS is other than Ident and Select")
 	}
-	return "", fmt.Errorf("TODO: add support for more transpiling")
+
 }
 
-func (t *Transpiler) transpileTimestampCallExpr(e *expr.Expr) (string, error) {
+func (t *Transpiler) transpileTimestampCallExpr(e *expr.Expr) (*clause.Expr, error) {
 
 	callExpr := e.GetCallExpr()
 	if len(callExpr.Args) != 1 {
-		return "", fmt.Errorf(
+		return nil, fmt.Errorf(
 			"unexpected number of arguments to `%s`: %d", callExpr.Function, len(callExpr.Args),
 		)
 	}
 	constArg, ok := callExpr.Args[0].ExprKind.(*expr.Expr_ConstExpr)
 	if !ok {
-		return "", fmt.Errorf("expected constant string arg to %s", callExpr.Function)
+		return nil, fmt.Errorf("expected constant string arg to %s", callExpr.Function)
 	}
 	stringArg, ok := constArg.ConstExpr.ConstantKind.(*expr.Constant_StringValue)
 	if !ok {
-		return "", fmt.Errorf("expected constant string arg to %s", callExpr.Function)
+		return nil, fmt.Errorf("expected constant string arg to %s", callExpr.Function)
 	}
-
-	return stringArg.StringValue, nil
-}
-
-// TODO: temporary solution to recusrively find target filter expr name to replace
-func ExtractConstExpr(e *expr.Expr, targetName string, found bool) (string, bool) {
-	identExprName := strcase.ToSnake(e.GetIdentExpr().GetName())
-	if len(e.GetCallExpr().GetArgs()) == 0 && identExprName == targetName {
-		return "", true
+	timeArg, err := time.Parse(time.RFC3339, stringArg.StringValue)
+	if err != nil {
+		return nil, fmt.Errorf("invalid string arg to %s: %w", callExpr.Function, err)
 	}
-	if found {
-		return e.GetConstExpr().GetStringValue(), true
-	}
-
-	var strValue string
-	for _, e := range e.GetCallExpr().GetArgs() {
-		strValue, found = ExtractConstExpr(e, targetName, found)
-		if strValue != "" && found {
-			return strValue, true
-		}
-	}
-
-	return "", false
-}
-
-// TODO: temporary solution to hijack and replace the `pipeline_id` filter on the fly to swap to `pipeline_uid` for query
-func HijackConstExpr(e *expr.Expr, beforeExprName string, replaceExprName string, replaceExprValue string, found bool) (string, bool) {
-	identExprName := strcase.ToSnake(e.GetIdentExpr().GetName())
-	if len(e.GetCallExpr().GetArgs()) == 0 && identExprName == beforeExprName {
-		e.GetIdentExpr().Name = replaceExprName
-		return "", true
-	}
-	if found {
-		*e = expr.Expr{
-			Id: e.GetId(),
-			ExprKind: &expr.Expr_ConstExpr{
-				ConstExpr: &expr.Constant{
-					ConstantKind: &expr.Constant_StringValue{
-						StringValue: replaceExprValue,
-					},
-				},
-			},
-		}
-		return e.GetConstExpr().GetStringValue(), true
-	}
-
-	var strValue string
-	for _, e := range e.GetCallExpr().GetArgs() {
-		strValue, found = HijackConstExpr(e, beforeExprName, replaceExprName, replaceExprValue, found)
-		if strValue != "" && found {
-			return strValue, true
-		}
-	}
-
-	return "", false
+	return &clause.Expr{
+		Vars:               []any{timeArg},
+		WithoutParentheses: true,
+	}, nil
 }

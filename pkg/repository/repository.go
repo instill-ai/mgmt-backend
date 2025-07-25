@@ -11,6 +11,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.einride.tech/aip/filtering"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"gorm.io/plugin/dbresolver"
 
 	"github.com/instill-ai/mgmt-backend/config"
@@ -212,6 +213,15 @@ func (r *repository) listOwners(ctx context.Context, ownerType string, pageSize 
 	queryBuilder := db.Model(&datamodel.Owner{}).Order("create_time DESC, id DESC")
 	queryBuilder = queryBuilder.Where("owner_type = ?", ownerType)
 
+	var expr *clause.Expr
+	var err error
+	if expr, err = r.transpileFilter(filter, "owner"); err != nil {
+		return nil, 0, "", err
+	}
+	if expr != nil {
+		queryBuilder = queryBuilder.Where(expr)
+	}
+
 	if pageSize > 0 {
 		queryBuilder = queryBuilder.Limit(pageSize)
 	}
@@ -250,11 +260,19 @@ func (r *repository) listOwners(ctx context.Context, ownerType string, pageSize 
 
 		lastUID := (owners)[len(owners)-1].UID
 		lastItem := &datamodel.Owner{}
-		if result := db.Model(&datamodel.Owner{}).
+		queryBuilder := db.Model(&datamodel.Owner{}).
 			Omit("profile_avatar").
 			Where("owner_type = ?", ownerType).
-			Order("create_time ASC, uid ASC").
-			Limit(1).Find(lastItem); result.Error != nil {
+			Order("create_time ASC, uid ASC")
+		var expr *clause.Expr
+		var err error
+		if expr, err = r.transpileFilter(filter, "owner"); err != nil {
+			return nil, 0, "", err
+		}
+		if expr != nil {
+			queryBuilder = queryBuilder.Where(expr)
+		}
+		if result := queryBuilder.Limit(1).Find(lastItem); result.Error != nil {
 			return nil, 0, "", result.Error
 		}
 		if lastItem.UID.String() == lastUID.String() {
@@ -535,4 +553,12 @@ func (r *repository) UpdateTokenLastUseTime(ctx context.Context, accessToken str
 	}
 
 	return nil
+}
+
+// TranspileFilter transpiles a parsed AIP filter expression to GORM DB clauses
+func (r *repository) transpileFilter(filter filtering.Filter, tableName string) (*clause.Expr, error) {
+	return (&Transpiler{
+		filter:    filter,
+		tableName: tableName,
+	}).Transpile()
 }
