@@ -131,6 +131,7 @@ func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*
 			Bio:                &dbUser.Bio.String,
 			SocialProfileLinks: socialProfileLinks,
 		},
+		Email: dbUser.Email,
 	}, nil
 }
 
