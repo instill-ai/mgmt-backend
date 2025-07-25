@@ -187,13 +187,9 @@ func (t *Transpiler) transpileComparisonCallExpr(e *expr.Expr, op any) (*clause.
 	switch op.(type) {
 	case clause.Eq:
 		switch ident.SQL {
-		// TODO we should support wildcards without special filter names
-		case "q":
-			sql = "((SIMILARITY(id, ?) > 0.2) OR (SIMILARITY(namespace_id, ?) > 0.2) OR (LOWER(id) LIKE LOWER(?)) OR (LOWER(namespace_id) LIKE LOWER(?)))"
-			vars = append(vars, con.Vars[0], con.Vars[0], fmt.Sprintf("%%%s%%", con.Vars[0]), fmt.Sprintf("%%%s%%", con.Vars[0]))
-		case "q_title":
-			sql = "((SIMILARITY(title, ?) > 0.2) OR (LOWER(title) LIKE LOWER(?)))"
-			vars = append(vars, con.Vars[0], fmt.Sprintf("%%%s%%", con.Vars[0]))
+		case "email":
+			sql = "(LOWER(email) LIKE LOWER(CONCAT('%', ?, '%')))"
+			vars = append(vars, con.Vars[0])
 		default:
 			sql = fmt.Sprintf("%s = ?", ident.SQL)
 			vars = append(vars, con.Vars...)
