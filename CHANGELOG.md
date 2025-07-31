@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.25.0](https://github.com/instill-ai/mgmt-backend/compare/v0.24.0...v0.25.0) (2025-07-31)
+
+
+### Features
+
+* **service:** return user_count in the organization object ([#286](https://github.com/instill-ai/mgmt-backend/issues/286)) ([9e93a50](https://github.com/instill-ai/mgmt-backend/commit/9e93a50809c5eaf7aec198469be118601661674b))
+* **service:** support filter users by email ([#289](https://github.com/instill-ai/mgmt-backend/issues/289)) ([ba277a2](https://github.com/instill-ai/mgmt-backend/commit/ba277a2a6fb6199f5998617b2df8bb7c37f54096))
+
+
+### Bug Fixes
+
+* **cmd:** move Temporal namespace creation to cmd/init ([#284](https://github.com/instill-ai/mgmt-backend/issues/284)) ([0417b3f](https://github.com/instill-ai/mgmt-backend/commit/0417b3f71e1ef472632bf095d1b817e812c40a21))
+
+
+### Miscellaneous
+
+* **mgmt:** expose user email in the user object ([#288](https://github.com/instill-ai/mgmt-backend/issues/288)) ([17de13a](https://github.com/instill-ai/mgmt-backend/commit/17de13acabcd4137f9b213fd89dd54acf57ccfd6))
+* release v0.25.0 ([a04ac7b](https://github.com/instill-ai/mgmt-backend/commit/a04ac7b10e9610a6f86c6c6ec83418a12e4e4852))
+
 ## [0.24.0](https://github.com/instill-ai/mgmt-backend/compare/v0.23.1...v0.24.0) (2025-07-15)
 
 
