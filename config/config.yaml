@@ -52,11 +52,8 @@ openfga:
   port: 8080
 temporal:
   hostport: temporal:7233
-  namespace: mgmt-backend
+  namespace: instill-core
   retention: 1d
   metricsport: 8096
-  servername:
-  serverrootca:
-  clientcert:
-  clientkey:
+  apikey:
   insecureskipverify:
