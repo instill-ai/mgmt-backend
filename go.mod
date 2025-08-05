@@ -18,15 +18,14 @@ require (
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
 	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20250725054026-1b6f578bcb39
 	github.com/instill-ai/usage-client v0.4.0
-	github.com/instill-ai/x v0.9.0-alpha
+	github.com/instill-ai/x v0.9.0-alpha.0.20250804063509-85de2fb234cc
 	github.com/knadh/koanf v1.5.0
 	github.com/mennanov/fieldmask-utils v1.1.2
 	github.com/openfga/go-sdk v0.7.1
 	github.com/redis/go-redis/v9 v9.9.0
 	go.einride.tech/aip v0.70.2
 	go.opentelemetry.io/otel v1.37.0
-	go.temporal.io/api v1.49.1
-	go.temporal.io/sdk v1.34.0
+	go.temporal.io/sdk v1.35.0
 	go.temporal.io/sdk/contrib/opentelemetry v0.6.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.39.0
@@ -113,6 +112,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.37.0 // indirect
 	go.opentelemetry.io/otel/trace v1.37.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.7.0 // indirect
+	go.temporal.io/api v1.51.0 // indirect
 	go.temporal.io/sdk/contrib/tally v0.2.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
