@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
+	"github.com/instill-ai/x/checkfield"
 	"github.com/redis/go-redis/v9"
 	"go.einride.tech/aip/filtering"
 	"golang.org/x/crypto/bcrypt"
@@ -343,26 +344,45 @@ func (s *service) ListOrganizations(ctx context.Context, ctxUserUID uuid.UUID, p
 	return pbOrgs, totalSize, nextPageToken, err
 }
 
-func (s *service) CreateOrganization(ctx context.Context, ctxUserUID uuid.UUID, org *mgmtpb.Organization) (*mgmtpb.Organization, error) {
-	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
+var createRequiredFieldsForOrganization = []string{"id"}
+var outputOnlyFieldsForOrganization = []string{"name", "uid", "create_time", "update_time", "owner", "permission", "stats"}
+
+func (s *service) CreateOrganization(ctx context.Context, ownerUID uuid.UUID, org *mgmtpb.Organization) (*mgmtpb.Organization, error) {
+	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ownerUID)
+
+	// Set all OUTPUT_ONLY fields to zero value on the organization resource.
+	if err := checkfield.CheckCreateOutputOnlyFields(org, outputOnlyFieldsForOrganization); err != nil {
+		return nil, fmt.Errorf("%w: %w", errorsx.ErrCheckOutputOnlyFields, err)
+	}
+
+	// Return error if REQUIRED fields are not provided.
+	if err := checkfield.CheckRequiredFields(org, createRequiredFieldsForOrganization); err != nil {
+		return nil, fmt.Errorf("%w: %w", errorsx.ErrCheckRequiredFields, err)
+	}
+
+	// Return error if resource ID does not follow RFC-1034.
+	if err := checkfield.CheckResourceID(org.GetId()); err != nil {
+		return nil, fmt.Errorf("%w: %w", errorsx.ErrResourceID, err)
+	}
 
 	uid, _ := uuid.NewV4()
-	uidStr := uid.String()
-	org.Uid = uidStr
+	org.Uid = uid.String()
+
 	dbOrg, err := s.PBOrg2DBOrg(ctx, org)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("converting pb organization: %w", err)
 	}
 
 	if err := s.repository.CreateOrganization(ctx, dbOrg); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating organization record: %w", err)
 	}
 
-	err = s.aclClient.SetOrganizationUserMembership(ctx, dbOrg.UID, ctxUserUID, "owner")
+	err = s.aclClient.SetOrganizationUserMembership(ctx, dbOrg.UID, ownerUID, "owner")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("setting organization owner: %w", err)
 	}
-	return s.GetOrganization(ctx, ctxUserUID, org.Id)
+
+	return s.GetOrganization(ctx, ownerUID, org.Id)
 }
 
 func (s *service) GetOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtpb.Organization, error) {
