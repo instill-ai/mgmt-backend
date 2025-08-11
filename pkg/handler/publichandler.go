@@ -35,9 +35,6 @@ var immutableFields = []string{"uid", "id"}
 var createRequiredFieldsForToken = []string{"id"}
 var outputOnlyFieldsForToken = []string{"name", "uid", "state", "token_type", "access_token", "create_time", "update_time"}
 
-var createRequiredFieldsForOrganization = []string{"id"}
-var outputOnlyFieldsForOrganization = []string{"name", "uid", "create_time", "update_time"}
-
 var requiredFieldsForOrganizationMembership = []string{"role"}
 var outputOnlyFieldsForOrganizationMembership = []string{"name", "state", "user", "organization"}
 
@@ -318,24 +315,9 @@ func (h *PublicHandler) CheckNamespace(ctx context.Context, req *mgmtpb.CheckNam
 	}, nil
 }
 
-// CreateOrganization creates an organization.
+// CreateOrganization creates an organization with the authenticated user as
+// the owner.
 func (h *PublicHandler) CreateOrganization(ctx context.Context, req *mgmtpb.CreateOrganizationRequest) (*mgmtpb.CreateOrganizationResponse, error) {
-
-	// Set all OUTPUT_ONLY fields to zero value on the requested payload organization resource
-	if err := checkfield.CheckCreateOutputOnlyFields(req.Organization, outputOnlyFieldsForOrganization); err != nil {
-		return nil, errorsx.ErrCheckOutputOnlyFields
-	}
-
-	// Return error if REQUIRED fields are not provided in the requested payload organization resource
-	if err := checkfield.CheckRequiredFields(req.Organization, createRequiredFieldsForOrganization); err != nil {
-		return nil, errorsx.ErrCheckRequiredFields
-	}
-
-	// Return error if resource ID does not follow RFC-1034
-	if err := checkfield.CheckResourceID(req.Organization.GetId()); err != nil {
-		return nil, errorsx.ErrResourceID
-	}
-
 	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
 	if err != nil {
 		return nil, err
