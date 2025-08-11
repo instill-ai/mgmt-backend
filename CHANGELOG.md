@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.25.1](https://github.com/instill-ai/mgmt-backend/compare/v0.25.0...v0.25.1) (2025-08-11)
+
+
+### Features
+
+* **temporal:** remove Temporal namespace initialization ([#291](https://github.com/instill-ai/mgmt-backend/issues/291)) ([c1b8757](https://github.com/instill-ai/mgmt-backend/commit/c1b87575d5ac8052b74b61df0059dca463b3e76c))
+
+
+### Miscellaneous
+
+* **organization:** move org creation validation to service ([#293](https://github.com/instill-ai/mgmt-backend/issues/293)) ([a690b15](https://github.com/instill-ai/mgmt-backend/commit/a690b15598b482fab815d4ea162e35701d9ef1a8))
+
 ## [0.25.0](https://github.com/instill-ai/mgmt-backend/compare/v0.24.0...v0.25.0) (2025-07-31)
 
 
