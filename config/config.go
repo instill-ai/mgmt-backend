@@ -15,6 +15,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/instill-ai/x/client"
+	"github.com/instill-ai/x/openfga"
 	"github.com/instill-ai/x/temporal"
 )
 
@@ -29,7 +30,7 @@ type AppConfig struct {
 	OTELCollector   OTELCollectorConfig   `koanf:"otelcollector"`
 	InfluxDB        InfluxDBConfig        `koanf:"influxdb"`
 	PipelineBackend client.ServiceConfig  `koanf:"pipelinebackend"`
-	OpenFGA         OpenFGAConfig         `koanf:"openfga"`
+	OpenFGA         openfga.Config        `koanf:"openfga"`
 	Temporal        temporal.ClientConfig `koanf:"temporal"`
 }
 
@@ -51,17 +52,6 @@ type ServerConfig struct {
 	Debug           bool   `koanf:"debug"`
 	DefaultUserUID  string `koanf:"defaultuseruid"`
 	InstillCoreHost string `koanf:"instillcorehost"`
-}
-
-// OpenFGAConfig related to OpenFGA
-type OpenFGAConfig struct {
-	Host    string `koanf:"host"`
-	Port    int    `koanf:"port"`
-	Replica struct {
-		Host                 string `koanf:"host"`
-		Port                 int    `koanf:"port"`
-		ReplicationTimeFrame int    `koanf:"replicationtimeframe"` // in seconds
-	} `koanf:"replica"`
 }
 
 // CacheConfig related to Redis

@@ -90,7 +90,7 @@ type Service interface {
 
 	GetRedisClient() *redis.Client
 	GetInfluxClient() repository.InfluxDB
-	GetACLClient() *acl.ACLClient
+	GetACLClient() acl.ACLClient
 
 	GrantedNamespaceUID(_ context.Context, namespaceID string, authenticatedUserUID uuid.UUID) (uuid.UUID, error)
 }
@@ -100,12 +100,12 @@ type service struct {
 	influxDB                    repository.InfluxDB
 	pipelinePublicServiceClient pipelinepb.PipelinePublicServiceClient
 	redisClient                 *redis.Client
-	aclClient                   *acl.ACLClient
+	aclClient                   acl.ACLClient
 	instillCoreHost             string
 }
 
 // NewService initiates a service instance
-func NewService(p pipelinepb.PipelinePublicServiceClient, r repository.Repository, rc *redis.Client, i repository.InfluxDB, acl *acl.ACLClient, h string) Service {
+func NewService(p pipelinepb.PipelinePublicServiceClient, r repository.Repository, rc *redis.Client, i repository.InfluxDB, acl acl.ACLClient, h string) Service {
 	return &service{
 		pipelinePublicServiceClient: p,
 		repository:                  r,
@@ -124,7 +124,7 @@ func (s *service) GetInfluxClient() repository.InfluxDB {
 	return s.influxDB
 }
 
-func (s *service) GetACLClient() *acl.ACLClient {
+func (s *service) GetACLClient() acl.ACLClient {
 	return s.aclClient
 }
 

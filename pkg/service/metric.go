@@ -12,12 +12,14 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/instill-ai/mgmt-backend/internal/resource"
+	"github.com/instill-ai/mgmt-backend/pkg/acl"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 
 	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 	pipelinepb "github.com/instill-ai/protogen-go/pipeline/pipeline/v1beta"
 	errorsx "github.com/instill-ai/x/errors"
+	openfgax "github.com/instill-ai/x/openfga"
 	gatewayx "github.com/instill-ai/x/server/grpc/gateway"
 )
 
@@ -51,7 +53,7 @@ func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.F
 				if err != nil {
 					return nil, "", "", "", filter, err
 				}
-				granted, err := s.GetACLClient().CheckPermission(ctx, "organization", uuid.FromStringOrNil(org.Uid), "user", uuid.FromStringOrNil(owner.GetUid()), "", "member")
+				granted, err := s.GetACLClient().CheckPermissionByUser(ctx, acl.ObjectTypeOrganization, uuid.FromStringOrNil(org.Uid), openfgax.UserTypeUser, owner.GetUid(), "member")
 				if err != nil {
 					return nil, "", "", "", filter, err
 				}

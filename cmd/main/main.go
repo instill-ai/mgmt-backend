@@ -23,7 +23,6 @@ import (
 	"gorm.io/gorm"
 
 	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-	openfgaclient "github.com/openfga/go-sdk/client"
 
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/acl"
@@ -40,6 +39,7 @@ import (
 	clientx "github.com/instill-ai/x/client"
 	clientgrpcx "github.com/instill-ai/x/client/grpc"
 	logx "github.com/instill-ai/x/log"
+	openfgax "github.com/instill-ai/x/openfga"
 	otelx "github.com/instill-ai/x/otel"
 	servergrpcx "github.com/instill-ai/x/server/grpc"
 	gatewayx "github.com/instill-ai/x/server/grpc/gateway"
@@ -106,57 +106,34 @@ func main() {
 	pipelinePublicServiceClient, redisClient, db, influxDB, closeClients := newClients(ctx, logger)
 	defer closeClients()
 
-	// TODO: move openfga setup to x
-	fgaClient, err := openfgaclient.NewSdkClient(&openfgaclient.ClientConfiguration{
-		ApiScheme: "http",
-		ApiHost:   fmt.Sprintf("%s:%d", config.Config.OpenFGA.Host, config.Config.OpenFGA.Port),
+	// Initialize OpenFGA client using x/openfga package
+	fgaClient, err := openfgax.NewClient(openfgax.ClientParams{
+		Config: config.Config.OpenFGA,
+		Logger: logger,
 	})
-
 	if err != nil {
-		panic(err)
+		logger.Fatal("Failed to create OpenFGA client", zap.Error(err))
 	}
-
-	var fgaReplicaClient *openfgaclient.OpenFgaClient
-	if config.Config.OpenFGA.Replica.Host != "" {
-
-		fgaReplicaClient, err = openfgaclient.NewSdkClient(&openfgaclient.ClientConfiguration{
-			ApiUrl: fmt.Sprintf("http://%s:%d", config.Config.OpenFGA.Replica.Host, config.Config.OpenFGA.Replica.Port),
-		})
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	var aclClient acl.ACLClient
 
 	fgaData, err := database.GetFGAMigrationData(db)
 	if err != nil {
-		panic(err)
+		logger.Fatal("Failed to get FGA migration data", zap.Error(err))
 	}
 
 	logger.Info("Using stored FGA data",
 		zap.String("store_id", fgaData.StoreID),
 		zap.String("authorization_model_id", fgaData.AuthorizationModelID))
 
-	err = fgaClient.SetStoreId(fgaData.StoreID)
+	err = fgaClient.SetStoreID(fgaData.StoreID)
 	if err != nil {
-		panic(err)
+		logger.Fatal("Failed to set FGA store ID", zap.Error(err))
 	}
-	err = fgaClient.SetAuthorizationModelId(fgaData.AuthorizationModelID)
+	err = fgaClient.SetAuthorizationModelID(fgaData.AuthorizationModelID)
 	if err != nil {
-		panic(err)
+		logger.Fatal("Failed to set FGA authorization model ID", zap.Error(err))
 	}
-	if fgaReplicaClient != nil {
-		err = fgaReplicaClient.SetStoreId(fgaData.StoreID)
-		if err != nil {
-			panic(err)
-		}
-		err = fgaReplicaClient.SetAuthorizationModelId(fgaData.AuthorizationModelID)
-		if err != nil {
-			panic(err)
-		}
-	}
-	aclClient = acl.NewACLClient(fgaClient, fgaReplicaClient, redisClient)
+
+	aclClient := acl.NewFGAClient(fgaClient)
 
 	repository := repository.NewRepository(db, redisClient)
 	service := service.NewService(
@@ -164,7 +141,7 @@ func main() {
 		repository,
 		redisClient,
 		influxDB,
-		&aclClient,
+		aclClient,
 		config.Config.Server.InstillCoreHost,
 	)
 
