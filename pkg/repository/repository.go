@@ -12,6 +12,7 @@ import (
 	"go.einride.tech/aip/filtering"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"gorm.io/gorm/logger"
 	"gorm.io/plugin/dbresolver"
 
 	"github.com/instill-ai/mgmt-backend/config"
@@ -306,6 +307,11 @@ func (r *repository) createOwner(ctx context.Context, ownerType string, owner *d
 
 func (r *repository) GetOwner(ctx context.Context, id string, includeAvatar bool) (*datamodel.Owner, error) {
 	db := r.CheckPinnedUser(ctx, r.db)
+
+	// Temporarily disable logging for admin ID queries
+	if id == "admin" {
+		db = db.Session(&gorm.Session{Logger: db.Logger.LogMode(logger.Silent)})
+	}
 
 	var owner datamodel.Owner
 	queryBuilder := db.Model(&datamodel.Owner{}).Where("id = ?", id)
