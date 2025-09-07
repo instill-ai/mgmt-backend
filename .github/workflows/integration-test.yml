@@ -87,7 +87,7 @@ jobs:
           context: mgmt-backend
           load: true
           build-args: |
-            SERVICE_NAME=mgmt-backend
+            SERVICE_NAME=${{ env.SERVICE_NAME }}
             SERVICE_VERSION=${{ env.COMMIT_SHORT_SHA }}
           tags: instill/mgmt-backend:${{ env.COMMIT_SHORT_SHA }}
           cache-from: |
