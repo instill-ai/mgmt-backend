@@ -36,7 +36,7 @@ func HandleAvatar(mux *runtime.ServeMux, repository repository.Repository, w htt
 			return
 		}
 		if user.ProfileAvatar.String == "" {
-			w.WriteHeader(http.StatusNotFound)
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		avatarBase64 = user.ProfileAvatar.String
@@ -47,7 +47,7 @@ func HandleAvatar(mux *runtime.ServeMux, repository repository.Repository, w htt
 			return
 		}
 		if org.ProfileAvatar.String == "" {
-			w.WriteHeader(http.StatusNotFound)
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		avatarBase64 = org.ProfileAvatar.String
