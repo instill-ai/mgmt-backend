@@ -150,9 +150,11 @@ func (r *repository) GetUserByUID(ctx context.Context, uid uuid.UUID) (*datamode
 
 	return ownerWithType(owner, "user")
 }
+
 func (r *repository) UpdateUser(ctx context.Context, id string, user *datamodel.Owner) error {
 	return r.updateOwner(ctx, "user", id, user)
 }
+
 func (r *repository) DeleteUser(ctx context.Context, id string) error {
 	return r.deleteOwner(ctx, "user", id)
 }
@@ -341,7 +343,7 @@ func (r *repository) updateOwner(ctx context.Context, ownerType string, id strin
 	db := r.CheckPinnedUser(ctx, r.db)
 
 	logger, _ := logx.GetZapLogger(ctx)
-	if result := db.Select("*").Omit("UID").Omit("password_hash").Model(&datamodel.Owner{}).Where("owner_type = ?", ownerType).Where("id = ?", id).Updates(owner); result.Error != nil {
+	if result := db.Omit("UID").Omit("password_hash").Model(&datamodel.Owner{}).Where("owner_type = ?", ownerType).Where("id = ?", id).Updates(owner); result.Error != nil {
 		logger.Error(result.Error.Error())
 		return result.Error
 	}

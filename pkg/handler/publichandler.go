@@ -29,7 +29,7 @@ import (
 
 // TODO: Validate mask based on the field behavior. Currently, the fields are hard-coded.
 // We stipulate that the ID of the user is IMMUTABLE
-var outputOnlyFields = []string{"name", "type", "create_time", "update_time", "customer_id"}
+var outputOnlyFields = []string{"name", "create_time", "update_time", "customer_id"}
 var immutableFields = []string{"uid", "id"}
 
 var createRequiredFieldsForToken = []string{"id"}
