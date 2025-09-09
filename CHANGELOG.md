@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.25.2](https://github.com/instill-ai/mgmt-backend/compare/v0.25.1...v0.25.2) (2025-09-09)
+
+
+### Bug Fixes
+
+* **middleware,repository:** fix user profile avatar issue ([#296](https://github.com/instill-ai/mgmt-backend/issues/296)) ([c64d8a6](https://github.com/instill-ai/mgmt-backend/commit/c64d8a6d14c9004383267b26c7d6f967e33a898f))
+* **usage:** fix usage admin user nonexist issue ([#294](https://github.com/instill-ai/mgmt-backend/issues/294)) ([efafb4a](https://github.com/instill-ai/mgmt-backend/commit/efafb4a3dd546922b601aa60d706f994710abba6))
+
+
+### Miscellaneous
+
+* **x:** update x package to v0.10.0-alpha ([#297](https://github.com/instill-ai/mgmt-backend/issues/297)) ([f9a4349](https://github.com/instill-ai/mgmt-backend/commit/f9a43499343a4ecd0524092c00923d8d7e666dad))
+
 ## [0.25.1](https://github.com/instill-ai/mgmt-backend/compare/v0.25.0...v0.25.1) (2025-08-11)
 
 
