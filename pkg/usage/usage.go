@@ -3,6 +3,7 @@ package usage
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gofrs/uuid"
@@ -39,10 +40,13 @@ func NewUsage(ctx context.Context, s service.Service, usc usagepb.UsageServiceCl
 	var defaultOwnerUID string
 	if user, err := s.GetUserAdmin(ctx, constant.DefaultUserID); err == nil {
 		defaultOwnerUID = *user.Uid
-	} else {
+	} else if strings.Contains(err.Error(), "users/admin") {
 		// Only Instill Core CE has the default user "admin"
 		logger.Debug(fmt.Sprintf("error getting default user: %v, use a zero uuid as default owner uid", err))
 		defaultOwnerUID = uuid.Nil.String()
+	} else {
+		logger.Error(err.Error())
+		return nil
 	}
 
 	reporter, err := usageclient.InitReporter(ctx, usc, usagepb.Session_SERVICE_MGMT, config.Config.Server.Edition, serviceVersion, defaultOwnerUID)
@@ -119,10 +123,13 @@ func (u *usage) StartReporter(ctx context.Context) {
 	var defaultOwnerUID string
 	if user, err := u.service.GetUserAdmin(ctx, constant.DefaultUserID); err == nil {
 		defaultOwnerUID = *user.Uid
-	} else {
+	} else if strings.Contains(err.Error(), "users/admin") {
 		// Only Instill Core CE has the default user "admin"
 		logger.Debug(fmt.Sprintf("error getting default user: %v, use a zero uuid as default owner uid", err))
 		defaultOwnerUID = uuid.Nil.String()
+	} else {
+		logger.Error(err.Error())
+		return
 	}
 
 	go func() {
