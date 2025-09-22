@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.25.3](https://github.com/instill-ai/mgmt-backend/compare/v0.25.2...v0.25.3) (2025-09-22)
+
+
+### Bug Fixes
+
+* **usage:** add missing error filtering for users/admin ([#298](https://github.com/instill-ai/mgmt-backend/issues/298)) ([1253939](https://github.com/instill-ai/mgmt-backend/commit/12539394cc5ee1b03ab742ff4290ce72774409c1))
+
 ## [0.25.2](https://github.com/instill-ai/mgmt-backend/compare/v0.25.1...v0.25.2) (2025-09-09)
 
 
