@@ -21,7 +21,6 @@ import (
 
 	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
 	errorsx "github.com/instill-ai/x/errors"
-	logx "github.com/instill-ai/x/log"
 )
 
 const (
@@ -127,7 +126,7 @@ func (r *repository) CreateUser(ctx context.Context, user *datamodel.Owner) erro
 // ownerWithType is used to wrap an owner fetch with a tyupe check.
 func ownerWithType(o *datamodel.Owner, ownerType string) (*datamodel.Owner, error) {
 	if !o.OwnerType.Valid || o.OwnerType.String != ownerType {
-		return nil, gorm.ErrRecordNotFound
+		return nil, errorsx.RepositoryErr(gorm.ErrRecordNotFound)
 	}
 
 	return o, nil
@@ -193,11 +192,9 @@ func (r *repository) DeleteOrganization(ctx context.Context, id string) error {
 
 func (r *repository) GetAllUsers(ctx context.Context) ([]*datamodel.Owner, error) {
 	db := r.CheckPinnedUser(ctx, r.db)
-	logger, _ := logx.GetZapLogger(ctx)
 	var users []*datamodel.Owner
-	if result := db.Find(users).Where("owner_type = 'user'"); result.Error != nil {
-		logger.Error(result.Error.Error())
-		return nil, result.Error
+	if err := db.Find(users).Where("owner_type = 'user'").Error; err != nil {
+		return nil, errorsx.RepositoryErr(fmt.Errorf("getting all users: %w", err))
 	}
 	return users, nil
 }
@@ -206,11 +203,9 @@ func (r *repository) listOwners(ctx context.Context, ownerType string, pageSize 
 
 	db := r.CheckPinnedUser(ctx, r.db)
 
-	logger, _ := logx.GetZapLogger(ctx)
 	totalSize := int64(0)
-	if result := db.Model(&datamodel.Owner{}).Where("owner_type = ?", ownerType).Count(&totalSize); result.Error != nil {
-		logger.Error(result.Error.Error())
-		return nil, totalSize, "", result.Error
+	if err := db.Model(&datamodel.Owner{}).Where("owner_type = ?", ownerType).Count(&totalSize).Error; err != nil {
+		return nil, totalSize, "", errorsx.RepositoryErr(fmt.Errorf("counting owners: %w", err))
 	}
 
 	queryBuilder := db.Model(&datamodel.Owner{}).Order("create_time DESC, id DESC")
@@ -243,15 +238,13 @@ func (r *repository) listOwners(ctx context.Context, ownerType string, pageSize 
 
 	rows, err := queryBuilder.Rows()
 	if err != nil {
-		logger.Error(err.Error())
-		return nil, totalSize, "", err
+		return nil, totalSize, "", errorsx.RepositoryErr(fmt.Errorf("querying owners: %w", err))
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var item datamodel.Owner
 		if err = db.ScanRows(rows, &item); err != nil {
-			logger.Error(err.Error())
-			return nil, totalSize, "", err
+			return nil, totalSize, "", errorsx.RepositoryErr(fmt.Errorf("scanning owner row: %w", err))
 		}
 		createTime = item.CreateTime
 
@@ -275,8 +268,8 @@ func (r *repository) listOwners(ctx context.Context, ownerType string, pageSize 
 		if expr != nil {
 			queryBuilder = queryBuilder.Where(expr)
 		}
-		if result := queryBuilder.Limit(1).Find(lastItem); result.Error != nil {
-			return nil, 0, "", result.Error
+		if err := queryBuilder.Limit(1).Find(lastItem).Error; err != nil {
+			return nil, 0, "", errorsx.RepositoryErr(fmt.Errorf("finding last owner for pagination: %w", err))
 		}
 		if lastItem.UID.String() == lastUID.String() {
 			nextPageToken = ""
@@ -291,7 +284,6 @@ func (r *repository) listOwners(ctx context.Context, ownerType string, pageSize 
 }
 
 func (r *repository) createOwner(ctx context.Context, ownerType string, owner *datamodel.Owner) error {
-
 	r.PinUser(ctx)
 	db := r.CheckPinnedUser(ctx, r.db)
 
@@ -299,11 +291,10 @@ func (r *repository) createOwner(ctx context.Context, ownerType string, owner *d
 		return errorsx.ErrOwnerTypeNotMatch
 	}
 
-	logger, _ := logx.GetZapLogger(ctx)
-	if result := db.Model(&datamodel.Owner{}).Create(owner); result.Error != nil {
-		logger.Error(result.Error.Error())
-		return result.Error
+	if err := db.Model(&datamodel.Owner{}).Create(owner).Error; err != nil {
+		return errorsx.RepositoryErr(fmt.Errorf("inserting owner: %w", err))
 	}
+
 	return nil
 }
 
@@ -320,8 +311,8 @@ func (r *repository) GetOwner(ctx context.Context, id string, includeAvatar bool
 	if !includeAvatar {
 		queryBuilder = queryBuilder.Omit("profile_avatar")
 	}
-	if result := queryBuilder.First(&owner); result.Error != nil {
-		return nil, result.Error
+	if err := queryBuilder.First(&owner).Error; err != nil {
+		return nil, errorsx.RepositoryErr(fmt.Errorf("getting owner by id: %w", err))
 	}
 	return &owner, nil
 }
@@ -330,9 +321,13 @@ func (r *repository) GetOwnerByUID(ctx context.Context, uid uuid.UUID) (*datamod
 	db := r.CheckPinnedUser(ctx, r.db)
 
 	var owner datamodel.Owner
-	result := db.Model(&datamodel.Owner{}).Omit("profile_avatar").Where("uid = ?", uid.String()).First(&owner)
-	if result.Error != nil {
-		return nil, result.Error
+	if err := db.Model(&datamodel.Owner{}).
+		Omit("profile_avatar").
+		Where("uid = ?", uid.String()).
+		First(&owner).
+		Error; err != nil {
+
+		return nil, errorsx.RepositoryErr(fmt.Errorf("getting owner by uid: %w", err))
 	}
 	return &owner, nil
 }
@@ -342,10 +337,15 @@ func (r *repository) updateOwner(ctx context.Context, ownerType string, id strin
 	r.PinUser(ctx)
 	db := r.CheckPinnedUser(ctx, r.db)
 
-	logger, _ := logx.GetZapLogger(ctx)
-	if result := db.Omit("UID").Omit("password_hash").Model(&datamodel.Owner{}).Where("owner_type = ?", ownerType).Where("id = ?", id).Updates(owner); result.Error != nil {
-		logger.Error(result.Error.Error())
-		return result.Error
+	if err := db.Omit("UID").
+		Omit("password_hash").
+		Model(&datamodel.Owner{}).
+		Where("owner_type = ?", ownerType).
+		Where("id = ?", id).
+		Updates(owner).
+		Error; err != nil {
+
+		return errorsx.RepositoryErr(fmt.Errorf("updating owner: %w", err))
 	}
 	return nil
 }
@@ -355,15 +355,13 @@ func (r *repository) deleteOwner(ctx context.Context, ownerType string, id strin
 	r.PinUser(ctx)
 	db := r.CheckPinnedUser(ctx, r.db)
 
-	logger, _ := logx.GetZapLogger(ctx)
 	result := db.Model(&datamodel.Owner{}).
 		Where("owner_type = ?", ownerType).
 		Where("id = ?", id).
 		Delete(&datamodel.Owner{})
 
 	if result.Error != nil {
-		logger.Error(result.Error.Error())
-		return result.Error
+		return errorsx.RepositoryErr(fmt.Errorf("deleting owner: %w", result.Error))
 	}
 
 	if result.RowsAffected == 0 {
@@ -381,8 +379,8 @@ func (r *repository) GetUserPasswordHash(ctx context.Context, uid uuid.UUID) (st
 	db := r.CheckPinnedUser(ctx, r.db)
 
 	var pw datamodel.Password
-	if result := db.First(&pw, "uid = ?", uid.String()); result.Error != nil {
-		return "", time.Time{}, result.Error
+	if err := db.First(&pw, "uid = ?", uid.String()).Error; err != nil {
+		return "", time.Time{}, errorsx.RepositoryErr(fmt.Errorf("getting password hash: %w", err))
 	}
 	return pw.PasswordHash.String, pw.PasswordUpdateTime, nil
 }
@@ -392,14 +390,18 @@ func (r *repository) UpdateUserPasswordHash(ctx context.Context, uid uuid.UUID, 
 	r.PinUser(ctx)
 	db := r.CheckPinnedUser(ctx, r.db)
 
-	logger, _ := logx.GetZapLogger(ctx)
-	if result := db.Select("*").Omit("UID").Model(&datamodel.Password{}).Where("uid = ?", uid.String()).Updates(datamodel.Password{
-		PasswordHash:       sql.NullString{String: newPassword, Valid: true},
-		PasswordUpdateTime: updateTime,
-	}); result.Error != nil {
-		logger.Error(result.Error.Error())
-		return result.Error
+	if err := db.Select("*").
+		Omit("UID").
+		Model(&datamodel.Password{}).
+		Where("uid = ?", uid.String()).
+		Updates(datamodel.Password{
+			PasswordHash:       sql.NullString{String: newPassword, Valid: true},
+			PasswordUpdateTime: updateTime,
+		}).Error; err != nil {
+
+		return errorsx.RepositoryErr(fmt.Errorf("updating password hash: %w", err))
 	}
+
 	return nil
 }
 
@@ -412,13 +414,13 @@ func (r *repository) ListAllValidTokens(ctx context.Context) (tokens []datamodel
 	queryBuilder.Where("expire_time >= ?", time.Now())
 	rows, err := queryBuilder.Rows()
 	if err != nil {
-		return nil, err
+		return nil, errorsx.RepositoryErr(fmt.Errorf("querying valid tokens: %w", err))
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var item datamodel.Token
 		if err = db.ScanRows(rows, &item); err != nil {
-			return nil, err
+			return nil, errorsx.RepositoryErr(fmt.Errorf("scanning token row: %w", err))
 		}
 		// createTime = item.CreateTime
 		tokens = append(tokens, item)
@@ -431,8 +433,8 @@ func (r *repository) ListTokens(ctx context.Context, owner string, pageSize int6
 
 	db := r.CheckPinnedUser(ctx, r.db)
 
-	if result := db.Model(&datamodel.Token{}).Where("owner = ?", owner).Count(&totalSize); result.Error != nil {
-		return nil, 0, "", err
+	if err := db.Model(&datamodel.Token{}).Where("owner = ?", owner).Count(&totalSize).Error; err != nil {
+		return nil, 0, "", errorsx.RepositoryErr(fmt.Errorf("counting tokens: %w", err))
 	}
 
 	queryBuilder := db.Model(&datamodel.Token{}).Order("create_time DESC, uid DESC").Where("owner = ?", owner)
@@ -448,7 +450,7 @@ func (r *repository) ListTokens(ctx context.Context, owner string, pageSize int6
 	if pageToken != "" {
 		createTime, uid, err := paginate.DecodeToken(pageToken)
 		if err != nil {
-			return nil, 0, "", err
+			return nil, 0, "", errorsx.NewPageTokenErr(err)
 		}
 		queryBuilder = queryBuilder.Where("(create_time,uid) < (?::timestamp, ?)", createTime, uid)
 	}
@@ -456,13 +458,13 @@ func (r *repository) ListTokens(ctx context.Context, owner string, pageSize int6
 	var createTime time.Time
 	rows, err := queryBuilder.Rows()
 	if err != nil {
-		return nil, 0, "", err
+		return nil, 0, "", errorsx.RepositoryErr(fmt.Errorf("querying tokens: %w", err))
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var item datamodel.Token
 		if err = db.ScanRows(rows, &item); err != nil {
-			return nil, 0, "", err
+			return nil, 0, "", errorsx.RepositoryErr(fmt.Errorf("scanning token row: %w", err))
 		}
 		createTime = item.CreateTime
 		tokens = append(tokens, &item)
@@ -471,11 +473,12 @@ func (r *repository) ListTokens(ctx context.Context, owner string, pageSize int6
 	if len(tokens) > 0 {
 		lastUID := (tokens)[len(tokens)-1].UID
 		lastItem := &datamodel.Token{}
-		if result := db.Model(&datamodel.Token{}).
+		if err := db.Model(&datamodel.Token{}).
 			Where("owner = ?", owner).
 			Order("create_time ASC, uid ASC").
-			Limit(1).Find(lastItem); result.Error != nil {
-			return nil, 0, "", err
+			Limit(1).Find(lastItem).Error; err != nil {
+
+			return nil, 0, "", errorsx.RepositoryErr(fmt.Errorf("finding last token for pagination: %w", err))
 		}
 		if lastItem.UID.String() == lastUID.String() {
 			nextPageToken = ""
@@ -492,10 +495,8 @@ func (r *repository) CreateToken(ctx context.Context, token *datamodel.Token) er
 	r.PinUser(ctx)
 	db := r.CheckPinnedUser(ctx, r.db)
 
-	logger, _ := logx.GetZapLogger(ctx)
-	if result := db.Model(&datamodel.Token{}).Create(token); result.Error != nil {
-		logger.Error(result.Error.Error())
-		return result.Error
+	if err := db.Model(&datamodel.Token{}).Create(token).Error; err != nil {
+		return errorsx.RepositoryErr(fmt.Errorf("creating token: %w", err))
 	}
 	return nil
 }
@@ -506,8 +507,8 @@ func (r *repository) GetToken(ctx context.Context, owner string, id string) (*da
 
 	queryBuilder := db.Model(&datamodel.Token{}).Where("id = ? AND owner = ?", id, owner)
 	var token datamodel.Token
-	if result := queryBuilder.First(&token); result.Error != nil {
-		return nil, result.Error
+	if err := queryBuilder.First(&token).Error; err != nil {
+		return nil, errorsx.RepositoryErr(fmt.Errorf("getting token: %w", err))
 	}
 	return &token, nil
 }
@@ -518,8 +519,8 @@ func (r *repository) LookupToken(ctx context.Context, accessToken string) (*data
 
 	queryBuilder := db.Model(&datamodel.Token{}).Where("access_token = ?", accessToken)
 	var token datamodel.Token
-	if result := queryBuilder.First(&token); result.Error != nil {
-		return nil, result.Error
+	if err := queryBuilder.First(&token).Error; err != nil {
+		return nil, errorsx.RepositoryErr(fmt.Errorf("looking up token: %w", err))
 	}
 	return &token, nil
 }
@@ -534,7 +535,7 @@ func (r *repository) DeleteToken(ctx context.Context, owner string, id string) e
 		Delete(&datamodel.Token{})
 
 	if result.Error != nil {
-		return result.Error
+		return errorsx.RepositoryErr(fmt.Errorf("deleting token: %w", result.Error))
 	}
 
 	if result.RowsAffected == 0 {
@@ -553,7 +554,7 @@ func (r *repository) UpdateTokenLastUseTime(ctx context.Context, accessToken str
 		Update("last_use_time", time.Now())
 
 	if result.Error != nil {
-		return result.Error
+		return errorsx.RepositoryErr(fmt.Errorf("updating token last use time: %w", result.Error))
 	}
 
 	if result.RowsAffected == 0 {
