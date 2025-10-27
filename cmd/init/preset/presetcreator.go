@@ -8,7 +8,6 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/gogo/status"
 	"google.golang.org/grpc/codes"
-	"gorm.io/gorm"
 
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
@@ -16,6 +15,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 
 	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	errorsx "github.com/instill-ai/x/errors"
 )
 
 func CreatePresetOrg(ctx context.Context, r repository.Repository) error {
@@ -34,7 +34,7 @@ func CreatePresetOrg(ctx context.Context, r repository.Repository) error {
 		return nil
 	}
 
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	if !errors.Is(err, errorsx.ErrNotFound) {
 		return status.Errorf(codes.Internal, "error %v", err)
 	}
 

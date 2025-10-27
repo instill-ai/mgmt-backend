@@ -9,7 +9,6 @@ import (
 
 	"github.com/gofrs/uuid"
 	"go.einride.tech/aip/filtering"
-	"gorm.io/gorm"
 
 	"github.com/instill-ai/mgmt-backend/internal/resource"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
@@ -307,7 +306,7 @@ func (s *service) ListModelTriggerChartRecords(
 func (s *service) GrantedNamespaceUID(ctx context.Context, namespaceID string, authenticatedUserUID uuid.UUID) (uuid.UUID, error) {
 	owner, err := s.repository.GetOwner(ctx, namespaceID, false)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, errorsx.ErrNotFound) {
 			err = errorsx.ErrUnauthorized
 		}
 
