@@ -11,14 +11,17 @@ import (
 	"testing"
 	"time"
 
-	qt "github.com/frankban/quicktest"
 	"github.com/go-redis/redismock/v9"
 	"github.com/gofrs/uuid"
 	"gorm.io/gorm"
 
+	qt "github.com/frankban/quicktest"
+
 	"github.com/instill-ai/mgmt-backend/config"
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
+
 	database "github.com/instill-ai/mgmt-backend/pkg/db"
+	errorsx "github.com/instill-ai/x/errors"
 )
 
 var db *gorm.DB
@@ -102,16 +105,20 @@ func TestRepository_GetOwner(t *testing.T) {
 
 	c.Run("nok - get with wrong type", func(c *qt.C) {
 		_, err := repo.GetUser(ctx, org.ID, false)
-		c.Check(errors.Is(err, gorm.ErrRecordNotFound), qt.IsTrue, qt.Commentf(err.Error()))
+		c.Check(err, qt.IsNotNil)
+		c.Check(errors.Is(err, errorsx.ErrNotFound), qt.IsTrue, qt.Commentf(err.Error()))
 
 		_, err = repo.GetUserByUID(ctx, org.UID)
-		c.Check(errors.Is(err, gorm.ErrRecordNotFound), qt.IsTrue, qt.Commentf(err.Error()))
+		c.Check(err, qt.IsNotNil)
+		c.Check(errors.Is(err, errorsx.ErrNotFound), qt.IsTrue, qt.Commentf(err.Error()))
 
 		_, err = repo.GetOrganization(ctx, user.ID, false)
-		c.Check(errors.Is(err, gorm.ErrRecordNotFound), qt.IsTrue, qt.Commentf(err.Error()))
+		c.Check(err, qt.IsNotNil)
+		c.Check(errors.Is(err, errorsx.ErrNotFound), qt.IsTrue, qt.Commentf(err.Error()))
 
 		_, err = repo.GetOrganizationByUID(ctx, user.UID)
-		c.Check(errors.Is(err, gorm.ErrRecordNotFound), qt.IsTrue, qt.Commentf(err.Error()))
+		c.Check(err, qt.IsNotNil)
+		c.Check(errors.Is(err, errorsx.ErrNotFound), qt.IsTrue, qt.Commentf(err.Error()))
 	})
 
 	c.Run("ok - get with type", func(c *qt.C) {
