@@ -12,7 +12,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"gorm.io/gorm"
 
 	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 
@@ -25,6 +24,7 @@ import (
 
 	database "github.com/instill-ai/mgmt-backend/pkg/db"
 	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	errorsx "github.com/instill-ai/x/errors"
 	logx "github.com/instill-ai/x/log"
 )
 
@@ -122,7 +122,7 @@ func createDefaultUser(ctx context.Context, r repository.Repository) error {
 		return nil
 	}
 
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	if !errors.Is(err, errorsx.ErrNotFound) {
 		return status.Errorf(codes.Internal, "error %v", err)
 	}
 
