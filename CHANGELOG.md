@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.25.4](https://github.com/instill-ai/mgmt-backend/compare/v0.25.3...v0.25.4) (2025-10-27)
+
+
+### Bug Fixes
+
+* **repo:** update error assertions on repo clients ([#302](https://github.com/instill-ai/mgmt-backend/issues/302)) ([5564771](https://github.com/instill-ai/mgmt-backend/commit/5564771236b201259ebe68ca85a3809c64176b61))
+
+
+### Miscellaneous
+
+* **repo:** wrap repository errors into domain ones ([#300](https://github.com/instill-ai/mgmt-backend/issues/300)) ([f667995](https://github.com/instill-ai/mgmt-backend/commit/f6679955c7df939ae431fc61c7adafd028a6436d))
+
 ## [0.25.3](https://github.com/instill-ai/mgmt-backend/compare/v0.25.2...v0.25.3) (2025-09-22)
 
 
