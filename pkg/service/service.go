@@ -11,6 +11,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.einride.tech/aip/filtering"
 	"golang.org/x/crypto/bcrypt"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
 	"github.com/instill-ai/mgmt-backend/internal/resource"
 	"github.com/instill-ai/mgmt-backend/pkg/acl"
@@ -53,12 +54,12 @@ type Service interface {
 
 	ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID, userID string) ([]*mgmtpb.UserMembership, error)
 	GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) (*mgmtpb.UserMembership, error)
-	UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string, membership *mgmtpb.UserMembership) (*mgmtpb.UserMembership, error)
+	UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string, membership *mgmtpb.UserMembership, updateMask *fieldmaskpb.FieldMask) (*mgmtpb.UserMembership, error)
 	DeleteUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) error
 
 	ListOrganizationMemberships(ctx context.Context, ctxUserUID uuid.UUID, orgID string) ([]*mgmtpb.OrganizationMembership, error)
 	GetOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) (*mgmtpb.OrganizationMembership, error)
-	UpdateOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string, membership *mgmtpb.OrganizationMembership) (*mgmtpb.OrganizationMembership, error)
+	UpdateOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string, membership *mgmtpb.OrganizationMembership, updateMask *fieldmaskpb.FieldMask) (*mgmtpb.OrganizationMembership, error)
 	DeleteOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) error
 
 	CreateToken(ctx context.Context, ctxUserUID uuid.UUID, token *mgmtpb.ApiToken) error
@@ -806,9 +807,16 @@ func (s *service) GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, u
 	return membership, nil
 }
 
-func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string, membership *mgmtpb.UserMembership) (*mgmtpb.UserMembership, error) {
+func (s *service) UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string, membership *mgmtpb.UserMembership, updateMask *fieldmaskpb.FieldMask) (*mgmtpb.UserMembership, error) {
 
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
+
+	// Validate update_mask paths - only "state" is supported
+	for _, path := range updateMask.Paths {
+		if path != "state" {
+			return nil, fmt.Errorf("%w: unsupported field path: %s", errorsx.ErrFieldMask, path)
+		}
+	}
 
 	userID, err := s.convertUserIDAlias(ctx, ctxUserUID, userID)
 	if err != nil {
@@ -1017,9 +1025,16 @@ func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid
 	return membership, nil
 }
 
-func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string, membership *mgmtpb.OrganizationMembership) (*mgmtpb.OrganizationMembership, error) {
+func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string, membership *mgmtpb.OrganizationMembership, updateMask *fieldmaskpb.FieldMask) (*mgmtpb.OrganizationMembership, error) {
 
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
+
+	// Validate update_mask paths - only "role" is supported
+	for _, path := range updateMask.Paths {
+		if path != "role" {
+			return nil, fmt.Errorf("%w: unsupported field path: %s", errorsx.ErrFieldMask, path)
+		}
+	}
 
 	userID, err := s.convertUserIDAlias(ctx, ctxUserUID, userID)
 	if err != nil {
@@ -1047,6 +1062,21 @@ func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID u
 		return nil, errorsx.ErrCanNotSetAnotherOwner
 	}
 
+	// Check if demoting an owner - if so, ensure at least one owner remains
+	curRole, err := s.aclClient.GetOrganizationUserMembership(ctx, org.UID, user.UID)
+	if err != nil {
+		return nil, fmt.Errorf("fetching current membership: %w", err)
+	}
+	if curRole == "owner" && membership.Role != "owner" {
+		ownerCount, err := s.countOrganizationOwners(ctx, org.UID)
+		if err != nil {
+			return nil, err
+		}
+		if ownerCount <= 1 {
+			return nil, errorsx.ErrCanNotRemoveOwnerFromOrganization
+		}
+	}
+
 	pbUser, err := s.DBUser2PBUser(ctx, user)
 	if err != nil {
 		return nil, err
@@ -1057,8 +1087,7 @@ func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID u
 		return nil, err
 	}
 
-	curRole, err := s.aclClient.GetOrganizationUserMembership(ctx, org.UID, user.UID)
-	if err == nil && !strings.HasPrefix(curRole, "pending") {
+	if !strings.HasPrefix(curRole, "pending") {
 		err = s.aclClient.SetOrganizationUserMembership(ctx, org.UID, user.UID, membership.Role)
 		if err != nil {
 			return nil, err
@@ -1090,6 +1119,22 @@ func (s *service) UpdateOrganizationMembership(ctx context.Context, ctxUserUID u
 
 }
 
+// countOrganizationOwners counts the number of owners in an organization.
+func (s *service) countOrganizationOwners(ctx context.Context, orgUID uuid.UUID) (int, error) {
+	userRelations, err := s.aclClient.GetOrganizationUsers(ctx, orgUID)
+	if err != nil {
+		return 0, fmt.Errorf("fetching organization users: %w", err)
+	}
+
+	ownerCount := 0
+	for _, relation := range userRelations {
+		if relation.Relation == "owner" {
+			ownerCount++
+		}
+	}
+	return ownerCount, nil
+}
+
 func (s *service) DeleteOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) error {
 
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
@@ -1115,9 +1160,24 @@ func (s *service) DeleteOrganizationMembership(ctx context.Context, ctxUserUID u
 	if !canRemoveMembership {
 		return errorsx.ErrUnauthorized
 	}
-	if canRemoveMembership && ctxUserUID == user.UID {
-		return errorsx.ErrCanNotRemoveOwnerFromOrganization
+
+	// Check if the user being removed is an owner
+	userRole, err := s.aclClient.GetOrganizationUserMembership(ctx, org.UID, user.UID)
+	if err != nil {
+		return fmt.Errorf("fetching user membership: %w", err)
 	}
+
+	// If the user being removed is an owner, ensure at least one owner remains
+	if userRole == "owner" {
+		ownerCount, err := s.countOrganizationOwners(ctx, org.UID)
+		if err != nil {
+			return err
+		}
+		if ownerCount <= 1 {
+			return errorsx.ErrCanNotRemoveOwnerFromOrganization
+		}
+	}
+
 	err = s.aclClient.DeleteOrganizationUserMembership(ctx, org.UID, user.UID)
 	if err != nil {
 		return err

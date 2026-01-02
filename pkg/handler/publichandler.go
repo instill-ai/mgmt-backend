@@ -855,6 +855,10 @@ func (h *PublicHandler) UpdateUserMembership(ctx context.Context, req *mgmtpb.Up
 		return nil, err
 	}
 
+	if req.UpdateMask == nil || len(req.UpdateMask.Paths) == 0 {
+		return nil, errorsx.ErrFieldMask
+	}
+
 	if err := checkfield.CheckRequiredFields(req.Membership, requiredFieldsForUserMembership); err != nil {
 		return nil, errorsx.ErrCheckRequiredFields
 	}
@@ -863,7 +867,7 @@ func (h *PublicHandler) UpdateUserMembership(ctx context.Context, req *mgmtpb.Up
 		return nil, errorsx.ErrCheckOutputOnlyFields
 	}
 
-	pbMembership, err := h.Service.UpdateUserMembership(ctx, ctxUserUID, req.UserId, req.OrganizationId, req.Membership)
+	pbMembership, err := h.Service.UpdateUserMembership(ctx, ctxUserUID, req.UserId, req.OrganizationId, req.Membership, req.UpdateMask)
 	if err != nil {
 		return nil, err
 	}
@@ -941,6 +945,10 @@ func (h *PublicHandler) UpdateOrganizationMembership(ctx context.Context, req *m
 		return nil, err
 	}
 
+	if req.UpdateMask == nil || len(req.UpdateMask.Paths) == 0 {
+		return nil, errorsx.ErrFieldMask
+	}
+
 	if err := checkfield.CheckRequiredFields(req.Membership, requiredFieldsForOrganizationMembership); err != nil {
 		return nil, errorsx.ErrCheckRequiredFields
 	}
@@ -949,7 +957,7 @@ func (h *PublicHandler) UpdateOrganizationMembership(ctx context.Context, req *m
 		return nil, errorsx.ErrCheckOutputOnlyFields
 	}
 
-	pbMembership, err := h.Service.UpdateOrganizationMembership(ctx, ctxUserUID, req.OrganizationId, req.UserId, req.Membership)
+	pbMembership, err := h.Service.UpdateOrganizationMembership(ctx, ctxUserUID, req.OrganizationId, req.UserId, req.Membership, req.UpdateMask)
 	if err != nil {
 		return nil, err
 	}
