@@ -179,6 +179,27 @@ func (h *PrivateHandler) CheckNamespaceAdmin(ctx context.Context, req *mgmtpb.Ch
 		}, nil
 	}
 
+	// Check for sanitized collision: internally, namespace IDs are normalized
+	// by converting "-" to "_", so "foo-bar" and "foo_bar" would collide.
+	// If a variant exists (e.g., "foo_bar" for "foo-bar"), check if it's taken.
+	variant := getSanitizedNamespaceVariant(req.GetId())
+	if variant != "" {
+		_, err = h.Service.GetUserAdmin(ctx, variant)
+		if err == nil {
+			// Variant exists as user - this would cause a collision
+			return &mgmtpb.CheckNamespaceAdminResponse{
+				Type: mgmtpb.CheckNamespaceAdminResponse_NAMESPACE_RESERVED,
+			}, nil
+		}
+		_, err = h.Service.GetOrganizationAdmin(ctx, variant)
+		if err == nil {
+			// Variant exists as organization - this would cause a collision
+			return &mgmtpb.CheckNamespaceAdminResponse{
+				Type: mgmtpb.CheckNamespaceAdminResponse_NAMESPACE_RESERVED,
+			}, nil
+		}
+	}
+
 	return &mgmtpb.CheckNamespaceAdminResponse{
 		Type: mgmtpb.CheckNamespaceAdminResponse_NAMESPACE_AVAILABLE,
 	}, nil

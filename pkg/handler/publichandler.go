@@ -289,6 +289,18 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtpb.
 	return &resp, nil
 }
 
+// getSanitizedNamespaceVariant returns the "other" variant of a namespace ID
+// by swapping dashes and underscores.
+func getSanitizedNamespaceVariant(id string) string {
+	if strings.Contains(id, "-") {
+		return strings.ReplaceAll(id, "-", "_")
+	}
+	if strings.Contains(id, "_") {
+		return strings.ReplaceAll(id, "_", "-")
+	}
+	return ""
+}
+
 // CheckNamespace checks if the namespace is available.
 func (h *PublicHandler) CheckNamespace(ctx context.Context, req *mgmtpb.CheckNamespaceRequest) (*mgmtpb.CheckNamespaceResponse, error) {
 
@@ -308,6 +320,27 @@ func (h *PublicHandler) CheckNamespace(ctx context.Context, req *mgmtpb.CheckNam
 		return &mgmtpb.CheckNamespaceResponse{
 			Type: mgmtpb.CheckNamespaceResponse_NAMESPACE_ORGANIZATION,
 		}, nil
+	}
+
+	// Check for sanitized collision: internally, namespace IDs are normalized
+	// by converting "-" to "_", so "foo-bar" and "foo_bar" would collide.
+	// If a variant exists (e.g., "foo_bar" for "foo-bar"), check if it's taken.
+	variant := getSanitizedNamespaceVariant(req.GetId())
+	if variant != "" {
+		_, err = h.Service.GetUserAdmin(ctx, variant)
+		if err == nil {
+			// Variant exists as user - this would cause a collision
+			return &mgmtpb.CheckNamespaceResponse{
+				Type: mgmtpb.CheckNamespaceResponse_NAMESPACE_RESERVED,
+			}, nil
+		}
+		_, err = h.Service.GetOrganizationAdmin(ctx, variant)
+		if err == nil {
+			// Variant exists as organization - this would cause a collision
+			return &mgmtpb.CheckNamespaceResponse{
+				Type: mgmtpb.CheckNamespaceResponse_NAMESPACE_RESERVED,
+			}, nil
+		}
 	}
 
 	return &mgmtpb.CheckNamespaceResponse{
