@@ -44,6 +44,7 @@ const (
 	TriggerMode        string = "trigger_mode"
 	Status             string = "status"
 	Email              string = "email"
+	UserID             string = "id"
 )
 
 // Metric data enum

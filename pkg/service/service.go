@@ -42,26 +42,6 @@ type Service interface {
 	GetUserAdmin(ctx context.Context, id string) (*mgmtpb.User, error)
 	GetUserByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtpb.User, error)
 
-	CreateOrganization(ctx context.Context, ctxUserUID uuid.UUID, org *mgmtpb.Organization) (*mgmtpb.Organization, error)
-	ListOrganizations(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtpb.Organization, int64, string, error)
-	GetOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtpb.Organization, error)
-	UpdateOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string, org *mgmtpb.Organization) (*mgmtpb.Organization, error)
-	DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, id string) error
-
-	ListOrganizationsAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtpb.Organization, int64, string, error)
-	GetOrganizationAdmin(ctx context.Context, id string) (*mgmtpb.Organization, error)
-	GetOrganizationByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtpb.Organization, error)
-
-	ListUserMemberships(ctx context.Context, ctxUserUID uuid.UUID, userID string) ([]*mgmtpb.UserMembership, error)
-	GetUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) (*mgmtpb.UserMembership, error)
-	UpdateUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string, membership *mgmtpb.UserMembership, updateMask *fieldmaskpb.FieldMask) (*mgmtpb.UserMembership, error)
-	DeleteUserMembership(ctx context.Context, ctxUserUID uuid.UUID, userID string, orgID string) error
-
-	ListOrganizationMemberships(ctx context.Context, ctxUserUID uuid.UUID, orgID string) ([]*mgmtpb.OrganizationMembership, error)
-	GetOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) (*mgmtpb.OrganizationMembership, error)
-	UpdateOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string, membership *mgmtpb.OrganizationMembership, updateMask *fieldmaskpb.FieldMask) (*mgmtpb.OrganizationMembership, error)
-	DeleteOrganizationMembership(ctx context.Context, ctxUserUID uuid.UUID, orgID string, userID string) error
-
 	CreateToken(ctx context.Context, ctxUserUID uuid.UUID, token *mgmtpb.ApiToken) error
 	ListTokens(ctx context.Context, ctxUserUID uuid.UUID, pageSize int64, pageToken string) ([]*mgmtpb.ApiToken, int64, string, error)
 	GetToken(ctx context.Context, ctxUserUID uuid.UUID, id string) (*mgmtpb.ApiToken, error)

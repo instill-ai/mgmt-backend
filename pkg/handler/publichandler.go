@@ -35,12 +35,6 @@ var immutableFields = []string{"uid", "id"}
 var createRequiredFieldsForToken = []string{"id"}
 var outputOnlyFieldsForToken = []string{"name", "uid", "state", "token_type", "access_token", "create_time", "update_time"}
 
-var requiredFieldsForOrganizationMembership = []string{"role"}
-var outputOnlyFieldsForOrganizationMembership = []string{"name", "state", "user", "organization"}
-
-var requiredFieldsForUserMembership = []string{"state"}
-var outputOnlyFieldsForUserMembership = []string{"name", "role", "user", "organization"}
-
 // PublicHandler is the handler for the public endpoints.
 type PublicHandler struct {
 	mgmtpb.UnimplementedMgmtPublicServiceServer
@@ -156,6 +150,7 @@ func (h *PublicHandler) ListUsers(ctx context.Context, req *mgmtpb.ListUsersRequ
 	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
 		filtering.DeclareStandardFunctions(),
 		filtering.DeclareIdent(constant.Email, filtering.TypeString),
+		filtering.DeclareIdent(constant.UserID, filtering.TypeString),
 	}...)
 	if err != nil {
 		return nil, err
@@ -315,12 +310,6 @@ func (h *PublicHandler) CheckNamespace(ctx context.Context, req *mgmtpb.CheckNam
 			Type: mgmtpb.CheckNamespaceResponse_NAMESPACE_USER,
 		}, nil
 	}
-	_, err = h.Service.GetOrganizationAdmin(ctx, req.GetId())
-	if err == nil {
-		return &mgmtpb.CheckNamespaceResponse{
-			Type: mgmtpb.CheckNamespaceResponse_NAMESPACE_ORGANIZATION,
-		}, nil
-	}
 
 	// Check for sanitized collision: internally, namespace IDs are normalized
 	// by converting "-" to "_", so "foo-bar" and "foo_bar" would collide.
@@ -334,167 +323,11 @@ func (h *PublicHandler) CheckNamespace(ctx context.Context, req *mgmtpb.CheckNam
 				Type: mgmtpb.CheckNamespaceResponse_NAMESPACE_RESERVED,
 			}, nil
 		}
-		_, err = h.Service.GetOrganizationAdmin(ctx, variant)
-		if err == nil {
-			// Variant exists as organization - this would cause a collision
-			return &mgmtpb.CheckNamespaceResponse{
-				Type: mgmtpb.CheckNamespaceResponse_NAMESPACE_RESERVED,
-			}, nil
-		}
 	}
 
 	return &mgmtpb.CheckNamespaceResponse{
 		Type: mgmtpb.CheckNamespaceResponse_NAMESPACE_AVAILABLE,
 	}, nil
-}
-
-// CreateOrganization creates an organization with the authenticated user as
-// the owner.
-func (h *PublicHandler) CreateOrganization(ctx context.Context, req *mgmtpb.CreateOrganizationRequest) (*mgmtpb.CreateOrganizationResponse, error) {
-	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
-	if err != nil {
-		return nil, err
-	}
-
-	pbCreatedOrg, createErr := h.Service.CreateOrganization(ctx, ctxUserUID, req.Organization)
-	if createErr != nil {
-		return nil, createErr
-	}
-
-	resp := &mgmtpb.CreateOrganizationResponse{
-		Organization: pbCreatedOrg,
-	}
-
-	// Manually set the custom header to have a StatusCreated http response for REST endpoint
-	if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", strconv.Itoa(http.StatusCreated))); err != nil {
-		return nil, err
-	}
-
-	return resp, nil
-}
-
-// ListOrganizations lists organizations.
-func (h *PublicHandler) ListOrganizations(ctx context.Context, req *mgmtpb.ListOrganizationsRequest) (*mgmtpb.ListOrganizationsResponse, error) {
-
-	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, true)
-	if err != nil {
-		return nil, err
-	}
-
-	pbOrgs, totalSize, nextPageToken, err := h.Service.ListOrganizations(ctx, ctxUserUID, int(req.GetPageSize()), req.GetPageToken(), filtering.Filter{})
-	if err != nil {
-		return nil, err
-	}
-
-	resp := &mgmtpb.ListOrganizationsResponse{
-		Organizations: pbOrgs,
-		NextPageToken: nextPageToken,
-		TotalSize:     int32(totalSize),
-	}
-	return resp, nil
-}
-
-// GetOrganization gets an organization.
-func (h *PublicHandler) GetOrganization(ctx context.Context, req *mgmtpb.GetOrganizationRequest) (*mgmtpb.GetOrganizationResponse, error) {
-
-	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, true)
-	if err != nil {
-		return nil, err
-	}
-
-	pbOrg, err := h.Service.GetOrganization(ctx, ctxUserUID, req.OrganizationId)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := &mgmtpb.GetOrganizationResponse{
-		Organization: pbOrg,
-	}
-
-	return resp, nil
-}
-
-// UpdateOrganization updates an organization.
-func (h *PublicHandler) UpdateOrganization(ctx context.Context, req *mgmtpb.UpdateOrganizationRequest) (*mgmtpb.UpdateOrganizationResponse, error) {
-
-	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
-	if err != nil {
-		return nil, err
-	}
-
-	pbOrgReq := req.GetOrganization()
-	pbUpdateMask := req.GetUpdateMask()
-
-	// Validate the field mask
-	if !pbUpdateMask.IsValid(pbOrgReq) {
-		return nil, errorsx.ErrUpdateMask
-	}
-
-	getResp, err := h.GetOrganization(ctx, &mgmtpb.GetOrganizationRequest{OrganizationId: req.OrganizationId})
-	if err != nil {
-		return nil, err
-	}
-
-	mask, err := fieldmask_utils.MaskFromProtoFieldMask(pbUpdateMask, strcase.ToCamel)
-	if err != nil {
-		return nil, errorsx.ErrFieldMask
-	}
-
-	if mask.IsEmpty() {
-		return &mgmtpb.UpdateOrganizationResponse{
-			Organization: getResp.GetOrganization(),
-		}, nil
-	}
-
-	pbOrgToUpdate := getResp.GetOrganization()
-
-	// Return error if IMMUTABLE fields are intentionally changed
-	if err := checkfield.CheckUpdateImmutableFields(pbOrgReq, pbOrgToUpdate, immutableFields); err != nil {
-		return nil, errorsx.ErrCheckUpdateImmutableFields
-	}
-
-	// Only the fields mentioned in the field mask will be copied to `pbPipelineToUpdate`, other fields are left intact
-	err = fieldmask_utils.StructToStruct(mask, pbOrgReq, pbOrgToUpdate)
-	if err != nil {
-		return nil, errorsx.ErrFieldMask
-	}
-
-	pbOrg, err := h.Service.UpdateOrganization(ctx, ctxUserUID, req.OrganizationId, pbOrgToUpdate)
-
-	if err != nil {
-		return nil, err
-	}
-
-	resp := &mgmtpb.UpdateOrganizationResponse{
-		Organization: pbOrg,
-	}
-
-	return resp, nil
-}
-
-// DeleteOrganization deletes an organization.
-func (h *PublicHandler) DeleteOrganization(ctx context.Context, req *mgmtpb.DeleteOrganizationRequest) (*mgmtpb.DeleteOrganizationResponse, error) {
-
-	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = h.GetOrganization(ctx, &mgmtpb.GetOrganizationRequest{OrganizationId: req.OrganizationId})
-	if err != nil {
-		return nil, err
-	}
-
-	if err := h.Service.DeleteOrganization(ctx, ctxUserUID, req.OrganizationId); err != nil {
-		return nil, err
-	}
-
-	// We need to manually set the custom header to have a StatusCreated http response for REST endpoint
-	if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", strconv.Itoa(http.StatusNoContent))); err != nil {
-		return nil, err
-	}
-
-	return &mgmtpb.DeleteOrganizationResponse{}, nil
 }
 
 // CreateToken creates an API token for triggering pipelines. This endpoint is not supported yet.
@@ -838,182 +671,4 @@ func (h *PublicHandler) ListModelTriggerChartRecords(ctx context.Context, req *m
 	}
 
 	return resp, nil
-}
-
-// ListUserMemberships lists user memberships.
-func (h *PublicHandler) ListUserMemberships(ctx context.Context, req *mgmtpb.ListUserMembershipsRequest) (*mgmtpb.ListUserMembershipsResponse, error) {
-
-	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
-	if err != nil {
-		return nil, err
-	}
-
-	pbMemberships, err := h.Service.ListUserMemberships(ctx, ctxUserUID, req.UserId)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := mgmtpb.ListUserMembershipsResponse{
-		Memberships: pbMemberships,
-	}
-
-	return &resp, nil
-}
-
-// GetUserMembership gets a user membership.
-func (h *PublicHandler) GetUserMembership(ctx context.Context, req *mgmtpb.GetUserMembershipRequest) (*mgmtpb.GetUserMembershipResponse, error) {
-
-	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
-	if err != nil {
-		return nil, err
-	}
-
-	pbMembership, err := h.Service.GetUserMembership(ctx, ctxUserUID, req.UserId, req.OrganizationId)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := mgmtpb.GetUserMembershipResponse{
-		Membership: pbMembership,
-	}
-
-	return &resp, nil
-}
-
-// UpdateUserMembership updates a user membership.
-func (h *PublicHandler) UpdateUserMembership(ctx context.Context, req *mgmtpb.UpdateUserMembershipRequest) (*mgmtpb.UpdateUserMembershipResponse, error) {
-
-	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
-	if err != nil {
-		return nil, err
-	}
-
-	if req.UpdateMask == nil || len(req.UpdateMask.Paths) == 0 {
-		return nil, errorsx.ErrFieldMask
-	}
-
-	if err := checkfield.CheckRequiredFields(req.Membership, requiredFieldsForUserMembership); err != nil {
-		return nil, errorsx.ErrCheckRequiredFields
-	}
-
-	if err := checkfield.CheckCreateOutputOnlyFields(req.Membership, outputOnlyFieldsForUserMembership); err != nil {
-		return nil, errorsx.ErrCheckOutputOnlyFields
-	}
-
-	pbMembership, err := h.Service.UpdateUserMembership(ctx, ctxUserUID, req.UserId, req.OrganizationId, req.Membership, req.UpdateMask)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := mgmtpb.UpdateUserMembershipResponse{
-		Membership: pbMembership,
-	}
-
-	return &resp, nil
-}
-
-// DeleteUserMembership deletes a user membership.
-func (h *PublicHandler) DeleteUserMembership(ctx context.Context, req *mgmtpb.DeleteUserMembershipRequest) (*mgmtpb.DeleteUserMembershipResponse, error) {
-
-	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
-	if err != nil {
-		return nil, err
-	}
-
-	err = h.Service.DeleteUserMembership(ctx, ctxUserUID, req.UserId, req.OrganizationId)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := mgmtpb.DeleteUserMembershipResponse{}
-
-	return &resp, nil
-}
-
-// ListOrganizationMemberships lists organization memberships.
-func (h *PublicHandler) ListOrganizationMemberships(ctx context.Context, req *mgmtpb.ListOrganizationMembershipsRequest) (*mgmtpb.ListOrganizationMembershipsResponse, error) {
-
-	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
-	if err != nil {
-		return nil, err
-	}
-
-	pbMemberships, err := h.Service.ListOrganizationMemberships(ctx, ctxUserUID, req.OrganizationId)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := mgmtpb.ListOrganizationMembershipsResponse{
-		Memberships: pbMemberships,
-	}
-
-	return &resp, nil
-}
-
-// GetOrganizationMembership gets an organization membership.
-func (h *PublicHandler) GetOrganizationMembership(ctx context.Context, req *mgmtpb.GetOrganizationMembershipRequest) (*mgmtpb.GetOrganizationMembershipResponse, error) {
-
-	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
-	if err != nil {
-		return nil, err
-	}
-
-	pbMembership, err := h.Service.GetOrganizationMembership(ctx, ctxUserUID, req.OrganizationId, req.UserId)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := mgmtpb.GetOrganizationMembershipResponse{
-		Membership: pbMembership,
-	}
-
-	return &resp, nil
-}
-
-// UpdateOrganizationMembership updates an organization membership.
-func (h *PublicHandler) UpdateOrganizationMembership(ctx context.Context, req *mgmtpb.UpdateOrganizationMembershipRequest) (*mgmtpb.UpdateOrganizationMembershipResponse, error) {
-
-	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
-	if err != nil {
-		return nil, err
-	}
-
-	if req.UpdateMask == nil || len(req.UpdateMask.Paths) == 0 {
-		return nil, errorsx.ErrFieldMask
-	}
-
-	if err := checkfield.CheckRequiredFields(req.Membership, requiredFieldsForOrganizationMembership); err != nil {
-		return nil, errorsx.ErrCheckRequiredFields
-	}
-
-	if err := checkfield.CheckCreateOutputOnlyFields(req.Membership, outputOnlyFieldsForOrganizationMembership); err != nil {
-		return nil, errorsx.ErrCheckOutputOnlyFields
-	}
-
-	pbMembership, err := h.Service.UpdateOrganizationMembership(ctx, ctxUserUID, req.OrganizationId, req.UserId, req.Membership, req.UpdateMask)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := mgmtpb.UpdateOrganizationMembershipResponse{
-		Membership: pbMembership,
-	}
-
-	return &resp, nil
-}
-
-// DeleteOrganizationMembership deletes an organization membership.
-func (h *PublicHandler) DeleteOrganizationMembership(ctx context.Context, req *mgmtpb.DeleteOrganizationMembershipRequest) (*mgmtpb.DeleteOrganizationMembershipResponse, error) {
-
-	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
-	if err != nil {
-		return nil, err
-	}
-
-	err = h.Service.DeleteOrganizationMembership(ctx, ctxUserUID, req.OrganizationId, req.UserId)
-	if err != nil {
-		return nil, err
-	}
-
-	return &mgmtpb.DeleteOrganizationMembershipResponse{}, nil
 }
