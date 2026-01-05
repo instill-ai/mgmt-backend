@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.25.5](https://github.com/instill-ai/mgmt-backend/compare/v0.25.4...v0.25.5) (2026-01-05)
+
+
+### Bug Fixes
+
+* **api:** implement field mask validation for membership update endpoints ([#303](https://github.com/instill-ai/mgmt-backend/issues/303)) ([fe982b9](https://github.com/instill-ai/mgmt-backend/commit/fe982b9b387bfe0ebc26f42bf4568e5319ebb820))
+* **handler:** prevent namespace collision between dash and underscore variants ([#305](https://github.com/instill-ai/mgmt-backend/issues/305)) ([a6625fb](https://github.com/instill-ai/mgmt-backend/commit/a6625fbcac25d6830c9a195c5daed8004dfd391d))
+
+
+### Refactor
+
+* **service:** remove organization and membership methods from CE interface ([#306](https://github.com/instill-ai/mgmt-backend/issues/306)) ([e213190](https://github.com/instill-ai/mgmt-backend/commit/e213190cfd1019b6f3777897a12e8f1e4d3c4cf5))
+
 ## [0.25.4](https://github.com/instill-ai/mgmt-backend/compare/v0.25.3...v0.25.4) (2025-10-27)
 
 
