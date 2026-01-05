@@ -21,6 +21,7 @@ const defaultPageSize = int32(10)
 const maxPageSize = int32(100)
 
 // PrivateHandler is the handler for private endpoints.
+// NOTE: Organization admin endpoints are EE-only and implemented in mgmt-backend-ee.
 type PrivateHandler struct {
 	mgmtpb.UnimplementedMgmtPrivateServiceServer
 	Service service.Service
@@ -93,64 +94,31 @@ func (h *PrivateHandler) LookUpUserAdmin(ctx context.Context, req *mgmtpb.LookUp
 	return &resp, nil
 }
 
-// ListOrganizationsAdmin lists all organizations
-func (h *PrivateHandler) ListOrganizationsAdmin(ctx context.Context, req *mgmtpb.ListOrganizationsAdminRequest) (*mgmtpb.ListOrganizationsAdminResponse, error) {
+// CheckNamespaceByUIDAdmin checks if the namespace is available by UID.
+// NOTE: Organization lookup is EE-only. This CE version only checks user namespaces.
+func (h *PrivateHandler) CheckNamespaceByUIDAdmin(ctx context.Context, req *mgmtpb.CheckNamespaceByUIDAdminRequest) (*mgmtpb.CheckNamespaceByUIDAdminResponse, error) {
 
-	pageSize := req.GetPageSize()
-	if pageSize == 0 {
-		pageSize = defaultPageSize
-	} else if pageSize > maxPageSize {
-		pageSize = maxPageSize
+	user, err := h.Service.GetUserByUIDAdmin(ctx, uuid.FromStringOrNil(req.GetUid()))
+	if err == nil {
+		return &mgmtpb.CheckNamespaceByUIDAdminResponse{
+			Type: mgmtpb.CheckNamespaceByUIDAdminResponse_NAMESPACE_USER,
+			Id:   user.Id,
+			Owner: &mgmtpb.CheckNamespaceByUIDAdminResponse_User{
+				User: user,
+			},
+		}, nil
 	}
 
-	pbOrganizations, totalSize, nextPageToken, err := h.Service.ListOrganizationsAdmin(ctx, int(pageSize), req.GetPageToken(), filtering.Filter{})
-	if err != nil {
-		return nil, err
-	}
+	// NOTE: Organization lookup is EE-only.
+	// In CE, we only check for user namespaces.
 
-	resp := mgmtpb.ListOrganizationsAdminResponse{
-		Organizations: pbOrganizations,
-		NextPageToken: nextPageToken,
-		TotalSize:     int32(totalSize),
-	}
-	return &resp, nil
-}
-
-// GetOrganizationAdmin gets a organization
-func (h *PrivateHandler) GetOrganizationAdmin(ctx context.Context, req *mgmtpb.GetOrganizationAdminRequest) (*mgmtpb.GetOrganizationAdminResponse, error) {
-
-	pbOrganization, err := h.Service.GetOrganizationAdmin(ctx, req.OrganizationId)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := mgmtpb.GetOrganizationAdminResponse{
-		Organization: pbOrganization,
-	}
-	return &resp, nil
-}
-
-// LookUpOrganizationAdmin gets a organization by permalink
-func (h *PrivateHandler) LookUpOrganizationAdmin(ctx context.Context, req *mgmtpb.LookUpOrganizationAdminRequest) (*mgmtpb.LookUpOrganizationAdminResponse, error) {
-
-	// Validation: `uid` in request is valid
-	uid, err := uuid.FromString(req.OrganizationUid)
-	if err != nil {
-		return nil, err
-	}
-
-	pbOrganization, err := h.Service.GetOrganizationByUIDAdmin(ctx, uid)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := mgmtpb.LookUpOrganizationAdminResponse{
-		Organization: pbOrganization,
-	}
-	return &resp, nil
+	return &mgmtpb.CheckNamespaceByUIDAdminResponse{
+		Type: mgmtpb.CheckNamespaceByUIDAdminResponse_NAMESPACE_AVAILABLE,
+	}, nil
 }
 
 // CheckNamespaceAdmin checks if the namespace is available.
+// NOTE: Organization lookup is EE-only. This CE version only checks user namespaces.
 func (h *PrivateHandler) CheckNamespaceAdmin(ctx context.Context, req *mgmtpb.CheckNamespaceAdminRequest) (*mgmtpb.CheckNamespaceAdminResponse, error) {
 
 	err := checkfield.CheckResourceID(req.GetId())
@@ -168,16 +136,9 @@ func (h *PrivateHandler) CheckNamespaceAdmin(ctx context.Context, req *mgmtpb.Ch
 			},
 		}, nil
 	}
-	org, err := h.Service.GetOrganizationAdmin(ctx, req.GetId())
-	if err == nil {
-		return &mgmtpb.CheckNamespaceAdminResponse{
-			Type: mgmtpb.CheckNamespaceAdminResponse_NAMESPACE_ORGANIZATION,
-			Uid:  org.Uid,
-			Owner: &mgmtpb.CheckNamespaceAdminResponse_Organization{
-				Organization: org,
-			},
-		}, nil
-	}
+
+	// NOTE: Organization lookup is EE-only.
+	// In CE, we only check for user namespaces.
 
 	// Check for sanitized collision: internally, namespace IDs are normalized
 	// by converting "-" to "_", so "foo-bar" and "foo_bar" would collide.
@@ -191,45 +152,9 @@ func (h *PrivateHandler) CheckNamespaceAdmin(ctx context.Context, req *mgmtpb.Ch
 				Type: mgmtpb.CheckNamespaceAdminResponse_NAMESPACE_RESERVED,
 			}, nil
 		}
-		_, err = h.Service.GetOrganizationAdmin(ctx, variant)
-		if err == nil {
-			// Variant exists as organization - this would cause a collision
-			return &mgmtpb.CheckNamespaceAdminResponse{
-				Type: mgmtpb.CheckNamespaceAdminResponse_NAMESPACE_RESERVED,
-			}, nil
-		}
 	}
 
 	return &mgmtpb.CheckNamespaceAdminResponse{
 		Type: mgmtpb.CheckNamespaceAdminResponse_NAMESPACE_AVAILABLE,
-	}, nil
-}
-
-// CheckNamespaceByUIDAdmin checks if the namespace is available by UID.
-func (h *PrivateHandler) CheckNamespaceByUIDAdmin(ctx context.Context, req *mgmtpb.CheckNamespaceByUIDAdminRequest) (*mgmtpb.CheckNamespaceByUIDAdminResponse, error) {
-
-	user, err := h.Service.GetUserByUIDAdmin(ctx, uuid.FromStringOrNil(req.GetUid()))
-	if err == nil {
-		return &mgmtpb.CheckNamespaceByUIDAdminResponse{
-			Type: mgmtpb.CheckNamespaceByUIDAdminResponse_NAMESPACE_USER,
-			Id:   user.Id,
-			Owner: &mgmtpb.CheckNamespaceByUIDAdminResponse_User{
-				User: user,
-			},
-		}, nil
-	}
-	org, err := h.Service.GetOrganizationByUIDAdmin(ctx, uuid.FromStringOrNil(req.GetUid()))
-	if err == nil {
-		return &mgmtpb.CheckNamespaceByUIDAdminResponse{
-			Type: mgmtpb.CheckNamespaceByUIDAdminResponse_NAMESPACE_ORGANIZATION,
-			Id:   org.Id,
-			Owner: &mgmtpb.CheckNamespaceByUIDAdminResponse_Organization{
-				Organization: org,
-			},
-		}, nil
-	}
-
-	return &mgmtpb.CheckNamespaceByUIDAdminResponse{
-		Type: mgmtpb.CheckNamespaceByUIDAdminResponse_NAMESPACE_AVAILABLE,
 	}, nil
 }

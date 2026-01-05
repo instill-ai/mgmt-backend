@@ -190,6 +190,9 @@ func (t *Transpiler) transpileComparisonCallExpr(e *expr.Expr, op any) (*clause.
 		case "email":
 			sql = "(LOWER(email) LIKE LOWER(CONCAT('%', ?, '%')))"
 			vars = append(vars, con.Vars[0])
+		case "id":
+			sql = "(LOWER(id) LIKE LOWER(CONCAT('%', ?, '%')))"
+			vars = append(vars, con.Vars[0])
 		default:
 			sql = fmt.Sprintf("%s = ?", ident.SQL)
 			vars = append(vars, con.Vars...)

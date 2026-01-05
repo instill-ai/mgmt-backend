@@ -16,7 +16,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
 	github.com/iancoleman/strcase v0.3.0
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
-	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20260102200453-6ffa44100aba
+	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20260105033127-ad2c5d9287e2
 	github.com/instill-ai/usage-client v0.4.0
 	github.com/instill-ai/x v0.10.1-alpha.0.20251027105340-6d7061cca782
 	github.com/knadh/koanf v1.5.0
