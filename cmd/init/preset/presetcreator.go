@@ -18,18 +18,18 @@ import (
 	errorsx "github.com/instill-ai/x/errors"
 )
 
-func CreatePresetOrg(ctx context.Context, r repository.Repository) error {
+// CreatePresetUser creates a preset user namespace for storing preset
+// resources, such as preset pipelines.
+func CreatePresetUser(ctx context.Context, r repository.Repository) error {
 
-	// In Instill Core, we provide a "preset" namespace for storing preset
-	// resources, such as preset pipelines.
-	presetOrg := &datamodel.Owner{
-		Base:        datamodel.Base{UID: uuid.FromStringOrNil(constant.PresetOrgUID)},
-		ID:          constant.PresetOrgID,
-		OwnerType:   sql.NullString{String: service.PBUserType2DBUserType[mgmtpb.OwnerType_OWNER_TYPE_ORGANIZATION], Valid: true},
-		DisplayName: sql.NullString{String: constant.PresetOrgDisplayName, Valid: true},
+	presetUser := &datamodel.Owner{
+		Base:        datamodel.Base{UID: uuid.FromStringOrNil(constant.PresetUserUID)},
+		ID:          constant.PresetUserID,
+		OwnerType:   sql.NullString{String: service.PBUserType2DBUserType[mgmtpb.OwnerType_OWNER_TYPE_USER], Valid: true},
+		DisplayName: sql.NullString{String: constant.PresetUserDisplayName, Valid: true},
 	}
 
-	_, err := r.GetOrganization(context.Background(), constant.PresetOrgID, false)
+	_, err := r.GetUser(ctx, constant.PresetUserID, false)
 	if err == nil {
 		return nil
 	}
@@ -38,8 +38,8 @@ func CreatePresetOrg(ctx context.Context, r repository.Repository) error {
 		return status.Errorf(codes.Internal, "error %v", err)
 	}
 
-	// Create the default preset organization
-	err = r.CreateOrganization(ctx, presetOrg)
+	// Create the preset user
+	err = r.CreateUser(ctx, presetUser)
 	if err != nil {
 		return err
 	}
