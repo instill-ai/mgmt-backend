@@ -13,9 +13,10 @@ const DefaultJwtExpiration = 86400 * 7
 const DefaultJwtIssuer = "http://localhost:8080"
 const DefaultJwtAudience = "http://localhost:8080"
 
-const PresetOrgID = "preset"
-const PresetOrgUID = "63196cec-1c95-49e8-9bf6-9f9497a15f72"
-const PresetOrgDisplayName = "Preset"
+// Preset user namespace for storing preset resources (e.g., preset pipelines)
+const PresetUserID = "preset"
+const PresetUserUID = "63196cec-1c95-49e8-9bf6-9f9497a15f72"
+const PresetUserDisplayName = "Preset"
 
 // HeaderUserIDKey is the header key for the User ID
 const HeaderUserIDKey = "Instill-User-Id"

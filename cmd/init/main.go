@@ -62,8 +62,8 @@ func main() {
 		logger.Fatal(err.Error())
 	}
 
-	// Create preset organization
-	if err := preset.CreatePresetOrg(ctx, r); err != nil {
+	// Create preset user namespace for storing preset resources
+	if err := preset.CreatePresetUser(ctx, r); err != nil {
 		logger.Fatal(err.Error())
 	}
 
