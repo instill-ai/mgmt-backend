@@ -1,6 +1,6 @@
 module github.com/instill-ai/mgmt-backend
 
-go 1.24.4
+go 1.25.6
 
 retract v0.3.2 // Published accidentally.
 
