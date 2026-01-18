@@ -10,7 +10,6 @@ import (
 	"github.com/gofrs/uuid"
 	"go.einride.tech/aip/filtering"
 
-	"github.com/instill-ai/mgmt-backend/internal/resource"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 
@@ -43,27 +42,8 @@ func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.F
 				}
 				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.PipelineOwnerUID, ownerUIDStr, false)
 			} else if strings.HasPrefix(ownerName, "organizations") {
-				ownerType = "organizations"
-				id, err := resource.GetRscNameID(ownerName)
-				if err != nil {
-					return nil, "", "", "", filter, err
-				}
-				ownerID = id
-				// Look up the organization UID by ID
-				orgUID, err := s.GetOrganizationUIDByID(ctx, id)
-				if err != nil {
-					return nil, "", "", "", filter, err
-				}
-				granted, err := s.GetACLClient().CheckPermission(ctx, "organization", orgUID, "user", ownerUID, "", "member")
-				if err != nil {
-					return nil, "", "", "", filter, err
-				}
-				if !granted {
-					return nil, "", "", "", filter, ErrNoPermission
-				}
-				orgUIDStr := orgUID.String()
-				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.PipelineOwnerUID, orgUIDStr, false)
-				resultOwnerUID = &orgUIDStr
+				// Organizations are EE-only in CE
+				return nil, "", "", "", filter, ErrNoPermission
 			} else {
 				return nil, "", "", "", filter, errorsx.ErrInvalidOwnerNamespace
 			}
@@ -325,6 +305,7 @@ func (s *service) ListModelTriggerChartRecords(
 
 // GrantedNamespaceUID returns the UID of a namespace, provided the
 // authenticated user has access to it.
+// In CE, only the user's own namespace is accessible. Organizations are EE-only.
 func (s *service) GrantedNamespaceUID(ctx context.Context, namespaceID string, authenticatedUserUID uuid.UUID) (uuid.UUID, error) {
 	owner, err := s.repository.GetOwner(ctx, namespaceID, false)
 	if err != nil {
@@ -341,20 +322,6 @@ func (s *service) GrantedNamespaceUID(ctx context.Context, namespaceID string, a
 		return nsUID, nil
 	}
 
-	// The user is requesting information about other namespace: only
-	// organizations that the user is a member of are allowed.
-	role, err := s.GetACLClient().GetOrganizationUserMembership(ctx, nsUID, authenticatedUserUID)
-	if err != nil {
-		if errors.Is(err, errorsx.ErrMembershipNotFound) {
-			err = errorsx.ErrUnauthorized
-		}
-
-		return uuid.Nil, fmt.Errorf("fetching organization membership: %w", err)
-	}
-
-	if strings.HasPrefix(role, "pending") {
-		return uuid.Nil, fmt.Errorf("invalid permission role: %w", errorsx.ErrUnauthorized)
-	}
-
-	return nsUID, nil
+	// In CE, organizations are not supported. Users can only access their own namespace.
+	return uuid.Nil, errorsx.ErrUnauthorized
 }

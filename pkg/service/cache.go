@@ -13,7 +13,6 @@ import (
 
 const CacheTargetUser = "user"
 const CacheTargetToken = "api_token"
-const CacheTargetOrganization = "organization"
 const CacheTargetUserPasswordHash = "user_password_hash"
 
 func (s *service) getFromCacheByID(ctx context.Context, target string, id string) interface{} {
@@ -25,11 +24,6 @@ func (s *service) getFromCacheByID(ctx context.Context, target string, id string
 				pbUser := &mgmtpb.User{}
 				if err := protojson.Unmarshal(b, pbUser); err == nil {
 					return pbUser
-				}
-			} else {
-				pbOrg := &mgmtpb.Organization{}
-				if err := protojson.Unmarshal(b, pbOrg); err == nil {
-					return pbOrg
 				}
 			}
 		}
@@ -47,26 +41,10 @@ func (s *service) getUserFromCacheByID(ctx context.Context, id string) *mgmtpb.U
 		return nil
 	}
 }
-func (s *service) getOrganizationFromCacheByID(ctx context.Context, id string) *mgmtpb.Organization {
-	i := s.getFromCacheByID(ctx, CacheTargetOrganization, id)
-	if i != nil {
-		return i.(*mgmtpb.Organization)
-	} else {
-		return nil
-	}
-}
 func (s *service) getUserFromCacheByUID(ctx context.Context, uid uuid.UUID) *mgmtpb.User {
 	i := s.getFromCacheByUID(ctx, CacheTargetUser, uid)
 	if i != nil {
 		return i.(*mgmtpb.User)
-	} else {
-		return nil
-	}
-}
-func (s *service) getOrganizationFromCacheByUID(ctx context.Context, uid uuid.UUID) *mgmtpb.Organization {
-	i := s.getFromCacheByUID(ctx, CacheTargetOrganization, uid)
-	if i != nil {
-		return i.(*mgmtpb.Organization)
 	} else {
 		return nil
 	}
@@ -84,12 +62,6 @@ func (s *service) setToCache(ctx context.Context, target string, src interface{}
 			return err
 		}
 		id = src.Id
-	case *mgmtpb.Organization:
-		b, err = protojson.Marshal(src)
-		if err != nil {
-			return err
-		}
-		id = src.Id
 	}
 
 	// Cache only by ID (UID is no longer in the protobuf)
@@ -101,9 +73,6 @@ func (s *service) setToCache(ctx context.Context, target string, src interface{}
 }
 func (s *service) setUserToCache(ctx context.Context, user *mgmtpb.User) error {
 	return s.setToCache(ctx, CacheTargetUser, user)
-}
-func (s *service) setOrganizationToCache(ctx context.Context, org *mgmtpb.Organization) error {
-	return s.setToCache(ctx, CacheTargetOrganization, org)
 }
 
 func (s *service) deleteFromCacheByID(ctx context.Context, target string, id string) error {
@@ -117,9 +86,6 @@ func (s *service) deleteFromCacheByID(ctx context.Context, target string, id str
 
 func (s *service) deleteUserFromCacheByID(ctx context.Context, id string) error {
 	return s.deleteFromCacheByID(ctx, CacheTargetUser, id)
-}
-func (s *service) deleteOrganizationFromCacheByID(ctx context.Context, id string) error {
-	return s.deleteFromCacheByID(ctx, CacheTargetOrganization, id)
 }
 
 func (s *service) getUserPasswordHashFromCache(ctx context.Context, uid uuid.UUID) string {
