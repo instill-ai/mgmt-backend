@@ -19,18 +19,18 @@ import (
 	"github.com/instill-ai/mgmt-backend/internal/resource"
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
-	"github.com/instill-ai/mgmt-backend/pkg/usage"
 	"github.com/instill-ai/x/checkfield"
 
 	healthcheckpb "github.com/instill-ai/protogen-go/common/healthcheck/v1beta"
-	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	mgmtpb "github.com/instill-ai/protogen-go/mgmt/v1beta"
 	errorsx "github.com/instill-ai/x/errors"
 )
 
 // TODO: Validate mask based on the field behavior. Currently, the fields are hard-coded.
 // We stipulate that the ID of the user is IMMUTABLE
 var outputOnlyFields = []string{"name", "create_time", "update_time", "customer_id"}
-var immutableFields = []string{"uid", "id"}
+// Note: AuthenticatedUser message doesn't have uid field (removed for AIP compliance)
+var immutableFields = []string{"id"}
 
 var createRequiredFieldsForToken = []string{"id"}
 var outputOnlyFieldsForToken = []string{"name", "uid", "state", "token_type", "access_token", "create_time", "update_time"}
@@ -38,17 +38,13 @@ var outputOnlyFieldsForToken = []string{"name", "uid", "state", "token_type", "a
 // PublicHandler is the handler for the public endpoints.
 type PublicHandler struct {
 	mgmtpb.UnimplementedMgmtPublicServiceServer
-	Service      service.Service
-	Usg          usage.Usage
-	usageEnabled bool
+	Service service.Service
 }
 
 // NewPublicHandler initiates a public handler instance
-func NewPublicHandler(s service.Service, u usage.Usage, usageEnabled bool) mgmtpb.MgmtPublicServiceServer {
+func NewPublicHandler(s service.Service) mgmtpb.MgmtPublicServiceServer {
 	return &PublicHandler{
-		Service:      s,
-		Usg:          u,
-		usageEnabled: usageEnabled,
+		Service: s,
 	}
 }
 
@@ -73,12 +69,13 @@ func (h *PublicHandler) Readiness(ctx context.Context, in *mgmtpb.ReadinessReque
 // AuthTokenIssuer issues a token for the user.
 func (h *PublicHandler) AuthTokenIssuer(ctx context.Context, in *mgmtpb.AuthTokenIssuerRequest) (*mgmtpb.AuthTokenIssuerResponse, error) {
 
-	user, err := h.Service.GetUserAdmin(ctx, in.Username)
+	// Get user UID from username
+	userUID, err := h.Service.GetUserUIDByID(ctx, in.Username)
 	if err != nil {
 		return nil, err
 	}
 
-	err = h.Service.CheckUserPassword(ctx, uuid.FromStringOrNil(*user.Uid), in.Password)
+	err = h.Service.CheckUserPassword(ctx, userUID, in.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +85,7 @@ func (h *PublicHandler) AuthTokenIssuer(ctx context.Context, in *mgmtpb.AuthToke
 	return &mgmtpb.AuthTokenIssuerResponse{
 		AccessToken: &mgmtpb.AuthTokenIssuerResponse_UnsignedAccessToken{
 			Aud: constant.DefaultJwtAudience,
-			Sub: *user.Uid,
+			Sub: userUID.String(),
 			Iss: constant.DefaultJwtIssuer,
 			Jti: jti.String(),
 			Exp: exp,
@@ -103,17 +100,13 @@ func (h *PublicHandler) AuthChangePassword(ctx context.Context, in *mgmtpb.AuthC
 	if err != nil {
 		return nil, err
 	}
-	user, err := h.Service.GetUserByUIDAdmin(ctx, ctxUserUID)
+
+	err = h.Service.CheckUserPassword(ctx, ctxUserUID, in.OldPassword)
 	if err != nil {
 		return nil, err
 	}
 
-	err = h.Service.CheckUserPassword(ctx, uuid.FromStringOrNil(*user.Uid), in.OldPassword)
-	if err != nil {
-		return nil, err
-	}
-
-	err = h.Service.UpdateUserPassword(ctx, uuid.FromStringOrNil(*user.Uid), in.NewPassword)
+	err = h.Service.UpdateUserPassword(ctx, ctxUserUID, in.NewPassword)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +175,13 @@ func (h *PublicHandler) GetUser(ctx context.Context, req *mgmtpb.GetUserRequest)
 		return nil, err
 	}
 
-	pbUser, err := h.Service.GetUser(ctx, ctxUserUID, req.UserId)
+	// Parse user ID from name (format: users/{user_id})
+	userID, err := parseUserIDFromName(req.GetName())
+	if err != nil {
+		return nil, err
+	}
+
+	pbUser, err := h.Service.GetUser(ctx, ctxUserUID, userID)
 
 	if err != nil {
 		return nil, err
@@ -274,11 +273,6 @@ func (h *PublicHandler) PatchAuthenticatedUser(ctx context.Context, req *mgmtpb.
 
 	resp := mgmtpb.PatchAuthenticatedUserResponse{
 		User: pbUserUpdated,
-	}
-
-	// Trigger single reporter right after user updated
-	if h.usageEnabled && h.Usg != nil {
-		h.Usg.TriggerSingleReporter(context.Background())
 	}
 
 	return &resp, nil
@@ -409,7 +403,13 @@ func (h *PublicHandler) GetToken(ctx context.Context, req *mgmtpb.GetTokenReques
 		return nil, err
 	}
 
-	pbToken, err := h.Service.GetToken(ctx, ctxUserUID, req.TokenId)
+	// Parse token ID from name (format: users/{user_id}/tokens/{token_id})
+	tokenID, err := parseTokenIDFromName(req.GetName())
+	if err != nil {
+		return nil, err
+	}
+
+	pbToken, err := h.Service.GetToken(ctx, ctxUserUID, tokenID)
 	if err != nil {
 		return nil, err
 	}
@@ -429,7 +429,13 @@ func (h *PublicHandler) DeleteToken(ctx context.Context, req *mgmtpb.DeleteToken
 		return nil, err
 	}
 
-	existToken, err := h.GetToken(ctx, &mgmtpb.GetTokenRequest{TokenId: req.TokenId})
+	// Parse token ID from name (format: users/{user_id}/tokens/{token_id})
+	tokenID, err := parseTokenIDFromName(req.GetName())
+	if err != nil {
+		return nil, err
+	}
+
+	existToken, err := h.GetToken(ctx, &mgmtpb.GetTokenRequest{Name: req.GetName()})
 	if err != nil {
 		return nil, err
 	}
@@ -443,6 +449,7 @@ func (h *PublicHandler) DeleteToken(ctx context.Context, req *mgmtpb.DeleteToken
 		return &mgmtpb.DeleteTokenResponse{}, err
 	}
 
+	_ = tokenID // tokenID is already validated by GetToken
 	return &mgmtpb.DeleteTokenResponse{}, nil
 }
 

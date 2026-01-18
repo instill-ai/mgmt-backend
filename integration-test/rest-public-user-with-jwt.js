@@ -21,7 +21,6 @@ export function CheckPublicPatchAuthenticatedUser() {
   group(`Management Public API: Update authenticated user [with random "instill-user-uid" header]`, () => {
     var userUpdate = {
       email: "test@foo.bar",
-      customer_id: "new_customer_id",
       profile: {
         display_name: "test",
         company_name: "company"

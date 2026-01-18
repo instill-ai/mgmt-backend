@@ -6,6 +6,13 @@
 include .env
 export
 
+# Integration test configuration
+# - From host: make integration-test (uses localhost:8080)
+# - In container: make integration-test API_GATEWAY_URL=api-gateway:8080 DB_HOST=pg_sql
+API_GATEWAY_PROTOCOL ?= http
+API_GATEWAY_URL ?= localhost:8080
+DB_HOST ?= localhost
+
 GOTEST_FLAGS := CFG_DATABASE_HOST=${TEST_DBHOST} CFG_DATABASE_NAME=${TEST_DBNAME}
 ifeq (${DBTEST}, true)
 	GOTEST_TAGS := -tags=dbtest
@@ -94,12 +101,19 @@ coverage:
 
 .PHONY: integration-test
 integration-test:				## Run integration test
-	@TEST_FOLDER_ABS_PATH=${PWD} k6 run \
-		-e API_GATEWAY_PROTOCOL=${API_GATEWAY_PROTOCOL} -e API_GATEWAY_URL=${API_GATEWAY_URL} \
-		integration-test/grpc.js --no-usage-report --quiet
-	@TEST_FOLDER_ABS_PATH=${PWD} k6 run \
-		-e API_GATEWAY_PROTOCOL=${API_GATEWAY_PROTOCOL} -e API_GATEWAY_URL=${API_GATEWAY_URL} \
-		integration-test/rest.js --no-usage-report --quiet
+	@echo "✓ Running tests via API Gateway: ${API_GATEWAY_URL}"
+	@echo "  DB_HOST: ${DB_HOST}"
+	@rm -f /tmp/mgmt-integration-test.log
+	@TEST_FOLDER_ABS_PATH=${PWD} k6 run --address="" \
+		-e API_GATEWAY_PROTOCOL=${API_GATEWAY_PROTOCOL} \
+		-e API_GATEWAY_URL=${API_GATEWAY_URL} \
+		-e DB_HOST=${DB_HOST} \
+		integration-test/grpc.js --no-usage-report 2>&1 | tee -a /tmp/mgmt-integration-test.log
+	@TEST_FOLDER_ABS_PATH=${PWD} k6 run --address="" \
+		-e API_GATEWAY_PROTOCOL=${API_GATEWAY_PROTOCOL} \
+		-e API_GATEWAY_URL=${API_GATEWAY_URL} \
+		-e DB_HOST=${DB_HOST} \
+		integration-test/rest.js --no-usage-report 2>&1 | tee -a /tmp/mgmt-integration-test.log
 
 .PHONY: help
 help:       	 				## Show this help

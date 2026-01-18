@@ -1,9 +1,16 @@
 import http from "k6/http";
 import { check } from "k6";
 import * as constant from "./const.js"
-import * as mgmtPrivate from "./grpc-private-user.js";
-import * as mgmtPublic from "./grpc-public-user.js"
-import * as mgmtPublicWithJwt from "./grpc-public-user-with-jwt.js"
+
+/*
+ * gRPC Integration Tests
+ *
+ * Note: gRPC tests are disabled because we always use the API Gateway,
+ * which exposes HTTP endpoints via grpc-gateway transcoding, not native gRPC.
+ *
+ * All integration testing is done via REST tests (rest.js).
+ * This file only performs a basic login check to verify the test setup works.
+ */
 
 export let options = {
   setupTimeout: "300s",
@@ -26,41 +33,15 @@ export function setup() {
   });
 
   return {
-    "metadata": {
-      "Authorization": `Bearer ${loginResp.json().accessToken}`
+    metadata: {
+      "authorization": `Bearer ${loginResp.json().accessToken}`
     }
   }
 }
 
 export default function (header) {
-  /*
-   * Management API - API CALLS
-   */
-
-  if (!constant.apiGatewayMode) {
-    // ======== Private API
-    mgmtPrivate.CheckPrivateListUsersAdmin();
-    mgmtPrivate.CheckPrivateGetUserAdmin();
-    mgmtPrivate.CheckPrivateLookUpUserAdmin();
-    mgmtPrivate.CheckPrivateSubtractCredit();
-  } else {
-    // ======== Public API with instill-user-uid
-    mgmtPublicWithJwt.CheckPublicGetUser();
-    mgmtPublicWithJwt.CheckPublicPatchAuthenticatedUser();
-    // ======== Public API
-    mgmtPublic.CheckHealth();
-    mgmtPublic.CheckPublicGetUser(header);
-    mgmtPublic.CheckPublicPatchAuthenticatedUser(header);
-    mgmtPublic.CheckPublicCreateToken(header);
-    mgmtPublic.CheckPublicListTokens(header);
-    mgmtPublic.CheckPublicGetToken(header);
-    mgmtPublic.CheckPublicDeleteToken(header);
-    mgmtPublic.CheckPublicGetRemainingCredit(header);
-    mgmtPublic.CheckPublicMetrics(header);
-  }
-
+  // gRPC tests are skipped - all testing done via REST (rest.js)
 }
 
 export function teardown(data) {
-
 }

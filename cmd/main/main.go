@@ -10,7 +10,6 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/redis/go-redis/v9"
@@ -31,12 +30,10 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/middleware"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 	"github.com/instill-ai/mgmt-backend/pkg/service"
-	"github.com/instill-ai/mgmt-backend/pkg/usage"
 
 	database "github.com/instill-ai/mgmt-backend/pkg/db"
-	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
-	usagepb "github.com/instill-ai/protogen-go/core/usage/v1beta"
-	pipelinepb "github.com/instill-ai/protogen-go/pipeline/pipeline/v1beta"
+	mgmtpb "github.com/instill-ai/protogen-go/mgmt/v1beta"
+	pipelinepb "github.com/instill-ai/protogen-go/pipeline/v1beta"
 	clientx "github.com/instill-ai/x/client"
 	clientgrpcx "github.com/instill-ai/x/client/grpc"
 	logx "github.com/instill-ai/x/log"
@@ -168,46 +165,13 @@ func main() {
 		config.Config.Server.InstillCoreHost,
 	)
 
-	// Start usage reporter
-	var usg usage.Usage
-	if config.Config.Server.Usage.Enabled {
-		usageServiceClient, usageServiceClientClose, err := clientgrpcx.NewClient[usagepb.UsageServiceClient](
-			clientgrpcx.WithServiceConfig(clientx.ServiceConfig{
-				Host:       config.Config.Server.Usage.Host,
-				PublicPort: config.Config.Server.Usage.Port,
-			}),
-			clientgrpcx.WithSetOTELClientHandler(config.Config.OTELCollector.Enable),
-		)
-		if err != nil {
-			logger.Error("failed to create usage service client", zap.Error(err))
-		}
-		defer func() {
-			if err := usageServiceClientClose(); err != nil {
-				logger.Error("failed to close usage service client", zap.Error(err))
-			}
-		}()
-		logger.Info("try to start usage reporter")
-		go func() {
-			for {
-				usg = usage.NewUsage(ctx, service, usageServiceClient, serviceVersion)
-				if usg != nil {
-					usg.StartReporter(ctx)
-					logger.Info("usage reporter started")
-					break
-				}
-				logger.Warn("retry to start usage reporter after 5 minutes")
-				time.Sleep(5 * time.Minute)
-			}
-		}()
-	}
-
 	mgmtpb.RegisterMgmtPrivateServiceServer(
 		privateGrpcS,
 		handler.NewPrivateHandler(service),
 	)
 	mgmtpb.RegisterMgmtPublicServiceServer(
 		publicGrpcS,
-		handler.NewPublicHandler(service, usg, config.Config.Server.Usage.Enabled),
+		handler.NewPublicHandler(service),
 	)
 
 	publicServeMux := runtime.NewServeMux(
@@ -291,10 +255,6 @@ func main() {
 	case err := <-errSig:
 		logger.Error(fmt.Sprintf("Fatal error: %v\n", err))
 	case <-quitSig:
-		// send out the usage report at exit
-		if config.Config.Server.Usage.Enabled && usg != nil {
-			usg.TriggerSingleReporter(ctx)
-		}
 		logger.Info("Shutting down server...")
 		privateGrpcS.GracefulStop()
 		publicGrpcS.GracefulStop()

@@ -23,7 +23,7 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 
 	database "github.com/instill-ai/mgmt-backend/pkg/db"
-	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	mgmtpb "github.com/instill-ai/protogen-go/mgmt/v1beta"
 	errorsx "github.com/instill-ai/x/errors"
 	logx "github.com/instill-ai/x/log"
 )

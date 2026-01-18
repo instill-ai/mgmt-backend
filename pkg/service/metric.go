@@ -14,17 +14,20 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/constant"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 
-	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
-	pipelinepb "github.com/instill-ai/protogen-go/pipeline/pipeline/v1beta"
+	mgmtpb "github.com/instill-ai/protogen-go/mgmt/v1beta"
+	pipelinepb "github.com/instill-ai/protogen-go/pipeline/v1beta"
 	errorsx "github.com/instill-ai/x/errors"
 	gatewayx "github.com/instill-ai/x/server/grpc/gateway"
 )
 
 var ErrNoPermission = errors.New("no permission")
 
-func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.Filter, owner *mgmtpb.User) (*string, string, string, string, filtering.Filter, error) {
+// checkPipelineOwnership validates ownership and returns the owner UID for filtering.
+// The ownerUID parameter is the internal UUID of the owner (user).
+func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.Filter, owner *mgmtpb.User, ownerUID uuid.UUID) (*string, string, string, string, filtering.Filter, error) {
 	ownerID := owner.Id
-	ownerUID := owner.Uid
+	ownerUIDStr := ownerUID.String()
+	resultOwnerUID := &ownerUIDStr
 	ownerType := "users"
 	ownerQueryString := ""
 
@@ -38,7 +41,7 @@ func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.F
 				if ownerName != fmt.Sprintf("users/%s", owner.Id) {
 					return nil, "", "", "", filter, ErrNoPermission
 				}
-				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.PipelineOwnerUID, *owner.Uid, false)
+				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.PipelineOwnerUID, ownerUIDStr, false)
 			} else if strings.HasPrefix(ownerName, "organizations") {
 				ownerType = "organizations"
 				id, err := resource.GetRscNameID(ownerName)
@@ -46,60 +49,64 @@ func (s *service) checkPipelineOwnership(ctx context.Context, filter filtering.F
 					return nil, "", "", "", filter, err
 				}
 				ownerID = id
-				org, err := s.GetOrganizationAdmin(ctx, id)
+				// Look up the organization UID by ID
+				orgUID, err := s.GetOrganizationUIDByID(ctx, id)
 				if err != nil {
 					return nil, "", "", "", filter, err
 				}
-				granted, err := s.GetACLClient().CheckPermission(ctx, "organization", uuid.FromStringOrNil(org.Uid), "user", uuid.FromStringOrNil(owner.GetUid()), "", "member")
+				granted, err := s.GetACLClient().CheckPermission(ctx, "organization", orgUID, "user", ownerUID, "", "member")
 				if err != nil {
 					return nil, "", "", "", filter, err
 				}
 				if !granted {
 					return nil, "", "", "", filter, ErrNoPermission
 				}
-				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.PipelineOwnerUID, org.Uid, false)
-				ownerUID = &org.Uid
+				orgUIDStr := orgUID.String()
+				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.OwnerName, constant.PipelineOwnerUID, orgUIDStr, false)
+				resultOwnerUID = &orgUIDStr
 			} else {
 				return nil, "", "", "", filter, errorsx.ErrInvalidOwnerNamespace
 			}
 		} else {
-			ownerQueryString = fmt.Sprintf("|> filter(fn: (r) => r[\"owner_uid\"] == \"%v\")", *owner.Uid)
+			ownerQueryString = fmt.Sprintf("|> filter(fn: (r) => r[\"owner_uid\"] == \"%v\")", ownerUIDStr)
 		}
 	} else {
-		ownerQueryString = fmt.Sprintf("|> filter(fn: (r) => r[\"owner_uid\"] == \"%v\")", *owner.Uid)
+		ownerQueryString = fmt.Sprintf("|> filter(fn: (r) => r[\"owner_uid\"] == \"%v\")", ownerUIDStr)
 	}
-	return ownerUID, ownerID, ownerType, ownerQueryString, filter, nil
+	return resultOwnerUID, ownerID, ownerType, ownerQueryString, filter, nil
 }
 
-func (s *service) pipelineUIDLookup(ctx context.Context, ownerID string, ownerType string, filter filtering.Filter, owner *mgmtpb.User) (filtering.Filter, error) {
+// pipelineUIDLookup looks up pipeline UIDs for filtering.
+// The ownerUID parameter is the internal UUID of the owner (user).
+func (s *service) pipelineUIDLookup(ctx context.Context, ownerID string, ownerType string, filter filtering.Filter, owner *mgmtpb.User, ownerUID uuid.UUID) (filtering.Filter, error) {
 
-	ctx = gatewayx.InjectOwnerToContext(ctx, &mgmtpb.User{Uid: owner.Uid})
+	ctx = gatewayx.InjectOwnerToContext(ctx, ownerUID.String())
 
 	// lookup pipeline uid
 	if len(filter.CheckedExpr.GetExpr().GetCallExpr().GetArgs()) > 0 {
 		pipelineID, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, false)
+		namespaceID := strings.Split(owner.Name, "/")[1]
 
 		if pipelineID != "" {
 			respPipeline, err := s.pipelinePublicServiceClient.GetNamespacePipeline(ctx, &pipelinepb.GetNamespacePipelineRequest{
-				NamespaceId: strings.Split(owner.Name, "/")[1],
-				PipelineId:  pipelineID,
+				Name: fmt.Sprintf("namespaces/%s/pipelines/%s", namespaceID, pipelineID),
 			})
 			if err != nil {
 				return filter, err
 			}
 
-			repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, constant.PipelineUID, respPipeline.Pipeline.Uid, false)
+			// Use pipeline Id since Uid is no longer in the public API
+			repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, constant.PipelineUID, respPipeline.Pipeline.Id, false)
 
 			// lookup pipeline release uid
 			pipelineReleaseID, _ := repository.ExtractConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineReleaseID, false)
 
 			respPipelineRelease, err := s.pipelinePublicServiceClient.GetNamespacePipelineRelease(ctx, &pipelinepb.GetNamespacePipelineReleaseRequest{
-				NamespaceId: strings.Split(owner.Name, "/")[1],
-				PipelineId:  pipelineID,
-				ReleaseId:   pipelineReleaseID,
+				Name: fmt.Sprintf("namespaces/%s/pipelines/%s/releases/%s", namespaceID, pipelineID, pipelineReleaseID),
 			})
 			if err == nil {
-				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, constant.PipelineUID, respPipelineRelease.Release.Uid, false)
+				// Use release Id since Uid is no longer in the public API
+				repository.HijackConstExpr(filter.CheckedExpr.GetExpr(), constant.PipelineID, constant.PipelineUID, respPipelineRelease.Release.Id, false)
 			}
 		}
 	}
@@ -108,11 +115,16 @@ func (s *service) pipelineUIDLookup(ctx context.Context, ownerID string, ownerTy
 }
 
 func (s *service) ListPipelineTriggerRecords(ctx context.Context, owner *mgmtpb.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerRecord, int64, string, error) {
-	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
+	// Look up the owner's internal UID from their public ID
+	ownerInternalUID, err := s.GetUserUIDByID(ctx, owner.Id)
 	if err != nil {
 		return []*mgmtpb.PipelineTriggerRecord{}, 0, "", err
 	}
-	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner)
+	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner, ownerInternalUID)
+	if err != nil {
+		return []*mgmtpb.PipelineTriggerRecord{}, 0, "", err
+	}
+	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner, ownerInternalUID)
 	if err != nil {
 		return []*mgmtpb.PipelineTriggerRecord{}, 0, "", nil
 	}
@@ -124,13 +136,18 @@ func (s *service) ListPipelineTriggerRecords(ctx context.Context, owner *mgmtpb.
 }
 
 func (s *service) ListPipelineTriggerTableRecords(ctx context.Context, owner *mgmtpb.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerTableRecord, int64, string, error) {
-
-	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
+	// Look up the owner's internal UID from their public ID
+	ownerInternalUID, err := s.GetUserUIDByID(ctx, owner.Id)
 	if err != nil {
 		return []*mgmtpb.PipelineTriggerTableRecord{}, 0, "", err
 	}
 
-	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner)
+	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner, ownerInternalUID)
+	if err != nil {
+		return []*mgmtpb.PipelineTriggerTableRecord{}, 0, "", err
+	}
+
+	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner, ownerInternalUID)
 	if err != nil {
 		return []*mgmtpb.PipelineTriggerTableRecord{}, 0, "", nil
 	}
@@ -185,13 +202,18 @@ func (s *service) ListPipelineTriggerChartRecords(
 }
 
 func (s *service) ListPipelineTriggerChartRecordsV0(ctx context.Context, owner *mgmtpb.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerChartRecordV0, error) {
-
-	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner)
+	// Look up the owner's internal UID from their public ID
+	ownerInternalUID, err := s.GetUserUIDByID(ctx, owner.Id)
 	if err != nil {
 		return []*mgmtpb.PipelineTriggerChartRecordV0{}, err
 	}
 
-	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner)
+	ownerUID, ownerID, ownerType, ownerQueryString, filter, err := s.checkPipelineOwnership(ctx, filter, owner, ownerInternalUID)
+	if err != nil {
+		return []*mgmtpb.PipelineTriggerChartRecordV0{}, err
+	}
+
+	filter, err = s.pipelineUIDLookup(ctx, ownerID, ownerType, filter, owner, ownerInternalUID)
 	if err != nil {
 		return []*mgmtpb.PipelineTriggerChartRecordV0{}, nil
 	}

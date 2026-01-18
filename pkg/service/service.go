@@ -19,8 +19,8 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 	"github.com/instill-ai/mgmt-backend/pkg/repository"
 
-	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
-	pipelinepb "github.com/instill-ai/protogen-go/pipeline/pipeline/v1beta"
+	mgmtpb "github.com/instill-ai/protogen-go/mgmt/v1beta"
+	pipelinepb "github.com/instill-ai/protogen-go/pipeline/v1beta"
 	errorsx "github.com/instill-ai/x/errors"
 	gatewayx "github.com/instill-ai/x/server/grpc/gateway"
 )
@@ -41,6 +41,8 @@ type Service interface {
 	ListAuthenticatedUsersAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtpb.AuthenticatedUser, int64, string, error)
 	GetUserAdmin(ctx context.Context, id string) (*mgmtpb.User, error)
 	GetUserByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtpb.User, error)
+	GetUserUIDByID(ctx context.Context, id string) (uuid.UUID, error)
+	GetOrganizationUIDByID(ctx context.Context, id string) (uuid.UUID, error)
 
 	CreateToken(ctx context.Context, ctxUserUID uuid.UUID, token *mgmtpb.ApiToken) error
 	ListTokens(ctx context.Context, ctxUserUID uuid.UUID, pageSize int64, pageToken string) ([]*mgmtpb.ApiToken, int64, string, error)
@@ -240,6 +242,26 @@ func (s *service) GetUserByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtpb
 	return pbUser, nil
 }
 
+// GetUserUIDByID returns the internal UUID for a user given their public ID.
+// This is used internally when the UID is needed but the public protobuf doesn't contain it.
+func (s *service) GetUserUIDByID(ctx context.Context, id string) (uuid.UUID, error) {
+	dbUser, err := s.repository.GetUser(ctx, id, false)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("users/%s: %w", id, err)
+	}
+	return dbUser.UID, nil
+}
+
+// GetOrganizationUIDByID returns the internal UUID for an organization given its public ID.
+// This is used internally when the UID is needed but the public protobuf doesn't contain it.
+func (s *service) GetOrganizationUIDByID(ctx context.Context, id string) (uuid.UUID, error) {
+	dbOrg, err := s.repository.GetOrganization(ctx, id, false)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("organizations/%s: %w", id, err)
+	}
+	return dbOrg.UID, nil
+}
+
 func (s *service) ListUsersAdmin(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*mgmtpb.User, int64, string, error) {
 	dbUsers, totalSize, nextPageToken, err := s.repository.ListUsers(ctx, pageSize, pageToken, filter)
 	if err != nil {
@@ -346,9 +368,7 @@ func (s *service) CreateOrganization(ctx context.Context, ownerUID uuid.UUID, or
 		return nil, fmt.Errorf("%w: %w", errorsx.ErrResourceID, err)
 	}
 
-	uid, _ := uuid.NewV4()
-	org.Uid = uid.String()
-
+	// UID is no longer in the protobuf - it will be generated in PBOrg2DBOrg
 	dbOrg, err := s.PBOrg2DBOrg(ctx, org)
 	if err != nil {
 		return nil, fmt.Errorf("converting pb organization: %w", err)
@@ -448,11 +468,11 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 	// TODO: optimize this
 	pageToken := ""
 	pipelineIDList := []string{}
+	userUIDStr := ctxUserUID.String()
 	for {
-		userUIDStr := ctxUserUID.String()
 		// TODO: optimize this cascade delete
 		//nolint:staticcheck
-		resp, err := s.pipelinePublicServiceClient.ListOrganizationPipelines(gatewayx.InjectOwnerToContext(ctx, &mgmtpb.User{Uid: &userUIDStr}),
+		resp, err := s.pipelinePublicServiceClient.ListOrganizationPipelines(gatewayx.InjectOwnerToContext(ctx, userUIDStr),
 			&pipelinepb.ListOrganizationPipelinesRequest{
 				Parent:    fmt.Sprintf("organizations/%s", id),
 				PageToken: &pageToken})
@@ -469,9 +489,8 @@ func (s *service) DeleteOrganization(ctx context.Context, ctxUserUID uuid.UUID, 
 	}
 
 	for _, pipelineID := range pipelineIDList {
-		userUIDStr := ctxUserUID.String()
 		//nolint:staticcheck
-		_, _ = s.pipelinePublicServiceClient.DeleteOrganizationPipeline(gatewayx.InjectOwnerToContext(ctx, &mgmtpb.User{Uid: &userUIDStr}),
+		_, _ = s.pipelinePublicServiceClient.DeleteOrganizationPipeline(gatewayx.InjectOwnerToContext(ctx, userUIDStr),
 			&pipelinepb.DeleteOrganizationPipelineRequest{
 				Name: fmt.Sprintf("organizations/%s/pipelines/%s", id, pipelineID),
 			})
@@ -990,7 +1009,8 @@ func (s *service) GetOrganizationMembership(ctx context.Context, ctxUserUID uuid
 		state = mgmtpb.MembershipState_MEMBERSHIP_STATE_PENDING
 	}
 
-	if state == mgmtpb.MembershipState_MEMBERSHIP_STATE_PENDING && ctxUserUID != uuid.FromStringOrNil(*pbUser.Uid) {
+	// Use user.UID from the database model since Uid is no longer in the protobuf
+	if state == mgmtpb.MembershipState_MEMBERSHIP_STATE_PENDING && ctxUserUID != user.UID {
 		if !canSetMembership {
 			return nil, errorsx.ErrUnauthorized
 		}

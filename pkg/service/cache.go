@@ -8,7 +8,7 @@ import (
 	"github.com/gofrs/uuid"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	mgmtpb "github.com/instill-ai/protogen-go/mgmt/v1beta"
 )
 
 const CacheTargetUser = "user"
@@ -75,7 +75,6 @@ func (s *service) getOrganizationFromCacheByUID(ctx context.Context, uid uuid.UU
 func (s *service) setToCache(ctx context.Context, target string, src interface{}) error {
 	var b []byte
 	var id string
-	var uid string
 	var err error
 
 	switch src := src.(type) {
@@ -85,21 +84,16 @@ func (s *service) setToCache(ctx context.Context, target string, src interface{}
 			return err
 		}
 		id = src.Id
-		uid = *src.Uid
 	case *mgmtpb.Organization:
 		b, err = protojson.Marshal(src)
 		if err != nil {
 			return err
 		}
 		id = src.Id
-		uid = src.Uid
 	}
 
+	// Cache only by ID (UID is no longer in the protobuf)
 	setCmd := s.redisClient.Set(ctx, fmt.Sprintf("%s:%s", target, id), b, 5*time.Minute)
-	if setCmd.Err() != nil {
-		return setCmd.Err()
-	}
-	setCmd = s.redisClient.Set(ctx, fmt.Sprintf("%s:%s", target, uid), b, 5*time.Minute)
 	if setCmd.Err() != nil {
 		return setCmd.Err()
 	}
@@ -113,33 +107,11 @@ func (s *service) setOrganizationToCache(ctx context.Context, org *mgmtpb.Organi
 }
 
 func (s *service) deleteFromCacheByID(ctx context.Context, target string, id string) error {
-
-	var uid string
-	if target == CacheTargetUser {
-		user := s.getFromCacheByID(ctx, target, id)
-		if user != nil {
-			uid = *user.(*mgmtpb.User).Uid
-		}
-
-	} else {
-
-		org := s.getFromCacheByID(ctx, target, id)
-		if org != nil {
-			uid = org.(*mgmtpb.Organization).Uid
-		}
-	}
-
+	// Delete only by ID (UID is no longer in the protobuf)
 	setCmd := s.redisClient.Del(ctx, fmt.Sprintf("%s:%s", target, id))
 	if setCmd.Err() != nil {
 		return setCmd.Err()
 	}
-	if uid != "" {
-		setCmd = s.redisClient.Del(ctx, fmt.Sprintf("%s:%s", target, uid))
-		if setCmd.Err() != nil {
-			return setCmd.Err()
-		}
-	}
-
 	return nil
 }
 
