@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.25.5](https://github.com/instill-ai/mgmt-backend/compare/v0.25.4...v0.25.5) (2026-01-18)
+
+
+### Bug Fixes
+
+* **api:** implement field mask validation for membership update endpoints ([#303](https://github.com/instill-ai/mgmt-backend/issues/303)) ([fe982b9](https://github.com/instill-ai/mgmt-backend/commit/fe982b9b387bfe0ebc26f42bf4568e5319ebb820))
+* **handler:** prevent namespace collision between dash and underscore variants ([#305](https://github.com/instill-ai/mgmt-backend/issues/305)) ([a6625fb](https://github.com/instill-ai/mgmt-backend/commit/a6625fbcac25d6830c9a195c5daed8004dfd391d))
+
+
+### Miscellaneous
+
+* **go:** upgrade to 1.25.6 ([bb38f20](https://github.com/instill-ai/mgmt-backend/commit/bb38f207f943cef2fd09ff8cf8984549dfedad1f))
+
+
+### Refactor
+
+* **init:** change preset namespace from organization to user ([#307](https://github.com/instill-ai/mgmt-backend/issues/307)) ([c33b86d](https://github.com/instill-ai/mgmt-backend/commit/c33b86d472d1bcf2dd4a91ed38efdbd624627afa))
+* **mgmt:** adopt flattened protobuf structure and AIP-compliant resource names ([#308](https://github.com/instill-ai/mgmt-backend/issues/308)) ([062fc04](https://github.com/instill-ai/mgmt-backend/commit/062fc04386b6e9b46b3feeb3d8eba18b639f5986))
+* **service:** migrate organization features from CE to EE-only ([#309](https://github.com/instill-ai/mgmt-backend/issues/309)) ([cdd9cd6](https://github.com/instill-ai/mgmt-backend/commit/cdd9cd663e9080aede3d0ea617e6e252cb9f82f2))
+* **service:** remove organization and membership methods from CE interface ([#306](https://github.com/instill-ai/mgmt-backend/issues/306)) ([e213190](https://github.com/instill-ai/mgmt-backend/commit/e213190cfd1019b6f3777897a12e8f1e4d3c4cf5))
+
 ## [0.25.4](https://github.com/instill-ai/mgmt-backend/compare/v0.25.3...v0.25.4) (2025-10-27)
 
 
