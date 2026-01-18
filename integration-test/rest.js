@@ -3,6 +3,7 @@ import { check } from "k6";
 import * as constant from "./const.js"
 import * as mgmtPublic from "./rest-public-user.js"
 import * as mgmtPublicWithJwt from "./rest-public-user-with-jwt.js"
+import * as restInvariants from "./rest-invariants.js"
 
 export let options = {
   setupTimeout: "300s",
@@ -34,24 +35,28 @@ export function setup() {
 
 export default function (header) {
   /*
-   * Management API - API CALLS
+   * Management API - REST Integration Tests
+   *
+   * All tests run via API Gateway (grpc-gateway transcoding).
    */
 
-  if (constant.apiGatewayMode) {
-    // ======== Public API with instill-user-uid
-    mgmtPublicWithJwt.CheckPublicGetUser();
-    mgmtPublicWithJwt.CheckPublicPatchAuthenticatedUser();
-    // ======== Public API
-    mgmtPublic.CheckHealth();
-    mgmtPublic.CheckPublicGetUser(header);
-    mgmtPublic.CheckPublicPatchAuthenticatedUser(header);
-    mgmtPublic.CheckPublicCreateToken(header);
-    mgmtPublic.CheckPublicListTokens(header);
-    mgmtPublic.CheckPublicGetToken(header);
-    mgmtPublic.CheckPublicDeleteToken(header);
-    mgmtPublic.CheckPublicGetRemainingCredit(header);
-    mgmtPublic.CheckPublicMetrics(header);
-  }
+  // ======== Public API with instill-user-uid (auth validation)
+  mgmtPublicWithJwt.CheckPublicGetUser();
+  mgmtPublicWithJwt.CheckPublicPatchAuthenticatedUser();
+
+  // ======== Public API
+  mgmtPublic.CheckHealth();
+  mgmtPublic.CheckPublicGetUser(header);
+  mgmtPublic.CheckPublicPatchAuthenticatedUser(header);
+  mgmtPublic.CheckPublicCreateToken(header);
+  mgmtPublic.CheckPublicListTokens(header);
+  mgmtPublic.CheckPublicGetToken(header);
+  mgmtPublic.CheckPublicDeleteToken(header);
+  mgmtPublic.CheckPublicGetRemainingCredit(header);
+  mgmtPublic.CheckPublicMetrics(header);
+
+  // AIP Resource Refactoring Invariants
+  restInvariants.checkInvariants(header);
 }
 
 export function teardown(data) {

@@ -32,21 +32,25 @@ export function CheckPublicGetUser(header) {
       {
         [`GET /${constant.mgmtVersion}/user response status is 200`]:
           (r) => r.status === 200,
+        // AIP standard fields (1-6)
         [`GET /${constant.mgmtVersion}/user response name`]:
           (r) => r.json().user.name !== undefined,
-        [`GET /${constant.mgmtVersion}/user response uid is UUID`]:
-          (r) => helper.isUUID(r.json().user.uid),
         [`GET /${constant.mgmtVersion}/user response id`]:
           (r) => r.json().user.id !== undefined,
-        [`GET /${constant.mgmtVersion}/user response id`]:
+        [`GET /${constant.mgmtVersion}/user response id matches`]:
           (r) => r.json().user.id === constant.defaultUser.id,
+        [`GET /${constant.mgmtVersion}/user response displayName`]:
+          (r) => r.json().user.displayName !== undefined,
+        [`GET /${constant.mgmtVersion}/user response slug`]:
+          (r) => r.json().user.slug !== undefined,
+        [`GET /${constant.mgmtVersion}/user response aliases`]:
+          (r) => Array.isArray(r.json().user.aliases),
+        // User-specific fields
         [`GET /${constant.mgmtVersion}/user response email`]:
           (r) => r.json().user.email !== undefined,
-        [`GET /${constant.mgmtVersion}/user response customerId`]:
-          (r) => r.json().user.customerId !== undefined,
-        [`GET /${constant.mgmtVersion}/user response displayName`]:
+        [`GET /${constant.mgmtVersion}/user response profile.displayName`]:
           (r) => r.json().user.profile.displayName !== undefined,
-        [`GET /${constant.mgmtVersion}/user response companyName`]:
+        [`GET /${constant.mgmtVersion}/user response profile.companyName`]:
           (r) => r.json().user.profile.companyName !== undefined,
         [`GET /${constant.mgmtVersion}/user response role`]:
           (r) => r.json().user.role !== undefined,
@@ -65,65 +69,83 @@ export function CheckPublicPatchAuthenticatedUser(header) {
   group(`Management Public API: Update authenticated user`, () => {
     var userUpdate = {
       email: "test@foo.bar",
-      customerId: "new_customer_id",
       profile: {
         displayName: "test",
         companyName: "company",
       },
       role: "ai-engineer",
       newsletterSubscription: true,
-      createTime: "2000-01-01T00:00:00.000000Z",
-      updateTime: "2000-01-01T00:00:00.000000Z",
     };
 
-    var res = http.request(
+    // Merge auth header with Content-Type for PATCH requests
+    const patchHeader = {
+      headers: {
+        ...header.headers,
+        "Content-Type": "application/json",
+      },
+    };
+
+    var getRes = http.request(
       "GET",
       `${constant.mgmtPublicHost}/user`,
       null,
       header,
     );
 
-    check(
-      http.request(
-        "PATCH",
-        `${constant.mgmtPublicHost}/user`,
-        JSON.stringify(userUpdate), header),
-      {
-        [`PATCH /${constant.mgmtVersion}/user response 200`]:
-          (r) => r.status === 200,
-        [`PATCH /${constant.mgmtVersion}/user response name unchanged`]:
-          (r) => r.json().user.name === res.json().user.name,
-        [`PATCH /${constant.mgmtVersion}/user response uid unchanged`]:
-          (r) => r.json().user.uid === res.json().user.uid,
-        [`PATCH /${constant.mgmtVersion}/user response id unchanged`]:
-          (r) => r.json().user.id === res.json().user.id,
-        [`PATCH /${constant.mgmtVersion}/user response email updated`]:
-          (r) => r.json().user.email === userUpdate.email,
-        [`PATCH /${constant.mgmtVersion}/user response customerId unchanged`]:
-          (r) => r.json().user.customerId === res.json().user.customerId,
-        [`PATCH /${constant.mgmtVersion}/user response displayName updated`]:
-          (r) => r.json().user.profile.displayName === userUpdate.profile.displayName,
-        [`PATCH /${constant.mgmtVersion}/user response companyName updated`]:
-          (r) => r.json().user.profile.companyName === userUpdate.profile.companyName,
-        [`PATCH /${constant.mgmtVersion}/user response role updated`]:
-          (r) => r.json().user.role === userUpdate.role,
-        [`PATCH /${constant.mgmtVersion}/user response newsletterSubscription updated`]:
-          (r) => r.json().user.newsletterSubscription === userUpdate.newsletterSubscription,
-        [`PATCH /${constant.mgmtVersion}/user response createTime unchanged`]:
-          (r) => r.json().user.createTime === res.json().user.createTime,
-        [`PATCH /${constant.mgmtVersion}/user response updateTime updated`]:
-          (r) => r.json().user.updateTime !== res.json().user.updateTime,
-        [`PATCH /${constant.mgmtVersion}/user response updateTime not updated with request value`]:
-          (r) => r.json().user.updateTime !== userUpdate.updateTime,
-      }
+    // Store original user for comparison
+    const originalUser = getRes.json().user;
+
+    var patchRes = http.request(
+      "PATCH",
+      `${constant.mgmtPublicHost}/user`,
+      JSON.stringify(userUpdate),
+      patchHeader,
     );
 
-    // Restore to default user
+    // Debug: log error response if PATCH fails
+    if (patchRes.status !== 200) {
+      console.log(`PATCH /user failed with status ${patchRes.status}: ${patchRes.body}`);
+    }
+
+    check(patchRes, {
+      [`PATCH /${constant.mgmtVersion}/user response 200`]:
+        (r) => r.status === 200,
+    });
+
+    // Only check response fields if PATCH succeeded
+    if (patchRes.status === 200) {
+      const updatedUser = patchRes.json().user;
+      check(patchRes, {
+        // AIP immutable fields unchanged
+        [`PATCH /${constant.mgmtVersion}/user response name unchanged`]:
+          () => updatedUser.name === originalUser.name,
+        [`PATCH /${constant.mgmtVersion}/user response id unchanged`]:
+          () => updatedUser.id === originalUser.id,
+        // Note: slug is derived from displayName, so it WILL change when profile.displayName changes
+        // Updated fields
+        [`PATCH /${constant.mgmtVersion}/user response email updated`]:
+          () => updatedUser.email === userUpdate.email,
+        [`PATCH /${constant.mgmtVersion}/user response profile.displayName updated`]:
+          () => updatedUser.profile.displayName === userUpdate.profile.displayName,
+        [`PATCH /${constant.mgmtVersion}/user response profile.companyName updated`]:
+          () => updatedUser.profile.companyName === userUpdate.profile.companyName,
+        [`PATCH /${constant.mgmtVersion}/user response role updated`]:
+          () => updatedUser.role === userUpdate.role,
+        [`PATCH /${constant.mgmtVersion}/user response newsletterSubscription updated`]:
+          () => updatedUser.newsletterSubscription === userUpdate.newsletterSubscription,
+        [`PATCH /${constant.mgmtVersion}/user response createTime unchanged`]:
+          () => updatedUser.createTime === originalUser.createTime,
+        [`PATCH /${constant.mgmtVersion}/user response updateTime updated`]:
+          () => updatedUser.updateTime !== originalUser.updateTime,
+      });
+    }
+
+    // Restore to default user (use defaultUserUpdate which excludes immutable fields)
     check(
       http.request(
         "PATCH",
         `${constant.mgmtPublicHost}/user`,
-        JSON.stringify(constant.defaultUser), header),
+        JSON.stringify(constant.defaultUserUpdate), patchHeader),
 
       {
         [`PATCH /${constant.mgmtVersion}/user response status 200`]:
@@ -180,18 +202,40 @@ export function CheckPublicPatchAuthenticatedUser(header) {
 
 export function CheckPublicCreateToken(header) {
   group(`Management Public API: Create API token`, () => {
-    check(
-      http.request(
-        "POST",
-        `${constant.mgmtPublicHost}/tokens`,
-        JSON.stringify(constant.testToken),
-        header,
-      ),
-      {
-        [`POST /${constant.mgmtVersion}/tokens response status 201`]:
-          (r) => r.status === 201,
-      }
+    // Add Content-Type header for POST request
+    const postHeader = {
+      headers: {
+        ...header.headers,
+        "Content-Type": "application/json",
+      },
+    };
+
+    // First, try to delete any existing test token to avoid 409 conflict
+    // Note: Backend expects name format users/{user_id}/tokens/{token_id} but
+    // proto route uses tokens/{token_id}. This is a backend/proto mismatch.
+    http.request(
+      "DELETE",
+      `${constant.mgmtPublicHost}/tokens/${constant.testToken.id}`,
+      null,
+      header,
     );
+
+    var res = http.request(
+      "POST",
+      `${constant.mgmtPublicHost}/tokens`,
+      JSON.stringify(constant.testToken),
+      postHeader,
+    );
+
+    // Debug: log error response if POST fails
+    if (res.status !== 201) {
+      console.log(`POST /tokens failed with status ${res.status}: ${res.body}`);
+    }
+
+    check(res, {
+      [`POST /${constant.mgmtVersion}/tokens response status 201`]:
+        (r) => r.status === 201,
+    });
   });
 }
 
@@ -201,7 +245,7 @@ export function CheckPublicListTokens(header) {
       http.request(
         "GET",
         `${constant.mgmtPublicHost}/tokens`,
-        JSON.stringify({}),
+        null,
         header,
       ),
       {
@@ -214,35 +258,49 @@ export function CheckPublicListTokens(header) {
 
 export function CheckPublicGetToken(header) {
   group(`Management Public API: Get API token`, () => {
-    check(
-      http.request(
-        "GET",
-        `${constant.mgmtPublicHost}/tokens/${constant.testToken.id}`,
-        JSON.stringify({}),
-        header,
-      ),
-      {
-        [`GET /${constant.mgmtVersion}/tokens/${constant.testToken.id} response status 200`]:
-          (r) => r.status === 200,
-      }
+    // Note: Backend expects name format users/{user_id}/tokens/{token_id} but
+    // proto route uses tokens/{token_id}. This is a backend/proto mismatch
+    // that causes 500 errors until the backend handler is fixed.
+    var res = http.request(
+      "GET",
+      `${constant.mgmtPublicHost}/tokens/${constant.testToken.id}`,
+      null,
+      header,
     );
+
+    // Debug: log error response if GET fails
+    if (res.status !== 200) {
+      console.log(`GET /tokens/${constant.testToken.id} failed with status ${res.status}: ${res.body}`);
+    }
+
+    check(res, {
+      [`GET /${constant.mgmtVersion}/tokens/${constant.testToken.id} response status 200`]:
+        (r) => r.status === 200,
+    });
   });
 }
 
 export function CheckPublicDeleteToken(header) {
   group(`Management Public API: Delete API token`, () => {
-    check(
-      http.request(
-        "DELETE",
-        `${constant.mgmtPublicHost}/tokens/${constant.testToken.id}`,
-        JSON.stringify({}),
-        header,
-      ),
-      {
-        [`DELETE /${constant.mgmtVersion}/tokens/${constant.testToken.id} response status 204`]:
-          (r) => r.status === 204,
-      }
+    // Note: Backend expects name format users/{user_id}/tokens/{token_id} but
+    // proto route uses tokens/{token_id}. This is a backend/proto mismatch
+    // that causes 500 errors until the backend handler is fixed.
+    var res = http.request(
+      "DELETE",
+      `${constant.mgmtPublicHost}/tokens/${constant.testToken.id}`,
+      null,
+      header,
     );
+
+    // Debug: log error response if DELETE fails
+    if (res.status !== 204) {
+      console.log(`DELETE /tokens/${constant.testToken.id} failed with status ${res.status}: ${res.body}`);
+    }
+
+    check(res, {
+      [`DELETE /${constant.mgmtVersion}/tokens/${constant.testToken.id} response status 204`]:
+        (r) => r.status === 204,
+    });
   });
 }
 

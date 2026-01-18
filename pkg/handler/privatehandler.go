@@ -2,8 +2,10 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gofrs/uuid"
 	"go.einride.tech/aip/filtering"
@@ -12,13 +14,48 @@ import (
 
 	"github.com/instill-ai/mgmt-backend/pkg/service"
 
-	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	mgmtpb "github.com/instill-ai/protogen-go/mgmt/v1beta"
 	checkfield "github.com/instill-ai/x/checkfield"
 	errorsx "github.com/instill-ai/x/errors"
 )
 
 const defaultPageSize = int32(10)
 const maxPageSize = int32(100)
+
+// parseUserIDFromName parses a user resource name of format "users/{user_id}"
+// and returns the user_id
+func parseUserIDFromName(name string) (string, error) {
+	parts := strings.Split(name, "/")
+	if len(parts) != 2 || parts[0] != "users" {
+		return "", fmt.Errorf("invalid user name format, expected users/{user_id}")
+	}
+	return parts[1], nil
+}
+
+// parseUIDFromPermalink parses a permalink of format "users/{uid}" and returns the UUID
+func parseUIDFromPermalink(permalink string) (uuid.UUID, error) {
+	parts := strings.Split(permalink, "/")
+	if len(parts) != 2 || parts[0] != "users" {
+		return uuid.Nil, fmt.Errorf("invalid permalink format, expected users/{uid}")
+	}
+	return uuid.FromString(parts[1])
+}
+
+// parseTokenIDFromName parses a token resource name of format "users/{user_id}/tokens/{token_id}"
+// and returns the token_id
+func parseTokenIDFromName(name string) (string, error) {
+	parts := strings.Split(name, "/")
+	// Support both formats:
+	// - "tokens/{token_id}" (from proto route /v1beta/{name=tokens/*})
+	// - "users/{user_id}/tokens/{token_id}" (legacy full resource name)
+	if len(parts) == 2 && parts[0] == "tokens" {
+		return parts[1], nil
+	}
+	if len(parts) == 4 && parts[0] == "users" && parts[2] == "tokens" {
+		return parts[3], nil
+	}
+	return "", fmt.Errorf("invalid token name format, expected tokens/{token_id} or users/{user_id}/tokens/{token_id}")
+}
 
 // PrivateHandler is the handler for private endpoints.
 // NOTE: Organization admin endpoints are EE-only and implemented in mgmt-backend-ee.
@@ -59,8 +96,13 @@ func (h *PrivateHandler) ListUsersAdmin(ctx context.Context, req *mgmtpb.ListUse
 
 // GetUserAdmin gets a user
 func (h *PrivateHandler) GetUserAdmin(ctx context.Context, req *mgmtpb.GetUserAdminRequest) (*mgmtpb.GetUserAdminResponse, error) {
+	// Parse user ID from name (format: users/{user_id})
+	userID, err := parseUserIDFromName(req.GetName())
+	if err != nil {
+		return nil, err
+	}
 
-	pbUser, err := h.Service.GetUserAdmin(ctx, req.UserId)
+	pbUser, err := h.Service.GetUserAdmin(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -73,8 +115,9 @@ func (h *PrivateHandler) GetUserAdmin(ctx context.Context, req *mgmtpb.GetUserAd
 
 // LookUpUserAdmin gets a user by permalink
 func (h *PrivateHandler) LookUpUserAdmin(ctx context.Context, req *mgmtpb.LookUpUserAdminRequest) (*mgmtpb.LookUpUserAdminResponse, error) {
-	// Validation: `uid` in request is valid
-	uid, err := uuid.FromString(req.UserUid)
+	// Parse user UID from permalink (format: users/{user_uid})
+	permalink := req.GetPermalink()
+	userUID, err := parseUIDFromPermalink(permalink)
 	if err != nil {
 		// Manually set the custom header to have a StatusBadRequest http response for REST endpoint
 		if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", strconv.Itoa(http.StatusBadRequest))); err != nil {
@@ -83,7 +126,7 @@ func (h *PrivateHandler) LookUpUserAdmin(ctx context.Context, req *mgmtpb.LookUp
 		return &mgmtpb.LookUpUserAdminResponse{}, err
 	}
 
-	pbUser, err := h.Service.GetUserByUIDAdmin(ctx, uid)
+	pbUser, err := h.Service.GetUserByUIDAdmin(ctx, userUID)
 	if err != nil {
 		return nil, err
 	}
@@ -128,9 +171,11 @@ func (h *PrivateHandler) CheckNamespaceAdmin(ctx context.Context, req *mgmtpb.Ch
 
 	user, err := h.Service.GetUserAdmin(ctx, req.GetId())
 	if err == nil {
+		// Look up user UID separately
+		userUID, _ := h.Service.GetUserUIDByID(ctx, req.GetId())
 		return &mgmtpb.CheckNamespaceAdminResponse{
 			Type: mgmtpb.CheckNamespaceAdminResponse_NAMESPACE_USER,
-			Uid:  *user.Uid,
+			Uid:  userUID.String(),
 			Owner: &mgmtpb.CheckNamespaceAdminResponse_User{
 				User: user,
 			},

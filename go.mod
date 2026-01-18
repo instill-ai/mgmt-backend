@@ -16,9 +16,8 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
 	github.com/iancoleman/strcase v0.3.0
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
-	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20260105033127-ad2c5d9287e2
-	github.com/instill-ai/usage-client v0.4.0
-	github.com/instill-ai/x v0.10.1-alpha.0.20251027105340-6d7061cca782
+	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20260118003146-5bd5d4129f45
+	github.com/instill-ai/x v0.10.1-alpha.0.20260118004501-5221537d0a1d
 	github.com/knadh/koanf v1.5.0
 	github.com/mennanov/fieldmask-utils v1.1.2
 	github.com/openfga/go-sdk v0.7.1
@@ -45,7 +44,6 @@ require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/catalinc/hashcash v1.0.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect

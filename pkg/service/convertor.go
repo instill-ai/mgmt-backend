@@ -13,6 +13,7 @@ import (
 	"image/png"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -25,9 +26,27 @@ import (
 
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 
-	mgmtpb "github.com/instill-ai/protogen-go/core/mgmt/v1beta"
+	mgmtpb "github.com/instill-ai/protogen-go/mgmt/v1beta"
 	logx "github.com/instill-ai/x/log"
 )
+
+// generateSlug generates a URL-friendly slug from a display name.
+// It converts to lowercase, replaces spaces with hyphens, and removes special characters.
+func generateSlug(displayName string) string {
+	// Convert to lowercase
+	slug := strings.ToLower(displayName)
+	// Replace spaces with hyphens
+	slug = strings.ReplaceAll(slug, " ", "-")
+	// Remove non-alphanumeric characters except hyphens
+	reg := regexp.MustCompile(`[^a-z0-9-]`)
+	slug = reg.ReplaceAllString(slug, "")
+	// Remove multiple consecutive hyphens
+	reg = regexp.MustCompile(`-+`)
+	slug = reg.ReplaceAllString(slug, "-")
+	// Trim leading/trailing hyphens
+	slug = strings.Trim(slug, "-")
+	return slug
+}
 
 // maps for user owner type
 var (
@@ -108,7 +127,6 @@ func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*
 	}
 
 	id := dbUser.ID
-	uid := dbUser.UID.String()
 
 	socialProfileLinks := map[string]string{}
 	if dbUser.SocialProfileLinks != nil {
@@ -117,22 +135,34 @@ func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*
 	}
 
 	avatar := fmt.Sprintf("%s/v1beta/users/%s/avatar", s.instillCoreHost, dbUser.ID)
+
+	// Generate slug from display name if available, otherwise from ID
+	slug := id
+	if dbUser.DisplayName.Valid && dbUser.DisplayName.String != "" {
+		slug = generateSlug(dbUser.DisplayName.String)
+	}
+
 	return &mgmtpb.User{
-		Name:       fmt.Sprintf("users/%s", id),
-		Uid:        &uid,
-		Id:         id,
-		CreateTime: timestamppb.New(dbUser.CreateTime),
-		UpdateTime: timestamppb.New(dbUser.UpdateTime),
-		Profile: &mgmtpb.UserProfile{
-			DisplayName:        &dbUser.DisplayName.String,
-			CompanyName:        &dbUser.CompanyName.String,
-			PublicEmail:        &dbUser.PublicEmail.String,
-			Avatar:             &avatar,
-			Bio:                &dbUser.Bio.String,
-			SocialProfileLinks: socialProfileLinks,
-		},
-		Email: dbUser.Email,
-	}, nil
+		// AIP standard fields 1-8
+		Name:        fmt.Sprintf("users/%s", id),
+		Id:          id,
+		DisplayName: dbUser.DisplayName.String,
+		Slug:        slug,
+		Aliases:     []string{}, // TODO: populate from database when available
+		Description: dbUser.Bio.String,
+		CreateTime:  timestamppb.New(dbUser.CreateTime),
+		UpdateTime:  timestamppb.New(dbUser.UpdateTime),
+	// User-specific fields
+	Profile: &mgmtpb.UserProfile{
+		DisplayName:        dbUser.DisplayName.String,
+		CompanyName:        &dbUser.CompanyName.String,
+		PublicEmail:        &dbUser.PublicEmail.String,
+		Avatar:             &avatar,
+		Bio:                &dbUser.Bio.String,
+		SocialProfileLinks: socialProfileLinks,
+	},
+	Email: dbUser.Email,
+}, nil
 }
 
 // DBUser2PBAuthenticatedUser converts a database user instance to proto authenticated user
@@ -142,7 +172,6 @@ func (s *service) DBUser2PBAuthenticatedUser(ctx context.Context, dbUser *datamo
 	}
 
 	id := dbUser.ID
-	uid := dbUser.UID.String()
 	socialProfileLinks := map[string]string{}
 	if dbUser.SocialProfileLinks != nil {
 		b, _ := dbUser.SocialProfileLinks.MarshalJSON()
@@ -150,39 +179,53 @@ func (s *service) DBUser2PBAuthenticatedUser(ctx context.Context, dbUser *datamo
 	}
 
 	avatar := fmt.Sprintf("%s/v1beta/users/%s/avatar", s.instillCoreHost, dbUser.ID)
+
+	// Generate slug from display name if available, otherwise from ID
+	slug := id
+	if dbUser.DisplayName.Valid && dbUser.DisplayName.String != "" {
+		slug = generateSlug(dbUser.DisplayName.String)
+	}
+
 	return &mgmtpb.AuthenticatedUser{
-		Name:                   fmt.Sprintf("users/%s", id),
-		Uid:                    &uid,
-		Id:                     id,
-		CreateTime:             timestamppb.New(dbUser.CreateTime),
-		UpdateTime:             timestamppb.New(dbUser.UpdateTime),
+		// AIP standard fields 1-8
+		Name:        fmt.Sprintf("users/%s", id),
+		Id:          id,
+		DisplayName: dbUser.DisplayName.String,
+		Slug:        slug,
+		Aliases:     []string{}, // TODO: populate from database when available
+		Description: dbUser.Bio.String,
+		CreateTime:  timestamppb.New(dbUser.CreateTime),
+		UpdateTime:  timestamppb.New(dbUser.UpdateTime),
+		// AuthenticatedUser-specific fields
 		Email:                  dbUser.Email,
-		CustomerId:             dbUser.CustomerID,
+		// CustomerId removed from protobuf - TODO: re-add when field is restored
+		// CustomerId:             dbUser.CustomerID,
 		Role:                   &dbUser.Role.String,
 		CookieToken:            &dbUser.CookieToken.String,
 		NewsletterSubscription: dbUser.NewsletterSubscription,
-		Profile: &mgmtpb.UserProfile{
-			DisplayName:        &dbUser.DisplayName.String,
-			CompanyName:        &dbUser.CompanyName.String,
-			PublicEmail:        &dbUser.PublicEmail.String,
-			Avatar:             &avatar,
-			Bio:                &dbUser.Bio.String,
-			SocialProfileLinks: socialProfileLinks,
-		},
-		OnboardingStatus: mgmtpb.OnboardingStatus(dbUser.OnboardingStatus),
-	}, nil
+	Profile: &mgmtpb.UserProfile{
+		DisplayName:        dbUser.DisplayName.String,
+		CompanyName:        &dbUser.CompanyName.String,
+		PublicEmail:        &dbUser.PublicEmail.String,
+		Avatar:             &avatar,
+		Bio:                &dbUser.Bio.String,
+		SocialProfileLinks: socialProfileLinks,
+	},
+	OnboardingStatus: mgmtpb.OnboardingStatus(dbUser.OnboardingStatus),
+}, nil
 }
 
 // PBAuthenticatedUser2DBUser converts a proto user instance to database user
+// Note: UID is no longer in the protobuf. The caller should set the UID
+// on the returned datamodel if updating an existing user.
 func (s *service) PBAuthenticatedUser2DBUser(ctx context.Context, pbUser *mgmtpb.AuthenticatedUser) (*datamodel.Owner, error) {
 	if pbUser == nil {
 		return nil, status.Error(codes.Internal, "can't convert a nil user")
 	}
 
-	uid, err := uuid.FromString(pbUser.GetUid())
-	if err != nil {
-		return nil, err
-	}
+	// UID is no longer in the protobuf - generate a new one for new users
+	// For updates, the caller should set the UID from the existing database record
+	uid := uuid.Must(uuid.NewV4())
 
 	userType := "user"
 	email := pbUser.GetEmail()
@@ -202,7 +245,8 @@ func (s *service) PBAuthenticatedUser2DBUser(ctx context.Context, pbUser *mgmtpb
 			Valid:  len(userType) > 0,
 		},
 		Email:      email,
-		CustomerID: pbUser.GetCustomerId(),
+		// CustomerID removed from protobuf - TODO: re-add when field is restored
+		// CustomerID: pbUser.GetCustomerId(),
 		DisplayName: sql.NullString{
 			String: pbUser.GetProfile().GetDisplayName(),
 			Valid:  len(pbUser.GetProfile().GetDisplayName()) > 0,
@@ -278,7 +322,7 @@ func (s *service) DBUsers2PBAuthenticatedUsers(ctx context.Context, dbUsers []*d
 	return pbUsers, nil
 }
 
-// DBUser2PBUser converts a database user instance to proto user
+// DBOrg2PBOrg converts a database organization instance to proto organization
 func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgmtpb.Organization, error) {
 	if dbOrg == nil {
 		return nil, status.Error(codes.Internal, "can't convert a nil organization")
@@ -292,13 +336,16 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 		return nil, err
 	}
 
-	var owner *mgmtpb.User
+	// Find the owner and get their ID for the string reference
+	var ownerRef string
 	for _, relation := range relations {
 		if relation.Relation == "owner" {
-			owner, err = s.GetUserByUIDAdmin(ctx, relation.UID)
+			ownerUser, err := s.GetUserByUIDAdmin(ctx, relation.UID)
 			if err != nil {
 				return nil, err
 			}
+			// Owner is now a string reference: "users/{user.id}"
+			ownerRef = fmt.Sprintf("users/%s", ownerUser.Id)
 			break
 		}
 	}
@@ -323,20 +370,31 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 		return nil, err
 	}
 
+	// Generate slug from display name if available, otherwise from ID
+	slug := id
+	if dbOrg.DisplayName.Valid && dbOrg.DisplayName.String != "" {
+		slug = generateSlug(dbOrg.DisplayName.String)
+	}
+
 	return &mgmtpb.Organization{
-		Name:       fmt.Sprintf("organizations/%s", id),
-		Uid:        uid,
-		Id:         id,
-		CreateTime: timestamppb.New(dbOrg.CreateTime),
-		UpdateTime: timestamppb.New(dbOrg.UpdateTime),
-		Profile: &mgmtpb.OrganizationProfile{
-			DisplayName:        &dbOrg.DisplayName.String,
-			PublicEmail:        &dbOrg.PublicEmail.String,
-			Avatar:             &avatar,
-			Bio:                &dbOrg.Bio.String,
-			SocialProfileLinks: socialProfileLinks,
-		},
-		Owner: owner,
+		// AIP standard fields 1-9
+		Name:        fmt.Sprintf("organizations/%s", id),
+		Id:          id,
+		DisplayName: dbOrg.DisplayName.String,
+		Slug:        slug,
+		Aliases:     []string{}, // TODO: populate from database when available
+		Description: dbOrg.Bio.String,
+		CreateTime:  timestamppb.New(dbOrg.CreateTime),
+		UpdateTime:  timestamppb.New(dbOrg.UpdateTime),
+		Owner:       ownerRef, // Now a string reference
+	// Organization-specific fields
+	Profile: &mgmtpb.OrganizationProfile{
+		DisplayName:        dbOrg.DisplayName.String,
+		PublicEmail:        &dbOrg.PublicEmail.String,
+		Avatar:             &avatar,
+		Bio:                &dbOrg.Bio.String,
+		SocialProfileLinks: socialProfileLinks,
+	},
 		Permission: &mgmtpb.Permission{
 			CanEdit: canUpdateOrganization,
 		},
@@ -346,16 +404,17 @@ func (s *service) DBOrg2PBOrg(ctx context.Context, dbOrg *datamodel.Owner) (*mgm
 	}, nil
 }
 
-// PBOrg2DBOrg converts a proto user instance to database user
+// PBOrg2DBOrg converts a proto organization instance to database organization
+// Note: UID is no longer in the protobuf. The caller should set the UID
+// on the returned datamodel if updating an existing organization.
 func (s *service) PBOrg2DBOrg(ctx context.Context, pbOrg *mgmtpb.Organization) (*datamodel.Owner, error) {
 	if pbOrg == nil {
 		return nil, status.Error(codes.Internal, "can't convert a nil organization")
 	}
 
-	uid, err := uuid.FromString(pbOrg.GetUid())
-	if err != nil {
-		return nil, err
-	}
+	// UID is no longer in the protobuf - generate a new one for new organizations
+	// For updates, the caller should set the UID from the existing database record
+	uid := uuid.Must(uuid.NewV4())
 
 	userType := "organization"
 	profileAvatar, err := s.compressAvatar(pbOrg.GetProfile().GetAvatar())
