@@ -29,11 +29,12 @@ import (
 // TODO: Validate mask based on the field behavior. Currently, the fields are hard-coded.
 // We stipulate that the ID of the user is IMMUTABLE
 var outputOnlyFields = []string{"name", "create_time", "update_time", "customer_id"}
+
 // Note: AuthenticatedUser message doesn't have uid field (removed for AIP compliance)
 var immutableFields = []string{"id"}
 
 var createRequiredFieldsForToken = []string{"id"}
-var outputOnlyFieldsForToken = []string{"name", "uid", "state", "token_type", "access_token", "create_time", "update_time"}
+var outputOnlyFieldsForToken = []string{"name", "state", "token_type", "access_token", "create_time", "update_time", "last_use_time"}
 
 // PublicHandler is the handler for the public endpoints.
 type PublicHandler struct {
@@ -471,7 +472,8 @@ func (h *PublicHandler) ValidateToken(ctx context.Context, req *mgmtpb.ValidateT
 		return nil, err
 	}
 
-	return &mgmtpb.ValidateTokenResponse{UserUid: userUID}, nil
+	// Return user as full resource name: users/{user_uid}
+	return &mgmtpb.ValidateTokenResponse{User: fmt.Sprintf("users/%s", userUID)}, nil
 }
 
 // GetPipelineTriggerCount returns the pipeline trigger count of a given
@@ -508,96 +510,6 @@ func (h *PublicHandler) GetModelTriggerCount(ctx context.Context, req *mgmtpb.Ge
 	return resp, nil
 }
 
-// ListPipelineTriggerRecords lists pipeline trigger records.
-func (h *PublicHandler) ListPipelineTriggerRecords(ctx context.Context, req *mgmtpb.ListPipelineTriggerRecordsRequest) (*mgmtpb.ListPipelineTriggerRecordsResponse, error) {
-
-	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
-	if err != nil {
-		return nil, err
-	}
-	pbUser, err := h.Service.GetUserByUIDAdmin(ctx, ctxUserUID)
-	if err != nil {
-		return nil, err
-	}
-	var mode mgmtpb.Mode
-	var status mgmtpb.Status
-	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
-		filtering.DeclareStandardFunctions(),
-		filtering.DeclareIdent(constant.Start, filtering.TypeTimestamp),
-		filtering.DeclareIdent(constant.Stop, filtering.TypeTimestamp),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.OwnerName), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineID), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineUID), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineReleaseID), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineReleaseUID), filtering.TypeString),
-		filtering.DeclareEnumIdent(strcase.ToLowerCamel(constant.TriggerMode), mode.Type()),
-		filtering.DeclareEnumIdent(constant.Status, status.Type()),
-	}...)
-	if err != nil {
-		return nil, err
-	}
-	filter, err := filtering.ParseFilter(req, declarations)
-	if err != nil {
-		return nil, err
-	}
-	pipelineTriggerRecords, totalSize, nextPageToken, err := h.Service.ListPipelineTriggerRecords(ctx, pbUser, int64(req.GetPageSize()), req.GetPageToken(), filter)
-	if err != nil {
-		return nil, err
-	}
-	resp := mgmtpb.ListPipelineTriggerRecordsResponse{
-		PipelineTriggerRecords: pipelineTriggerRecords,
-		NextPageToken:          nextPageToken,
-		TotalSize:              int32(totalSize),
-	}
-
-	return &resp, nil
-}
-
-// ListPipelineTriggerTableRecords lists pipeline trigger table records.
-func (h *PublicHandler) ListPipelineTriggerTableRecords(ctx context.Context, req *mgmtpb.ListPipelineTriggerTableRecordsRequest) (*mgmtpb.ListPipelineTriggerTableRecordsResponse, error) {
-
-	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
-	if err != nil {
-		return nil, err
-	}
-	pbUser, err := h.Service.GetUserByUIDAdmin(ctx, ctxUserUID)
-	if err != nil {
-		return nil, err
-	}
-
-	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
-		filtering.DeclareStandardFunctions(),
-		filtering.DeclareIdent(constant.Start, filtering.TypeTimestamp),
-		filtering.DeclareIdent(constant.Stop, filtering.TypeTimestamp),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.OwnerName), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineID), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineUID), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineReleaseID), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineReleaseUID), filtering.TypeString),
-	}...)
-	if err != nil {
-		return nil, err
-	}
-
-	filter, err := filtering.ParseFilter(req, declarations)
-	if err != nil {
-		return nil, err
-	}
-
-	pipelineTriggerTableRecords, totalSize, nextPageToken, err := h.Service.ListPipelineTriggerTableRecords(ctx, pbUser, int64(req.GetPageSize()), req.GetPageToken(), filter)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := mgmtpb.ListPipelineTriggerTableRecordsResponse{
-		PipelineTriggerTableRecords: pipelineTriggerTableRecords,
-		NextPageToken:               nextPageToken,
-		TotalSize:                   int32(totalSize),
-	}
-
-	return &resp, nil
-}
-
 // ListPipelineTriggerChartRecords returns a timeline of a requester's pipeline
 // trigger count.
 func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req *mgmtpb.ListPipelineTriggerChartRecordsRequest) (*mgmtpb.ListPipelineTriggerChartRecordsResponse, error) {
@@ -612,55 +524,6 @@ func (h *PublicHandler) ListPipelineTriggerChartRecords(ctx context.Context, req
 	}
 
 	return resp, nil
-}
-
-// ListPipelineTriggerChartRecordsV0 returns a timeline of a requester's pipeline
-// trigger count.
-func (h *PublicHandler) ListPipelineTriggerChartRecordsV0(ctx context.Context, req *mgmtpb.ListPipelineTriggerChartRecordsV0Request) (*mgmtpb.ListPipelineTriggerChartRecordsV0Response, error) {
-
-	ctxUserUID, err := h.Service.ExtractCtxUser(ctx, false)
-	if err != nil {
-		return nil, err
-	}
-	pbUser, err := h.Service.GetUserByUIDAdmin(ctx, ctxUserUID)
-	if err != nil {
-		return nil, err
-	}
-
-	var mode mgmtpb.Mode
-	var status mgmtpb.Status
-
-	declarations, err := filtering.NewDeclarations([]filtering.DeclarationOption{
-		filtering.DeclareStandardFunctions(),
-		filtering.DeclareIdent(constant.Start, filtering.TypeTimestamp),
-		filtering.DeclareIdent(constant.Stop, filtering.TypeTimestamp),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.OwnerName), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineID), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineUID), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineReleaseID), filtering.TypeString),
-		filtering.DeclareIdent(strcase.ToLowerCamel(constant.PipelineReleaseUID), filtering.TypeString),
-		filtering.DeclareEnumIdent(strcase.ToLowerCamel(constant.TriggerMode), mode.Type()),
-		filtering.DeclareEnumIdent(constant.Status, status.Type()),
-	}...)
-	if err != nil {
-		return nil, err
-	}
-
-	filter, err := filtering.ParseFilter(req, declarations)
-	if err != nil {
-		return nil, err
-	}
-
-	pipelineTriggerChartRecords, err := h.Service.ListPipelineTriggerChartRecordsV0(ctx, pbUser, int64(req.GetAggregationWindow()), filter)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := mgmtpb.ListPipelineTriggerChartRecordsV0Response{
-		PipelineTriggerChartRecords: pipelineTriggerChartRecords,
-	}
-
-	return &resp, nil
 }
 
 // ListModelTriggerChartRecords returns a timeline of model trigger counts for a given requester. The

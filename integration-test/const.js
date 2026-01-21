@@ -74,6 +74,10 @@ export const defaultUser = {
   newsletterSubscription: true,
 };
 
+export const testTokenId = "test-token";
+
+// Note: The HTTP body maps to the "token" field directly (body: "token" in proto),
+// so we send the ApiToken fields directly without a wrapper.
 export const testToken = {
   id: "test-token",
   ttl: -1,

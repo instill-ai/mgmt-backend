@@ -50,10 +50,7 @@ type Service interface {
 	CheckUserPassword(ctx context.Context, uid uuid.UUID, password string) error
 	UpdateUserPassword(ctx context.Context, uid uuid.UUID, newPassword string) error
 
-	ListPipelineTriggerRecords(ctx context.Context, owner *mgmtpb.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerRecord, int64, string, error)
-	ListPipelineTriggerTableRecords(ctx context.Context, owner *mgmtpb.User, pageSize int64, pageToken string, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerTableRecord, int64, string, error)
 	ListPipelineTriggerChartRecords(_ context.Context, _ *mgmtpb.ListPipelineTriggerChartRecordsRequest, ctxUserUID uuid.UUID) (*mgmtpb.ListPipelineTriggerChartRecordsResponse, error)
-	ListPipelineTriggerChartRecordsV0(ctx context.Context, owner *mgmtpb.User, aggregationWindow int64, filter filtering.Filter) ([]*mgmtpb.PipelineTriggerChartRecordV0, error)
 	GetPipelineTriggerCount(_ context.Context, _ *mgmtpb.GetPipelineTriggerCountRequest, ctxUserUID uuid.UUID) (*mgmtpb.GetPipelineTriggerCountResponse, error)
 	GetModelTriggerCount(_ context.Context, _ *mgmtpb.GetModelTriggerCountRequest, ctxUserUID uuid.UUID) (*mgmtpb.GetModelTriggerCountResponse, error)
 	ListModelTriggerChartRecords(ctx context.Context, req *mgmtpb.ListModelTriggerChartRecordsRequest, ctxUserUID uuid.UUID) (*mgmtpb.ListModelTriggerChartRecordsResponse, error)
@@ -123,26 +120,30 @@ func (s *service) convertUserIDAlias(ctx context.Context, ctxUserUID uuid.UUID, 
 
 // GetUser returns the api user
 func (s *service) ExtractCtxUser(ctx context.Context, allowVisitor bool) (userUID uuid.UUID, err error) {
-	// Verify if "instill-user-uid" is in the header
-	authType := resource.GetRequestSingleHeader(ctx, constant.HeaderAuthType)
-	if authType == "user" {
-		headerCtxUserUID := resource.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)
-		if headerCtxUserUID == "" {
-			return uuid.Nil, errorsx.ErrUnauthenticated
-		}
+	// First check for Instill-User-Uid header (can be set by API Gateway's JWT auth/validator)
+	// This handles both explicit "user" auth type and JWT-based auth where only the UID is propagated
+	headerCtxUserUID := resource.GetRequestSingleHeader(ctx, constant.HeaderUserUIDKey)
+	if headerCtxUserUID != "" {
 		return uuid.FromStringOrNil(headerCtxUserUID), nil
-	} else {
-		if !allowVisitor {
-			return uuid.Nil, errorsx.ErrUnauthenticated
-		}
-		headerCtxVisitorUID := resource.GetRequestSingleHeader(ctx, constant.HeaderVisitorUIDKey)
-		if headerCtxVisitorUID == "" {
-			return uuid.Nil, errorsx.ErrUnauthenticated
-		}
-
-		return uuid.FromStringOrNil(headerCtxVisitorUID), nil
 	}
 
+	// Check explicit auth type
+	authType := resource.GetRequestSingleHeader(ctx, constant.HeaderAuthType)
+	if authType == "user" {
+		// Auth type is user but no UID provided
+		return uuid.Nil, errorsx.ErrUnauthenticated
+	}
+
+	// Visitor mode
+	if !allowVisitor {
+		return uuid.Nil, errorsx.ErrUnauthenticated
+	}
+	headerCtxVisitorUID := resource.GetRequestSingleHeader(ctx, constant.HeaderVisitorUIDKey)
+	if headerCtxVisitorUID == "" {
+		return uuid.Nil, errorsx.ErrUnauthenticated
+	}
+
+	return uuid.FromStringOrNil(headerCtxVisitorUID), nil
 }
 
 func (s *service) ListUsers(ctx context.Context, ctxUserUID uuid.UUID, pageSize int, pageToken string, filter filtering.Filter) (users []*mgmtpb.User, totalSize int64, nextPageToken string, err error) {

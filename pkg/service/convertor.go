@@ -27,7 +27,6 @@ import (
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
 
 	mgmtpb "github.com/instill-ai/protogen-go/mgmt/v1beta"
-	logx "github.com/instill-ai/x/log"
 )
 
 // generateSlug generates a URL-friendly slug from a display name.
@@ -152,17 +151,17 @@ func (s *service) DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*
 		Description: dbUser.Bio.String,
 		CreateTime:  timestamppb.New(dbUser.CreateTime),
 		UpdateTime:  timestamppb.New(dbUser.UpdateTime),
-	// User-specific fields
-	Profile: &mgmtpb.UserProfile{
-		DisplayName:        dbUser.DisplayName.String,
-		CompanyName:        &dbUser.CompanyName.String,
-		PublicEmail:        &dbUser.PublicEmail.String,
-		Avatar:             &avatar,
-		Bio:                &dbUser.Bio.String,
-		SocialProfileLinks: socialProfileLinks,
-	},
-	Email: dbUser.Email,
-}, nil
+		// User-specific fields
+		Profile: &mgmtpb.UserProfile{
+			DisplayName:        dbUser.DisplayName.String,
+			CompanyName:        &dbUser.CompanyName.String,
+			PublicEmail:        &dbUser.PublicEmail.String,
+			Avatar:             &avatar,
+			Bio:                &dbUser.Bio.String,
+			SocialProfileLinks: socialProfileLinks,
+		},
+		Email: dbUser.Email,
+	}, nil
 }
 
 // DBUser2PBAuthenticatedUser converts a database user instance to proto authenticated user
@@ -197,22 +196,22 @@ func (s *service) DBUser2PBAuthenticatedUser(ctx context.Context, dbUser *datamo
 		CreateTime:  timestamppb.New(dbUser.CreateTime),
 		UpdateTime:  timestamppb.New(dbUser.UpdateTime),
 		// AuthenticatedUser-specific fields
-		Email:                  dbUser.Email,
+		Email: dbUser.Email,
 		// CustomerId removed from protobuf - TODO: re-add when field is restored
 		// CustomerId:             dbUser.CustomerID,
 		Role:                   &dbUser.Role.String,
 		CookieToken:            &dbUser.CookieToken.String,
 		NewsletterSubscription: dbUser.NewsletterSubscription,
-	Profile: &mgmtpb.UserProfile{
-		DisplayName:        dbUser.DisplayName.String,
-		CompanyName:        &dbUser.CompanyName.String,
-		PublicEmail:        &dbUser.PublicEmail.String,
-		Avatar:             &avatar,
-		Bio:                &dbUser.Bio.String,
-		SocialProfileLinks: socialProfileLinks,
-	},
-	OnboardingStatus: mgmtpb.OnboardingStatus(dbUser.OnboardingStatus),
-}, nil
+		Profile: &mgmtpb.UserProfile{
+			DisplayName:        dbUser.DisplayName.String,
+			CompanyName:        &dbUser.CompanyName.String,
+			PublicEmail:        &dbUser.PublicEmail.String,
+			Avatar:             &avatar,
+			Bio:                &dbUser.Bio.String,
+			SocialProfileLinks: socialProfileLinks,
+		},
+		OnboardingStatus: mgmtpb.OnboardingStatus(dbUser.OnboardingStatus),
+	}, nil
 }
 
 // PBAuthenticatedUser2DBUser converts a proto user instance to database user
@@ -244,7 +243,7 @@ func (s *service) PBAuthenticatedUser2DBUser(ctx context.Context, pbUser *mgmtpb
 			String: userType,
 			Valid:  len(userType) > 0,
 		},
-		Email:      email,
+		Email: email,
 		// CustomerID removed from protobuf - TODO: re-add when field is restored
 		// CustomerID: pbUser.GetCustomerId(),
 		DisplayName: sql.NullString{
@@ -332,7 +331,6 @@ func (s *service) DBToken2PBToken(ctx context.Context, dbToken *datamodel.Token)
 
 	return &mgmtpb.ApiToken{
 		Name:        fmt.Sprintf("tokens/%s", id),
-		Uid:         dbToken.UID.String(),
 		Id:          id,
 		State:       state,
 		AccessToken: dbToken.AccessToken,
@@ -351,21 +349,10 @@ func (s *service) DBToken2PBToken(ctx context.Context, dbToken *datamodel.Token)
 
 // PBToken2DBToken converts a proto user instance to database user
 func (s *service) PBToken2DBToken(ctx context.Context, pbToken *mgmtpb.ApiToken) (*datamodel.Token, error) {
-
-	logger, _ := logx.GetZapLogger(ctx)
-
 	r := &datamodel.Token{
 		Base: datamodel.Base{
-			UID: func() uuid.UUID {
-				if pbToken.GetUid() == "" {
-					return uuid.UUID{}
-				}
-				id, err := uuid.FromString(pbToken.GetUid())
-				if err != nil {
-					logger.Error(err.Error())
-				}
-				return id
-			}(),
+			// UID is generated internally and not exposed via API
+			UID: uuid.UUID{},
 
 			CreateTime: func() time.Time {
 				if pbToken.GetCreateTime() != nil {
