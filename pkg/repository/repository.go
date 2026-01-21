@@ -193,7 +193,7 @@ func (r *repository) DeleteOrganization(ctx context.Context, id string) error {
 func (r *repository) GetAllUsers(ctx context.Context) ([]*datamodel.Owner, error) {
 	db := r.CheckPinnedUser(ctx, r.db)
 	var users []*datamodel.Owner
-	if err := db.Find(users).Where("owner_type = 'user'").Error; err != nil {
+	if err := db.Where("owner_type = ?", "user").Find(&users).Error; err != nil {
 		return nil, errorsx.RepositoryErr(fmt.Errorf("getting all users: %w", err))
 	}
 	return users, nil

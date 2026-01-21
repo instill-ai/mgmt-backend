@@ -1,5 +1,6 @@
 import http from "k6/http";
 import { check } from "k6";
+import encoding from "k6/encoding";
 import * as constant from "./const.js"
 import * as mgmtPublic from "./rest-public-user.js"
 import * as mgmtPublicWithJwt from "./rest-public-user-with-jwt.js"
@@ -14,21 +15,12 @@ export let options = {
 };
 
 export function setup() {
-  var loginResp = http.request("POST", `${constant.mgmtPublicHost}/auth/login`, JSON.stringify({
-    "username": constant.defaultUsername,
-    "password": constant.defaultPassword,
-  }))
-
-
-  check(loginResp, {
-    [`POST /${constant.mgmtVersion}/auth/login response status is 200`]: (
-      r
-    ) => r.status === 200,
-  });
+  // CE edition uses Basic Auth for all authenticated requests
+  const basicAuth = encoding.b64encode(`${constant.defaultUsername}:${constant.defaultPassword}`);
 
   return {
     "headers": {
-      "Authorization": `Bearer ${loginResp.json().accessToken}`
+      "Authorization": `Basic ${basicAuth}`
     }
   }
 }
