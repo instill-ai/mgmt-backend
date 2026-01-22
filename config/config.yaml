@@ -50,6 +50,9 @@ otelcollector:
 openfga:
   host: openfga
   port: 8080
+  cache:
+    enabled: true
+    ttl: 60
 temporal:
   hostport: temporal:7233
   namespace: instill-core
