@@ -472,8 +472,14 @@ func (h *PublicHandler) ValidateToken(ctx context.Context, req *mgmtpb.ValidateT
 		return nil, err
 	}
 
-	// Return user as full resource name: users/{user_uid}
-	return &mgmtpb.ValidateTokenResponse{User: fmt.Sprintf("users/%s", userUID)}, nil
+	// Fetch the user to get the user ID for the AIP-compliant resource name
+	user, err := h.Service.GetUserByUIDAdmin(ctx, uuid.FromStringOrNil(userUID))
+	if err != nil {
+		return nil, err
+	}
+
+	// Return user as AIP-compliant resource name: users/{user_id}
+	return &mgmtpb.ValidateTokenResponse{User: fmt.Sprintf("users/%s", user.Id)}, nil
 }
 
 // GetPipelineTriggerCount returns the pipeline trigger count of a given

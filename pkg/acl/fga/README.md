@@ -10,4 +10,5 @@
    - `fga.md5` - MD5 hash of the FGA model used for change detection during migrations, if the md5 hash is different from the existing one stored in the database, the migration will be applied
 
 ## Note
+
 - Currently, the authorization models for other backends are centralized and stored here. In the future, we may consider decentralizing these models and distributing them to their respective backends.
