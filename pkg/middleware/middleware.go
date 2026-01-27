@@ -28,32 +28,45 @@ func HandleAvatar(mux *runtime.ServeMux, repository repository.Repository, w htt
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	avatarBase64 := ""
-	if strings.Split(pathParams["name"], "/")[0] == "users" {
-		user, err := repository.GetUser(ctx, strings.Split(pathParams["name"], "/")[1], true)
+	var avatarBase64 string
+	nameParts := strings.Split(pathParams["name"], "/")
+	switch nameParts[0] {
+	case "users":
+		user, err := repository.GetUser(ctx, nameParts[1], true)
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		if user.ProfileAvatar.String == "" {
+		// Check if avatar is NULL or empty
+		if !user.ProfileAvatar.Valid || user.ProfileAvatar.String == "" {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		avatarBase64 = user.ProfileAvatar.String
-	} else if strings.Split(pathParams["name"], "/")[0] == "organizations" {
-		org, err := repository.GetOrganization(ctx, strings.Split(pathParams["name"], "/")[1], true)
+	case "organizations":
+		org, err := repository.GetOrganization(ctx, nameParts[1], true)
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		if org.ProfileAvatar.String == "" {
+		// Check if avatar is NULL or empty
+		if !org.ProfileAvatar.Valid || org.ProfileAvatar.String == "" {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		avatarBase64 = org.ProfileAvatar.String
+	default:
+		w.WriteHeader(http.StatusNotFound)
+		return
 	}
 
-	b, err := base64.StdEncoding.DecodeString(strings.Split(avatarBase64, ",")[1])
+	// Avatar data should be in format "data:image/...;base64,<data>"
+	parts := strings.Split(avatarBase64, ",")
+	if len(parts) < 2 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	b, err := base64.StdEncoding.DecodeString(parts[1])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
