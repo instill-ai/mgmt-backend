@@ -16,12 +16,13 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
 	github.com/iancoleman/strcase v0.3.0
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
-	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20260126193523-156ce51dc037
+	github.com/instill-ai/protogen-go v0.3.3-alpha.0.20260128000315-44b7452b6f2c
 	github.com/instill-ai/x v0.10.1-alpha.0.20260126193844-80180146fe69
 	github.com/knadh/koanf v1.5.0
 	github.com/mennanov/fieldmask-utils v1.1.2
 	github.com/openfga/go-sdk v0.7.1
 	github.com/redis/go-redis/v9 v9.9.0
+	github.com/stretchr/testify v1.10.0
 	go.einride.tech/aip v0.70.2
 	go.opentelemetry.io/otel v1.37.0
 	go.temporal.io/sdk v1.35.0
@@ -87,7 +88,6 @@ require (
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/twmb/murmur3 v1.1.8 // indirect
 	github.com/uber-go/tally/v4 v4.1.17 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect

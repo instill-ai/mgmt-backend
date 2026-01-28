@@ -66,10 +66,12 @@ type Repository interface {
 	GetOwner(ctx context.Context, id string, includeAvatar bool) (*datamodel.Owner, error)
 	GetOwnerByUID(ctx context.Context, uid uuid.UUID) (*datamodel.Owner, error)
 
-	listOwners(ctx context.Context, ownerType string, pageSize int, pageToken string, filter filtering.Filter) ([]*datamodel.Owner, int64, string, error)
-	createOwner(ctx context.Context, ownerType string, user *datamodel.Owner) error
-	updateOwner(ctx context.Context, ownerType string, id string, user *datamodel.Owner) error
-	deleteOwner(ctx context.Context, ownerType string, id string) error
+	// ListOwners, CreateOwner, UpdateOwner, DeleteOwner are the generic owner CRUD methods.
+	// They are exported to allow EE to mock the repository interface for unit testing.
+	ListOwners(ctx context.Context, ownerType string, pageSize int, pageToken string, filter filtering.Filter) ([]*datamodel.Owner, int64, string, error)
+	CreateOwner(ctx context.Context, ownerType string, user *datamodel.Owner) error
+	UpdateOwner(ctx context.Context, ownerType string, id string, user *datamodel.Owner) error
+	DeleteOwner(ctx context.Context, ownerType string, id string) error
 
 	GetUserPasswordHash(ctx context.Context, uid uuid.UUID) (string, time.Time, error)
 	UpdateUserPasswordHash(ctx context.Context, uid uuid.UUID, newPassword string, updateTime time.Time) error
@@ -117,10 +119,10 @@ func (r *repository) PinUser(ctx context.Context) {
 }
 
 func (r *repository) ListUsers(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*datamodel.Owner, int64, string, error) {
-	return r.listOwners(ctx, "user", pageSize, pageToken, filter)
+	return r.ListOwners(ctx, "user", pageSize, pageToken, filter)
 }
 func (r *repository) CreateUser(ctx context.Context, user *datamodel.Owner) error {
-	return r.createOwner(ctx, "user", user)
+	return r.CreateOwner(ctx, "user", user)
 }
 
 // ownerWithType is used to wrap an owner fetch with a tyupe check.
@@ -151,18 +153,18 @@ func (r *repository) GetUserByUID(ctx context.Context, uid uuid.UUID) (*datamode
 }
 
 func (r *repository) UpdateUser(ctx context.Context, id string, user *datamodel.Owner) error {
-	return r.updateOwner(ctx, "user", id, user)
+	return r.UpdateOwner(ctx, "user", id, user)
 }
 
 func (r *repository) DeleteUser(ctx context.Context, id string) error {
-	return r.deleteOwner(ctx, "user", id)
+	return r.DeleteOwner(ctx, "user", id)
 }
 
 func (r *repository) ListOrganizations(ctx context.Context, pageSize int, pageToken string, filter filtering.Filter) ([]*datamodel.Owner, int64, string, error) {
-	return r.listOwners(ctx, "organization", pageSize, pageToken, filter)
+	return r.ListOwners(ctx, "organization", pageSize, pageToken, filter)
 }
 func (r *repository) CreateOrganization(ctx context.Context, org *datamodel.Owner) error {
-	return r.createOwner(ctx, "organization", org)
+	return r.CreateOwner(ctx, "organization", org)
 }
 
 func (r *repository) GetOrganization(ctx context.Context, id string, includeAvatar bool) (*datamodel.Owner, error) {
@@ -184,10 +186,10 @@ func (r *repository) GetOrganizationByUID(ctx context.Context, uid uuid.UUID) (*
 }
 
 func (r *repository) UpdateOrganization(ctx context.Context, id string, org *datamodel.Owner) error {
-	return r.updateOwner(ctx, "organization", id, org)
+	return r.UpdateOwner(ctx, "organization", id, org)
 }
 func (r *repository) DeleteOrganization(ctx context.Context, id string) error {
-	return r.deleteOwner(ctx, "organization", id)
+	return r.DeleteOwner(ctx, "organization", id)
 }
 
 func (r *repository) GetAllUsers(ctx context.Context) ([]*datamodel.Owner, error) {
@@ -199,7 +201,7 @@ func (r *repository) GetAllUsers(ctx context.Context) ([]*datamodel.Owner, error
 	return users, nil
 }
 
-func (r *repository) listOwners(ctx context.Context, ownerType string, pageSize int, pageToken string, filter filtering.Filter) ([]*datamodel.Owner, int64, string, error) {
+func (r *repository) ListOwners(ctx context.Context, ownerType string, pageSize int, pageToken string, filter filtering.Filter) ([]*datamodel.Owner, int64, string, error) {
 
 	db := r.CheckPinnedUser(ctx, r.db)
 
@@ -283,7 +285,7 @@ func (r *repository) listOwners(ctx context.Context, ownerType string, pageSize 
 	return owners, totalSize, "", nil
 }
 
-func (r *repository) createOwner(ctx context.Context, ownerType string, owner *datamodel.Owner) error {
+func (r *repository) CreateOwner(ctx context.Context, ownerType string, owner *datamodel.Owner) error {
 	r.PinUser(ctx)
 	db := r.CheckPinnedUser(ctx, r.db)
 
@@ -332,12 +334,16 @@ func (r *repository) GetOwnerByUID(ctx context.Context, uid uuid.UUID) (*datamod
 	return &owner, nil
 }
 
-func (r *repository) updateOwner(ctx context.Context, ownerType string, id string, owner *datamodel.Owner) error {
+func (r *repository) UpdateOwner(ctx context.Context, ownerType string, id string, owner *datamodel.Owner) error {
 
 	r.PinUser(ctx)
 	db := r.CheckPinnedUser(ctx, r.db)
 
-	if err := db.Omit("UID").
+	// Use Select("*") to force GORM to update ALL fields including zero-values
+	// (e.g., newsletter_subscription = false, empty strings).
+	// Without Select("*"), GORM skips zero-value fields by default.
+	if err := db.Select("*").
+		Omit("UID").
 		Omit("password_hash").
 		Model(&datamodel.Owner{}).
 		Where("owner_type = ?", ownerType).
@@ -350,7 +356,7 @@ func (r *repository) updateOwner(ctx context.Context, ownerType string, id strin
 	return nil
 }
 
-func (r *repository) deleteOwner(ctx context.Context, ownerType string, id string) error {
+func (r *repository) DeleteOwner(ctx context.Context, ownerType string, id string) error {
 
 	r.PinUser(ctx)
 	db := r.CheckPinnedUser(ctx, r.db)

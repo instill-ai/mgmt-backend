@@ -25,6 +25,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/instill-ai/mgmt-backend/pkg/datamodel"
+	"github.com/instill-ai/x/resource"
 
 	mgmtpb "github.com/instill-ai/protogen-go/mgmt/v1beta"
 )
@@ -214,17 +215,28 @@ func (s *service) DBUser2PBAuthenticatedUser(ctx context.Context, dbUser *datamo
 	}, nil
 }
 
-// PBAuthenticatedUser2DBUser converts a proto user instance to database user
-// Note: UID is no longer in the protobuf. The caller should set the UID
-// on the returned datamodel if updating an existing user.
-func (s *service) PBAuthenticatedUser2DBUser(ctx context.Context, pbUser *mgmtpb.AuthenticatedUser) (*datamodel.Owner, error) {
+// PBAuthenticatedUser2DBUser converts a proto user instance to database user.
+// If existingUser is provided (update case), UID and ID are preserved.
+// If existingUser is nil (create case), new UID and ID are generated.
+func (s *service) PBAuthenticatedUser2DBUser(ctx context.Context, pbUser *mgmtpb.AuthenticatedUser, existingUser *datamodel.Owner) (*datamodel.Owner, error) {
 	if pbUser == nil {
 		return nil, status.Error(codes.Internal, "can't convert a nil user")
 	}
 
-	// UID is no longer in the protobuf - generate a new one for new users
-	// For updates, the caller should set the UID from the existing database record
-	uid := uuid.Must(uuid.NewV4())
+	var uid uuid.UUID
+	var userID string
+
+	if existingUser != nil {
+		// Update case: reuse existing UID and ID (they are immutable)
+		uid = existingUser.UID
+		userID = existingUser.ID
+	} else {
+		// Create case: generate new UID and ID
+		// ID format: usr-{base62(sha256(uid)[:10])}
+		// Example: "usr-8f3A2k9E7c1xYz"
+		uid = uuid.Must(uuid.NewV4())
+		userID = resource.GeneratePrefixedID("usr", uid)
+	}
 
 	userType := "user"
 	email := pbUser.GetEmail()
@@ -238,7 +250,7 @@ func (s *service) PBAuthenticatedUser2DBUser(ctx context.Context, pbUser *mgmtpb
 		Base: datamodel.Base{
 			UID: uid,
 		},
-		ID: pbUser.GetId(),
+		ID: userID,
 		OwnerType: sql.NullString{
 			String: userType,
 			Valid:  len(userType) > 0,

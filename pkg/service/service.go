@@ -57,7 +57,7 @@ type Service interface {
 
 	DBUser2PBUser(ctx context.Context, dbUser *datamodel.Owner) (*mgmtpb.User, error)
 	DBUsers2PBUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtpb.User, error)
-	PBAuthenticatedUser2DBUser(ctx context.Context, pbUser *mgmtpb.AuthenticatedUser) (*datamodel.Owner, error)
+	PBAuthenticatedUser2DBUser(ctx context.Context, pbUser *mgmtpb.AuthenticatedUser, existingUser *datamodel.Owner) (*datamodel.Owner, error)
 	DBUsers2PBAuthenticatedUsers(ctx context.Context, dbUsers []*datamodel.Owner) ([]*mgmtpb.AuthenticatedUser, error)
 
 	DBToken2PBToken(ctx context.Context, dbToken *datamodel.Token) (*mgmtpb.ApiToken, error)
@@ -158,7 +158,7 @@ func (s *service) ListUsers(ctx context.Context, ctxUserUID uuid.UUID, pageSize 
 
 func (s *service) CreateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtpb.AuthenticatedUser) (*mgmtpb.AuthenticatedUser, error) {
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
-	dbUser, err := s.PBAuthenticatedUser2DBUser(ctx, user)
+	dbUser, err := s.PBAuthenticatedUser2DBUser(ctx, user, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -286,23 +286,24 @@ func (s *service) GetAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID
 func (s *service) UpdateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.UUID, user *mgmtpb.AuthenticatedUser) (*mgmtpb.AuthenticatedUser, error) {
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
-	// Check if the user exists
-	if _, err := s.repository.GetUserByUID(ctx, ctxUserUID); err != nil {
-		return nil, err
-	}
-
-	// Update the user
-	dbUser, err := s.PBAuthenticatedUser2DBUser(ctx, user)
+	// Get the existing user to preserve their UID and ID (they are immutable)
+	existingUser, err := s.repository.GetUserByUID(ctx, ctxUserUID)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.deleteUserFromCacheByID(ctx, dbUser.ID)
+	// Convert the proto user to DB user, preserving existing UID and ID
+	dbUser, err := s.PBAuthenticatedUser2DBUser(ctx, user, existingUser)
 	if err != nil {
 		return nil, err
 	}
-	if err := s.repository.UpdateUser(ctx, dbUser.ID, dbUser); err != nil {
-		return nil, fmt.Errorf("users/%s: %w", dbUser.ID, err)
+
+	err = s.deleteUserFromCacheByID(ctx, existingUser.ID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repository.UpdateUser(ctx, existingUser.ID, dbUser); err != nil {
+		return nil, fmt.Errorf("users/%s: %w", existingUser.ID, err)
 	}
 
 	return s.GetAuthenticatedUser(ctx, ctxUserUID)

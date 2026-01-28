@@ -294,12 +294,7 @@ func getSanitizedNamespaceVariant(id string) string {
 // CheckNamespace checks if the namespace is available.
 func (h *PublicHandler) CheckNamespace(ctx context.Context, req *mgmtpb.CheckNamespaceRequest) (*mgmtpb.CheckNamespaceResponse, error) {
 
-	err := checkfield.CheckResourceID(req.GetId())
-	if err != nil {
-		return nil, errorsx.ErrResourceID
-	}
-
-	_, err = h.Service.GetUserAdmin(ctx, req.GetId())
+	_, err := h.Service.GetUserAdmin(ctx, req.GetId())
 	if err == nil {
 		return &mgmtpb.CheckNamespaceResponse{
 			Type: mgmtpb.CheckNamespaceResponse_NAMESPACE_USER,
