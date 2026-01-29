@@ -298,7 +298,8 @@ func (s *service) UpdateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.U
 		return nil, err
 	}
 
-	err = s.deleteUserFromCacheByID(ctx, existingUser.ID)
+	// Delete both ID and UID cache entries since setUserToCacheWithUID stores under both keys
+	err = s.deleteUserFromCacheByIDAndUID(ctx, existingUser.ID, existingUser.UID)
 	if err != nil {
 		return nil, err
 	}
@@ -314,7 +315,14 @@ func (s *service) UpdateAuthenticatedUser(ctx context.Context, ctxUserUID uuid.U
 func (s *service) DeleteUser(ctx context.Context, ctxUserUID uuid.UUID, id string) error {
 	ctx = context.WithValue(ctx, repository.UserUIDCtxKey, ctxUserUID)
 
-	err := s.deleteUserFromCacheByID(ctx, id)
+	// Get the user's UID before deleting so we can clear both cache entries
+	userUID, err := s.GetUserUIDByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete both ID and UID cache entries since setUserToCacheWithUID stores under both keys
+	err = s.deleteUserFromCacheByIDAndUID(ctx, id, userUID)
 	if err != nil {
 		return err
 	}

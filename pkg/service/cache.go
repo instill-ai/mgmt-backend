@@ -107,6 +107,20 @@ func (s *service) deleteUserFromCacheByID(ctx context.Context, id string) error 
 	return s.deleteFromCacheByID(ctx, CacheTargetUser, id)
 }
 
+func (s *service) deleteUserFromCacheByUID(ctx context.Context, uid uuid.UUID) error {
+	return s.deleteFromCacheByID(ctx, CacheTargetUser, uid.String())
+}
+
+// deleteUserFromCacheByIDAndUID deletes user cache entries for both ID and UID keys.
+// This should be used when the user data is modified or deleted to ensure both
+// cache entries are invalidated (since setUserToCacheWithUID stores under both keys).
+func (s *service) deleteUserFromCacheByIDAndUID(ctx context.Context, id string, uid uuid.UUID) error {
+	if err := s.deleteUserFromCacheByID(ctx, id); err != nil {
+		return err
+	}
+	return s.deleteUserFromCacheByUID(ctx, uid)
+}
+
 func (s *service) getUserPasswordHashFromCache(ctx context.Context, uid uuid.UUID) string {
 	getCmd := s.redisClient.Get(ctx, fmt.Sprintf("%s:%s", CacheTargetUserPasswordHash, uid))
 	if getCmd.Err() == nil {
