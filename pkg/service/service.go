@@ -232,7 +232,7 @@ func (s *service) GetUserByUIDAdmin(ctx context.Context, uid uuid.UUID) (*mgmtpb
 	if err != nil {
 		return nil, err
 	}
-	err = s.setUserToCache(ctx, pbUser)
+	err = s.setUserToCacheWithUID(ctx, pbUser, uid)
 	if err != nil {
 		return nil, err
 	}

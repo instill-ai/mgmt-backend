@@ -75,6 +75,25 @@ func (s *service) setUserToCache(ctx context.Context, user *mgmtpb.User) error {
 	return s.setToCache(ctx, CacheTargetUser, user)
 }
 
+func (s *service) setUserToCacheWithUID(ctx context.Context, user *mgmtpb.User, uid uuid.UUID) error {
+	b, err := protojson.Marshal(user)
+	if err != nil {
+		return err
+	}
+
+	// Cache by ID
+	if err := s.redisClient.Set(ctx, fmt.Sprintf("%s:%s", CacheTargetUser, user.Id), b, 5*time.Minute).Err(); err != nil {
+		return err
+	}
+
+	// Also cache by UID for lookups by UID
+	if err := s.redisClient.Set(ctx, fmt.Sprintf("%s:%s", CacheTargetUser, uid.String()), b, 5*time.Minute).Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *service) deleteFromCacheByID(ctx context.Context, target string, id string) error {
 	// Delete only by ID (UID is no longer in the protobuf)
 	setCmd := s.redisClient.Del(ctx, fmt.Sprintf("%s:%s", target, id))
