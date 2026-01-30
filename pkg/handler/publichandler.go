@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/iancoleman/strcase"
@@ -67,30 +66,16 @@ func (h *PublicHandler) Readiness(ctx context.Context, in *mgmtpb.ReadinessReque
 	}, nil
 }
 
-// AuthTokenIssuer issues a token for the user.
-func (h *PublicHandler) AuthTokenIssuer(ctx context.Context, in *mgmtpb.AuthTokenIssuerRequest) (*mgmtpb.AuthTokenIssuerResponse, error) {
-
-	// Get user UID from username
-	userUID, err := h.Service.GetUserUIDByID(ctx, in.Username)
+// AuthenticateUser validates Basic Auth credentials and returns the user UID.
+// Used by API Gateway's simple-auth plugin for authentication.
+func (h *PublicHandler) AuthenticateUser(ctx context.Context, in *mgmtpb.AuthenticateUserRequest) (*mgmtpb.AuthenticateUserResponse, error) {
+	userUID, err := h.Service.AuthenticateUser(ctx, in.Username, in.Password)
 	if err != nil {
 		return nil, err
 	}
 
-	err = h.Service.CheckUserPassword(ctx, userUID, in.Password)
-	if err != nil {
-		return nil, err
-	}
-
-	jti, _ := uuid.NewV4()
-	exp := int32(time.Now().Unix()) + constant.DefaultJwtExpiration
-	return &mgmtpb.AuthTokenIssuerResponse{
-		AccessToken: &mgmtpb.AuthTokenIssuerResponse_UnsignedAccessToken{
-			Aud: constant.DefaultJwtAudience,
-			Sub: userUID.String(),
-			Iss: constant.DefaultJwtIssuer,
-			Jti: jti.String(),
-			Exp: exp,
-		},
+	return &mgmtpb.AuthenticateUserResponse{
+		UserUid: userUID.String(),
 	}, nil
 }
 
@@ -113,24 +98,6 @@ func (h *PublicHandler) AuthChangePassword(ctx context.Context, in *mgmtpb.AuthC
 	}
 
 	return &mgmtpb.AuthChangePasswordResponse{}, nil
-}
-
-// AuthLogout logs out the user.
-func (h *PublicHandler) AuthLogout(ctx context.Context, in *mgmtpb.AuthLogoutRequest) (*mgmtpb.AuthLogoutResponse, error) {
-	// TODO: implement this
-	return &mgmtpb.AuthLogoutResponse{}, nil
-}
-
-// AuthLogin logs in the user.
-func (h *PublicHandler) AuthLogin(ctx context.Context, in *mgmtpb.AuthLoginRequest) (*mgmtpb.AuthLoginResponse, error) {
-	// This endpoint will be handled by KrakenD. We don't need to implement here
-	return &mgmtpb.AuthLoginResponse{}, nil
-}
-
-// AuthValidateAccessToken validates the access token.
-func (h *PublicHandler) AuthValidateAccessToken(ctx context.Context, in *mgmtpb.AuthValidateAccessTokenRequest) (*mgmtpb.AuthValidateAccessTokenResponse, error) {
-	// This endpoint will be handled by KrakenD. We don't need to implement here
-	return &mgmtpb.AuthValidateAccessTokenResponse{}, nil
 }
 
 // ListUsers lists the users.

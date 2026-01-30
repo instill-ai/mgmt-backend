@@ -1,5 +1,6 @@
 import http from "k6/http";
 import { check } from "k6";
+import encoding from "k6/encoding";
 import * as constant from "./const.js"
 
 /*
@@ -9,7 +10,7 @@ import * as constant from "./const.js"
  * which exposes HTTP endpoints via grpc-gateway transcoding, not native gRPC.
  *
  * All integration testing is done via REST tests (rest.js).
- * This file only performs a basic login check to verify the test setup works.
+ * This file only performs a basic health check to verify the test setup works.
  */
 
 export let options = {
@@ -21,20 +22,18 @@ export let options = {
 };
 
 export function setup() {
-  var loginResp = http.request("POST", `${constant.mgmtPublicHost}/auth/login`, JSON.stringify({
-    "username": constant.defaultUsername,
-    "password": constant.defaultPassword,
-  }))
+  // CE edition uses Basic Auth for all authenticated requests
+  const basicAuth = encoding.b64encode(`${constant.defaultUsername}:${constant.defaultPassword}`);
 
-  check(loginResp, {
-    [`POST /${constant.mgmtVersion}/auth/login response status is 200`]: (
-      r
-    ) => r.status === 200,
+  // Verify health endpoint is accessible
+  var healthResp = http.request("GET", `${constant.mgmtPublicHost}/health/mgmt`);
+  check(healthResp, {
+    [`GET /${constant.mgmtVersion}/health/mgmt response status is 200`]: (r) => r.status === 200,
   });
 
   return {
     metadata: {
-      "authorization": `Bearer ${loginResp.json().accessToken}`
+      "authorization": `Basic ${basicAuth}`
     }
   }
 }

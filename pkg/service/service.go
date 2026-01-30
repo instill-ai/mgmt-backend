@@ -49,6 +49,7 @@ type Service interface {
 
 	CheckUserPassword(ctx context.Context, uid uuid.UUID, password string) error
 	UpdateUserPassword(ctx context.Context, uid uuid.UUID, newPassword string) error
+	AuthenticateUser(ctx context.Context, username, password string) (uuid.UUID, error)
 
 	ListPipelineTriggerChartRecords(_ context.Context, _ *mgmtpb.ListPipelineTriggerChartRecordsRequest, ctxUserUID uuid.UUID) (*mgmtpb.ListPipelineTriggerChartRecordsResponse, error)
 	GetPipelineTriggerCount(_ context.Context, _ *mgmtpb.GetPipelineTriggerCountRequest, ctxUserUID uuid.UUID) (*mgmtpb.GetPipelineTriggerCountResponse, error)
@@ -364,6 +365,29 @@ func (s *service) UpdateUserPassword(ctx context.Context, uid uuid.UUID, newPass
 	}
 	_ = s.deleteUserPasswordHashFromCache(ctx, uid)
 	return s.repository.UpdateUserPasswordHash(ctx, uid, string(passwordBytes), time.Now())
+}
+
+// AuthenticateUser validates username/password credentials and returns the user UID.
+// Used by API Gateway's simple-auth plugin for Basic Auth authentication.
+func (s *service) AuthenticateUser(ctx context.Context, username, password string) (uuid.UUID, error) {
+	// Get user by username (ID)
+	user, err := s.repository.GetUser(ctx, username, false)
+	if err != nil {
+		return uuid.Nil, errorsx.ErrUnauthenticated
+	}
+
+	// Get password hash and verify
+	passwordHash, _, err := s.repository.GetUserPasswordHash(ctx, user.UID)
+	if err != nil {
+		return uuid.Nil, errorsx.ErrUnauthenticated
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
+	if err != nil {
+		return uuid.Nil, errorsx.ErrUnauthenticated
+	}
+
+	return user.UID, nil
 }
 
 func (s *service) CreateToken(ctx context.Context, ctxUserUID uuid.UUID, token *mgmtpb.ApiToken) error {
