@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.25.5](https://github.com/instill-ai/mgmt-backend/compare/v0.25.4...v0.25.5) (2026-02-07)
+
+
+### Features
+
+* **profile:** add user profile fields in data model and fix user update handling ([#313](https://github.com/instill-ai/mgmt-backend/issues/313)) ([6058c8c](https://github.com/instill-ai/mgmt-backend/commit/6058c8caeae1d6934785b1ff183869afda8e6872))
+
+
+### Bug Fixes
+
+* **api:** align backend with protobuf API changes and remove deprecated metrics endpoints ([#310](https://github.com/instill-ai/mgmt-backend/issues/310)) ([9e2a80a](https://github.com/instill-ai/mgmt-backend/commit/9e2a80a84d35cf698e82fa85ee3bd4cfd606d966))
+* **api:** implement field mask validation for membership update endpoints ([#303](https://github.com/instill-ai/mgmt-backend/issues/303)) ([fe982b9](https://github.com/instill-ai/mgmt-backend/commit/fe982b9b387bfe0ebc26f42bf4568e5319ebb820))
+* **api:** return 204 No Content for missing avatar instead of 404 ([#312](https://github.com/instill-ai/mgmt-backend/issues/312)) ([f9a17c6](https://github.com/instill-ai/mgmt-backend/commit/f9a17c668d365715f34c65af0e8db5b1bd3c5db1))
+* **api:** return user ID instead of UID in ValidateToken response ([#311](https://github.com/instill-ai/mgmt-backend/issues/311)) ([d3348e1](https://github.com/instill-ai/mgmt-backend/commit/d3348e1269edc3dffc39a259632bb80ce2e1a7a2))
+* **cache:** store user cache by both ID and UID ([#314](https://github.com/instill-ai/mgmt-backend/issues/314)) ([c2bf12d](https://github.com/instill-ai/mgmt-backend/commit/c2bf12d2be60525e9bbbd4c782c83e1746564c9e))
+* **handler:** prevent namespace collision between dash and underscore variants ([#305](https://github.com/instill-ai/mgmt-backend/issues/305)) ([a6625fb](https://github.com/instill-ai/mgmt-backend/commit/a6625fbcac25d6830c9a195c5daed8004dfd391d))
+
+
+### Miscellaneous
+
+* **ci:** replace maximize-build-space with free-disk-space action ([197cdb7](https://github.com/instill-ai/mgmt-backend/commit/197cdb7feffb466502af10fd82d701eb6a7447dc))
+* **deps:** update protogen-go and x dependencies ([#315](https://github.com/instill-ai/mgmt-backend/issues/315)) ([9d4e31a](https://github.com/instill-ai/mgmt-backend/commit/9d4e31a0aab8d67e43f57067cb277704f0704d08))
+* **go:** upgrade to 1.25.6 ([bb38f20](https://github.com/instill-ai/mgmt-backend/commit/bb38f207f943cef2fd09ff8cf8984549dfedad1f))
+
+
+### Refactor
+
+* **auth:** replace JWT auth with Basic Auth for CE edition ([#316](https://github.com/instill-ai/mgmt-backend/issues/316)) ([98a0ae3](https://github.com/instill-ai/mgmt-backend/commit/98a0ae3c2f4f64fb439313f780715d505bd5ecbc))
+* **init:** change preset namespace from organization to user ([#307](https://github.com/instill-ai/mgmt-backend/issues/307)) ([c33b86d](https://github.com/instill-ai/mgmt-backend/commit/c33b86d472d1bcf2dd4a91ed38efdbd624627afa))
+* **mgmt:** adopt flattened protobuf structure and AIP-compliant resource names ([#308](https://github.com/instill-ai/mgmt-backend/issues/308)) ([062fc04](https://github.com/instill-ai/mgmt-backend/commit/062fc04386b6e9b46b3feeb3d8eba18b639f5986))
+* **service:** migrate organization features from CE to EE-only ([#309](https://github.com/instill-ai/mgmt-backend/issues/309)) ([cdd9cd6](https://github.com/instill-ai/mgmt-backend/commit/cdd9cd663e9080aede3d0ea617e6e252cb9f82f2))
+* **service:** remove organization and membership methods from CE interface ([#306](https://github.com/instill-ai/mgmt-backend/issues/306)) ([e213190](https://github.com/instill-ai/mgmt-backend/commit/e213190cfd1019b6f3777897a12e8f1e4d3c4cf5))
+
 ## [0.25.4](https://github.com/instill-ai/mgmt-backend/compare/v0.25.3...v0.25.4) (2025-10-27)
 
 
