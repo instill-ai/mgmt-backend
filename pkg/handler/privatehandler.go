@@ -58,7 +58,8 @@ func parseTokenIDFromName(name string) (string, error) {
 }
 
 // PrivateHandler is the handler for private endpoints.
-// NOTE: Organization admin endpoints are EE-only and implemented in mgmt-backend-ee.
+// NOTE: Organization admin endpoints are not part of the OSS surface and are
+// implemented by downstream consumers that overlay this service.
 type PrivateHandler struct {
 	mgmtpb.UnimplementedMgmtPrivateServiceServer
 	Service service.Service
