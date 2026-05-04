@@ -104,9 +104,12 @@ func main() {
 	defer closeClients()
 
 	// TODO: move openfga setup to x
+	noPoolHTTPClient := newNoPoolHTTPClient()
+
 	fgaClient, err := openfgaclient.NewSdkClient(&openfgaclient.ClientConfiguration{
-		ApiScheme: "http",
-		ApiHost:   fmt.Sprintf("%s:%d", config.Config.OpenFGA.Host, config.Config.OpenFGA.Port),
+		ApiScheme:  "http",
+		ApiHost:    fmt.Sprintf("%s:%d", config.Config.OpenFGA.Host, config.Config.OpenFGA.Port),
+		HTTPClient: noPoolHTTPClient,
 	})
 
 	if err != nil {
@@ -117,7 +120,8 @@ func main() {
 	if config.Config.OpenFGA.Replica.Host != "" {
 
 		fgaReplicaClient, err = openfgaclient.NewSdkClient(&openfgaclient.ClientConfiguration{
-			ApiUrl: fmt.Sprintf("http://%s:%d", config.Config.OpenFGA.Replica.Host, config.Config.OpenFGA.Replica.Port),
+			ApiUrl:     fmt.Sprintf("http://%s:%d", config.Config.OpenFGA.Replica.Host, config.Config.OpenFGA.Replica.Port),
+			HTTPClient: noPoolHTTPClient,
 		})
 		if err != nil {
 			panic(err)
@@ -272,6 +276,12 @@ func grpcHandlerFunc(grpcServer *grpc.Server, gwHandler http.Handler) http.Handl
 		}),
 		&http2.Server{},
 	)
+}
+
+func newNoPoolHTTPClient() *http.Client {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.DisableKeepAlives = true
+	return &http.Client{Transport: t}
 }
 
 func newClients(ctx context.Context, logger *zap.Logger) (pipelinepb.PipelinePublicServiceClient, *redis.Client, *gorm.DB, repository.InfluxDB, func()) {
